@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Assessment Result - Child Growth Monitor{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        {% if error %}
+        <div class="alert alert-danger">
+            <strong>Assessment Error:</strong> {{ error }}
+        </div>
+        <a href="/" class="btn btn-primary">Try Again</a>
+        {% elif result %}
+        <h2 class="mb-4">Assessment Result</h2>
+
+        <div class="row">
+            <!-- Image Preview -->
+            <div class="col-md-4 mb-4">
+                {% if result.measurement.annotated_image %}
+                <div class="card mb-3">
+                    <img src="/uploads/{{ result.measurement.annotated_image }}" class="card-img-top" alt="Annotated photo with pose landmarks">
+                    <div class="card-body text-center">
+                        <small class="text-muted">Pose-annotated image</small>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="card">
+                    <img src="/uploads/{{ image_filename }}" class="card-img-top" alt="Child photo">
+                    <div class="card-body text-center">
+                        <small class="text-muted">Original photo</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div class="col-md-8">
+                <!-- Child Info -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Child Information</strong></div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-sm-4"><strong>Name:</strong> {{ result.child_name }}</div>
+                            <div class="col-sm-4"><strong>Sex:</strong> {{ "Male" if result.sex == "M" else "Female" }}</div>
+                            <div class="col-sm-4"><strong>Age:</strong> {{ "%.1f"|format(result.age_months) }} months</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Measurement Results -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Measurements</strong></div>
+                    <div class="card-body">
+                        <table class="table table-sm mb-0">
+                            <tr>
+                                <td>Height</td>
+                                <td>
+                                    {% if result.measurement.predicted_height_cm %}
+                                        <strong>{{ "%.1f"|format(result.measurement.predicted_height_cm) }} cm</strong>
+                                        <span class="badge bg-success">From Image</span>
+                                    {% elif result.measurement.manual_height_cm %}
+                                        <strong>{{ "%.1f"|format(result.measurement.manual_height_cm) }} cm</strong>
+                                        <span class="badge bg-info">Manual Input</span>
+                                    {% else %}
+                                        <span class="text-muted">Not detected</span>
+                                        <span class="badge bg-warning text-dark">Enter height manually</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Weight</td>
+                                <td>
+                                    {% if result.measurement.manual_weight_kg %}
+                                        <strong>{{ "%.1f"|format(result.measurement.manual_weight_kg) }} kg</strong>
+                                        <span class="badge bg-info">Manual</span>
+                                    {% elif result.measurement.predicted_weight_kg %}
+                                        <strong>{{ "%.1f"|format(result.measurement.predicted_weight_kg) }} kg</strong>
+                                        <span class="badge bg-secondary">Estimated</span>
+                                    {% else %}
+                                        <span class="text-muted">Not available</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Reference Object</td>
+                                <td>
+                                    {% if result.measurement.reference_object_detected %}
+                                        <span class="badge bg-success">Detected</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">Not detected</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Confidence</td>
+                                <td>
+                                    {% if result.measurement.confidence_score is not none %}
+                                        {{ "%.1f"|format(result.measurement.confidence_score * 100) }}%
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Nutrition Classification -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Nutrition Classification (WHO Standards)</strong></div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-sm-6 mb-3">
+                                <h6>Height-for-Age (Stunting)</h6>
+                                {% if result.nutrition.haz_zscore is not none %}
+                                    <div class="fs-5">
+                                        Z-score: <strong>{{ "%.2f"|format(result.nutrition.haz_zscore) }}</strong>
+                                    </div>
+                                    {% set haz = result.nutrition.haz_status %}
+                                    <span class="badge fs-6
+                                        {% if haz == 'Normal' %}bg-success
+                                        {% elif haz == 'Stunted' %}bg-warning text-dark
+                                        {% elif haz == 'Severely Stunted' %}bg-danger
+                                        {% else %}bg-info{% endif %}">
+                                        {{ haz }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">Not available</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-sm-6 mb-3">
+                                <h6>Weight-for-Height (Wasting)</h6>
+                                {% if result.nutrition.whz_zscore is not none %}
+                                    <div class="fs-5">
+                                        Z-score: <strong>{{ "%.2f"|format(result.nutrition.whz_zscore) }}</strong>
+                                    </div>
+                                    {% set whz = result.nutrition.whz_status %}
+                                    <span class="badge fs-6
+                                        {% if whz == 'Normal' %}bg-success
+                                        {% elif 'MAM' in whz %}bg-warning text-dark
+                                        {% elif 'SAM' in whz %}bg-danger
+                                        {% elif 'Overweight' in whz or 'Obese' in whz %}bg-info
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ whz }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">Not available</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Summary</strong></div>
+                    <div class="card-body">
+                        <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ result.summary }}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+            <a href="/" class="btn btn-primary">Assess Another Child</a>
+            <a href="/children" class="btn btn-outline-secondary">View All Children</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

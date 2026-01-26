@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Children - Child Growth Monitor{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Registered Children</h2>
+
+{% if children %}
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Date of Birth</th>
+                <th>Sex</th>
+                <th>Guardian</th>
+                <th>Location</th>
+                <th>Visits</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for child in children %}
+            <tr>
+                <td>{{ child.name }}</td>
+                <td>{{ child.date_of_birth }}</td>
+                <td>{{ "Male" if child.sex == "M" else "Female" }}</td>
+                <td>{{ child.guardian_name or "-" }}</td>
+                <td>{{ child.location or "-" }}</td>
+                <td>{{ child.visits | length }}</td>
+                <td><a href="/children/{{ child.id }}" class="btn btn-sm btn-outline-primary">View</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+    No children registered yet. <a href="/" class="alert-link">Run an assessment</a> to get started.
+</div>
+{% endif %}
+{% endblock %}

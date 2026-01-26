@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}{{ child.name if child else "Not Found" }} - Child Growth Monitor{% endblock %}
+
+{% block content %}
+{% if child %}
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header"><strong>Child Profile</strong></div>
+            <div class="card-body">
+                <h5>{{ child.name }}</h5>
+                <p class="mb-1"><strong>DOB:</strong> {{ child.date_of_birth }}</p>
+                <p class="mb-1"><strong>Sex:</strong> {{ "Male" if child.sex == "M" else "Female" }}</p>
+                {% if child.guardian_name %}
+                <p class="mb-1"><strong>Guardian:</strong> {{ child.guardian_name }}</p>
+                {% endif %}
+                {% if child.location %}
+                <p class="mb-1"><strong>Location:</strong> {{ child.location }}</p>
+                {% endif %}
+                <p class="mb-0"><strong>Total Visits:</strong> {{ child.visits | length }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <h4 class="mb-3">Visit History</h4>
+        {% if child.visits %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Age (months)</th>
+                        <th>Height (cm)</th>
+                        <th>Weight (kg)</th>
+                        <th>HAZ Status</th>
+                        <th>WHZ Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for visit in child.visits | reverse %}
+                    <tr>
+                        <td>{{ visit.visit_date.strftime('%Y-%m-%d') if visit.visit_date else "-" }}</td>
+                        <td>{{ "%.1f"|format(visit.age_months) }}</td>
+                        {% if visit.measurement %}
+                            <td>{{ "%.1f"|format(visit.measurement.predicted_height_cm) if visit.measurement.predicted_height_cm else "-" }}</td>
+                            <td>{{ "%.1f"|format(visit.measurement.manual_weight_kg or visit.measurement.predicted_weight_kg or 0) if (visit.measurement.manual_weight_kg or visit.measurement.predicted_weight_kg) else "-" }}</td>
+                            <td>
+                                {% set haz = visit.measurement.haz_status %}
+                                {% if haz %}
+                                <span class="badge
+                                    {% if haz == 'Normal' %}bg-success
+                                    {% elif haz == 'Stunted' %}bg-warning text-dark
+                                    {% elif haz == 'Severely Stunted' %}bg-danger
+                                    {% else %}bg-info{% endif %}">
+                                    {{ haz }}
+                                </span>
+                                {% else %}-{% endif %}
+                            </td>
+                            <td>
+                                {% set whz = visit.measurement.whz_status %}
+                                {% if whz %}
+                                <span class="badge
+                                    {% if whz == 'Normal' %}bg-success
+                                    {% elif 'MAM' in whz %}bg-warning text-dark
+                                    {% elif 'SAM' in whz %}bg-danger
+                                    {% else %}bg-info{% endif %}">
+                                    {{ whz }}
+                                </span>
+                                {% else %}-{% endif %}
+                            </td>
+                        {% else %}
+                            <td colspan="4">No measurement data</td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">No visits recorded yet.</div>
+        {% endif %}
+    </div>
+</div>
+
+<a href="/children" class="btn btn-outline-secondary mt-3">Back to Children</a>
+{% else %}
+<div class="alert alert-warning">Child not found.</div>
+<a href="/children" class="btn btn-outline-secondary">Back to Children</a>
+{% endif %}
+{% endblock %}

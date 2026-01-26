@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Assess a Child - Child Growth Monitor{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <h2 class="mb-4">Child Growth Assessment</h2>
+        <p class="text-muted mb-4">
+            Upload a photo of the child standing next to a Parle-G packet for automatic height estimation.
+            The system will compute WHO Z-scores and classify nutritional status.
+        </p>
+
+        <form action="/assess" method="post" enctype="multipart/form-data" id="assessForm">
+            <div class="card mb-4">
+                <div class="card-header"><strong>Photo Upload</strong></div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="image" class="form-label">Child Photo</label>
+                        <input type="file" class="form-control" id="image" name="image"
+                               accept="image/*" required>
+                        <div class="form-text">
+                            For best results, the child should be standing upright with a Parle-G packet visible in the frame.
+                        </div>
+                    </div>
+                    <div id="imagePreview" class="text-center d-none">
+                        <img id="previewImg" class="img-fluid rounded" style="max-height: 300px;" alt="Preview">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header"><strong>Child Information</strong></div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="child_name" class="form-label">Child Name *</label>
+                            <input type="text" class="form-control" id="child_name" name="child_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="date_of_birth" class="form-label">Date of Birth *</label>
+                            <input type="date" class="form-control" id="date_of_birth" name="date_of_birth" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Sex *</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="sex" id="sexM" value="M" required>
+                                    <label class="form-check-label" for="sexM">Male</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="sex" id="sexF" value="F">
+                                    <label class="form-check-label" for="sexF">Female</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="weight_kg" class="form-label">Weight (kg)</label>
+                            <input type="number" class="form-control" id="weight_kg" name="weight_kg"
+                                   step="0.1" min="0.5" max="50" placeholder="Optional - leave blank to estimate">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="height_cm" class="form-label">Height (cm)</label>
+                            <input type="number" class="form-control" id="height_cm" name="height_cm"
+                                   step="0.1" min="30" max="200" placeholder="Optional - used if image detection fails">
+                            <div class="form-text">
+                                Leave blank to rely on image-based height estimation. Enter a value as fallback.
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="guardian_name" class="form-label">Guardian Name</label>
+                            <input type="text" class="form-control" id="guardian_name" name="guardian_name">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="location" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="location" name="location">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                    Run Assessment
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
