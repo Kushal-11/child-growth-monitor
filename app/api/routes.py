@@ -20,6 +20,8 @@ from app.schemas.assessment import AssessmentResponse
 from app.services.assessment_service import AssessmentService
 from config import UPLOAD_DIR
 
+
+
 router = APIRouter(prefix="/api/v1", tags=["API"])
 
 
@@ -37,10 +39,12 @@ def health_check():
 async def assess_child(
     image: UploadFile = File(...),
     child_name: str = Form(...),
-    date_of_birth: str = Form(...),  # YYYY-MM-DD
+    date_of_birth: str = Form(...),  # yyyy-mm-dd (HTML5 date input)
     sex: str = Form(...),  # 'M' or 'F'
     weight_kg: float = Form(None),
     height_cm: float = Form(None),
+    height_value: float = Form(None),  # Height value (from form)
+    height_unit: str = Form("cm"),  # Height unit: "cm" or "inch"
     guardian_name: str = Form(None),
     location: str = Form(None),
     db: Session = Depends(get_db),
@@ -54,6 +58,14 @@ async def assess_child(
         dob = date.fromisoformat(date_of_birth)
     except ValueError:
         raise HTTPException(400, "date_of_birth must be ISO format (YYYY-MM-DD)")
+
+    # Convert height if provided with unit
+    final_height_cm = height_cm
+    if height_value is not None and height_cm is None:
+        if height_unit == "inch":
+            final_height_cm = height_value * 2.54
+        else:
+            final_height_cm = height_value
 
     # Save uploaded image
     UPLOAD_DIR.mkdir(exist_ok=True)
@@ -69,7 +81,7 @@ async def assess_child(
         dob=dob,
         sex=sex,
         weight_kg=weight_kg,
-        height_cm=height_cm,
+        height_cm=final_height_cm,
         guardian_name=guardian_name,
         location=location,
     )

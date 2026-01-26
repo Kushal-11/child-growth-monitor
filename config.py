@@ -8,9 +8,13 @@ UPLOAD_DIR = BASE_DIR / "uploads"
 DB_PATH = BASE_DIR / "growth_monitor.db"
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
-# Parle-G packet known dimensions (centimeters)
-PARLEG_LENGTH_CM = 12.7
-PARLEG_WIDTH_CM = 5.5
+# Reference object dimensions (centimeters) - optional fallback for scale calibration
+# Standard yellow packet dimensions (e.g., biscuit packet)
+REFERENCE_OBJECT_LENGTH_CM = 12.7
+REFERENCE_OBJECT_WIDTH_CM = 5.5
+# Keep old name for backwards compatibility
+PARLEG_LENGTH_CM = REFERENCE_OBJECT_LENGTH_CM
+PARLEG_WIDTH_CM = REFERENCE_OBJECT_WIDTH_CM
 
 # MediaPipe configuration
 POSE_MODEL_PATH = DATA_DIR / "pose_landmarker_heavy.task"

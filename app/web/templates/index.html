@@ -6,7 +6,7 @@
     <div class="col-lg-8">
         <h2 class="mb-4">Child Growth Assessment</h2>
         <p class="text-muted mb-4">
-            Upload a photo of the child standing next to a Parle-G packet for automatic height estimation.
+            Upload a photo of the child standing upright for automatic height estimation.
             The system will compute WHO Z-scores and classify nutritional status.
         </p>
 
@@ -14,12 +14,12 @@
             <div class="card mb-4">
                 <div class="card-header"><strong>Photo Upload</strong></div>
                 <div class="card-body">
-                    <div class="mb-3">
+                        <div class="mb-3">
                         <label for="image" class="form-label">Child Photo</label>
                         <input type="file" class="form-control" id="image" name="image"
                                accept="image/*" required>
                         <div class="form-text">
-                            For best results, the child should be standing upright with a Parle-G packet visible in the frame.
+                            For best results, the child should be standing upright with full body visible in the frame.
                         </div>
                     </div>
                     <div id="imagePreview" class="text-center d-none">
@@ -63,9 +63,15 @@
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="height_cm" class="form-label">Height (cm)</label>
-                            <input type="number" class="form-control" id="height_cm" name="height_cm"
-                                   step="0.1" min="30" max="200" placeholder="Optional - used if image detection fails">
+                            <label for="height_value" class="form-label">Height</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="height_value" name="height_value"
+                                       step="0.1" min="10" max="200" placeholder="Optional - used if image detection fails">
+                                <select class="form-select" id="height_unit" name="height_unit" style="max-width: 100px;">
+                                    <option value="cm" selected>cm</option>
+                                    <option value="inch">inch</option>
+                                </select>
+                            </div>
                             <div class="form-text">
                                 Leave blank to rely on image-based height estimation. Enter a value as fallback.
                             </div>

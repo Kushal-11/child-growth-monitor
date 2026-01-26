@@ -3,16 +3,15 @@ Measurement service using OpenCV and MediaPipe.
 
 Pipeline:
   1. Load image via OpenCV
-  2. Detect Parle-G packet (yellow rectangle) for scale calibration
-  3. Run MediaPipe PoseLandmarker to detect body landmarks
-  4. Draw pose landmarks on annotated copy of the image
-  5. Compute child height in pixels (top of head to heel)
-  6. Convert pixels to centimeters using the Parle-G scale factor
+  2. Run MediaPipe PoseLandmarker to detect body landmarks
+  3. Draw pose landmarks on annotated copy of the image
+  4. Compute child height using hybrid approach:
+     - Primary: WHO statistical estimation (age/sex median)
+     - Supplementary: Anthropometric ratio-based estimation
+     - Fallback: Reference object detection (if available)
 
-Fallback:
-  - If no Parle-G detected: still reports height_pixels so the assessment
-    service can use manual height or alternative calibration
-  - If pose detection fails: confidence_score is 0
+Height estimation uses age, sex, and body segment measurements
+to provide accurate height estimates without requiring reference objects.
 """
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -657,9 +656,9 @@ class MeasurementService:
         Full measurement pipeline with hybrid height estimation.
         
         Uses multiple methods to estimate height:
-        1. Reference object (Parle-G) if detected - DEPRECATED as primary
-        2. Anthropometric ratios based on body segments
-        3. WHO statistical estimation using age/sex
+        1. WHO statistical estimation using age/sex (primary)
+        2. Anthropometric ratios based on body segments (supplementary)
+        3. Reference object detection (fallback, if available)
         4. Validation against WHO growth standards
         
         Args:
@@ -685,7 +684,7 @@ class MeasurementService:
         posture_valid = pose_result.get("posture_valid", True)
         posture_issues = pose_result.get("posture_issues", [])
 
-        # Step 2: Detect Parle-G packet (kept for backwards compatibility, but not primary)
+        # Step 2: Detect reference object (optional, kept for backwards compatibility)
         scale_factor, ref_detected, parleg_box = self._detect_parlegi(image)
 
         # Step 3: Measure body segments if landmarks available
@@ -741,7 +740,7 @@ class MeasurementService:
             # Note: This only gives relative proportions, not absolute height
             # without a reference object or WHO baseline
 
-        # Method C: Reference object (Parle-G) - kept for special cases
+        # Method C: Reference object detection - kept as fallback option
         if ref_detected and result.height_pixels is not None and scale_factor is not None:
             ref_height = round(result.height_pixels * scale_factor, 1)
             height_estimates["reference_object"] = {
@@ -790,13 +789,16 @@ class MeasurementService:
     def _detect_parlegi(
         self, image: np.ndarray
     ) -> Tuple[Optional[float], bool, Optional[np.ndarray]]:
-        """Detect the Parle-G packet and compute scale factor (cm/pixel).
+        """Detect reference object (yellow rectangular packet) and compute scale factor (cm/pixel).
+
+        This is a fallback method for scale calibration. The primary height estimation
+        uses WHO statistical methods and anthropometric ratios, which don't require reference objects.
 
         Returns (scale_factor_cm_per_pixel, was_detected, box_points_or_None).
         """
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-        # Broader HSV ranges to catch Parle-G under varying lighting
+        # Broader HSV ranges to catch yellow reference objects under varying lighting
         yellow_ranges = [
             (np.array([15, 60, 60]), np.array([40, 255, 255])),   # standard yellow
             (np.array([10, 50, 100]), np.array([30, 255, 255])),  # warm/orange-yellow
@@ -830,7 +832,7 @@ class MeasurementService:
                 continue
             aspect_ratio = max(w, h) / min(w, h)
 
-            # Parle-G aspect ratio: 12.7 / 5.5 ~ 2.31
+            # Reference object aspect ratio: 12.7 / 5.5 ~ 2.31
             # Broader tolerance: 1.5 to 3.5 to account for perspective distortion
             if 1.5 <= aspect_ratio <= 3.5 and area > best_area:
                 best_rect = rect
@@ -1089,15 +1091,15 @@ class MeasurementService:
                 2,
             )
 
-        # Draw Parle-G bounding box
+        # Draw reference object bounding box (if detected)
         if parleg_box is not None:
             cv2.drawContours(annotated, [parleg_box], 0, (0, 255, 0), 3)
             cx = int(np.mean(parleg_box[:, 0]))
             cy = int(np.mean(parleg_box[:, 1])) - 15
             cv2.putText(
                 annotated,
-                "Parle-G",
-                (cx - 35, cy),
+                "Reference",
+                (cx - 40, cy),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.6,
                 (0, 255, 0),

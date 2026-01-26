@@ -22,6 +22,14 @@ from app.models.database import get_db
 from app.services.assessment_service import AssessmentService
 from config import UPLOAD_DIR
 
+
+def parse_date_input(date_str: str) -> date:
+    """Parse date from yyyy-mm-dd format (HTML5 date input)."""
+    try:
+        return date.fromisoformat(date_str)
+    except ValueError:
+        raise ValueError(f"Invalid date format: {date_str}. Expected yyyy-mm-dd")
+
 router = APIRouter(tags=["Web UI"])
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
@@ -57,7 +65,14 @@ async def web_assess(
     with open(file_path, "wb") as f:
         shutil.copyfileobj(image.file, f)
 
-    dob = date.fromisoformat(date_of_birth)
+    try:
+        dob = date.fromisoformat(date_of_birth)
+    except ValueError:
+        return templates.TemplateResponse(
+            request,
+            "index.html",
+            {"error": "Invalid date format. Please use the date picker."},
+        )
 
     try:
         result = svc.assess(

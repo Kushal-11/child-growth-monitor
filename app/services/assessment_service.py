@@ -5,7 +5,7 @@ Ties together measurement (image processing) and nutrition (Z-score) services.
 Handles the full flow: image -> measurements -> WHO lookup -> classification.
 
 Height resolution priority:
-  1. Image-based (Parle-G scale + pose estimation)
+  1. Image-based (WHO statistical + anthropometric ratios)
   2. Manual height_cm input (fallback when image detection fails)
 """
 from datetime import date, datetime
@@ -229,7 +229,7 @@ class AssessmentService:
             lines.append("  Height: Could not be determined.")
             if not ref_detected:
                 lines.append(
-                    "  Note: Reference object (Parle-G) was not detected. "
+                    "  Note: Image-based height estimation was not successful. "
                     "Provide manual height for classification."
                 )
 
