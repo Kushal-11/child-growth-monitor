@@ -19,9 +19,11 @@ from app.models.visit import Visit
 from app.schemas.assessment import (
     AssessmentResponse,
     MeasurementDetail,
+    MLPrediction,
     NutritionDetail,
 )
 from app.services.measurement_service import MeasurementOutput, MeasurementService
+from app.services.ml_service import MLService
 from app.services.nutrition_service import NutritionService
 from app.services.who_data_service import WHODataService
 
@@ -31,6 +33,7 @@ class AssessmentService:
         self.measurement_svc = MeasurementService()
         self.nutrition_svc = NutritionService(who_data)
         self.who_data = who_data
+        self.ml_svc = MLService()
 
     def assess(
         self,
@@ -65,20 +68,35 @@ class AssessmentService:
         if effective_height is None and height_cm is not None:
             effective_height = height_cm
 
-        # 4. Determine effective weight
-        # Priority: manual weight > WHO median estimate for effective height
-        # Apply body build adjustment if available
+        # 4a. Run ML prediction (uses body proportions from pose landmarks)
+        ml_pred = None
+        if effective_height is not None and meas.body_segments is not None:
+            ml_pred = self.ml_svc.predict(
+                meas.body_segments, age_months, sex, effective_height
+            )
+
+        # 4b. Determine effective weight
+        # Priority: manual_weight > ML-estimated > WHO-median (slender/stocky adjusted)
         effective_weight = weight_kg
         estimated_weight = None
-        if effective_weight is None and effective_height is not None:
-            estimated_weight = self.who_data.get_median_weight_for_height(
-                sex, effective_height, age_months=age_months
-            )
-            if estimated_weight is not None:
-                # Adjust weight based on body build (slender/average/stocky)
-                weight_adjustment = getattr(meas, 'weight_adjustment', 1.0)
-                estimated_weight = round(estimated_weight * weight_adjustment, 2)
-            effective_weight = estimated_weight
+        weight_source = "manual" if weight_kg is not None else None
+
+        if effective_weight is None:
+            # Try ML weight estimate first (captures wasting signal)
+            if ml_pred is not None and ml_pred.estimated_weight_kg is not None:
+                effective_weight = ml_pred.estimated_weight_kg
+                estimated_weight = effective_weight
+                weight_source = "ml_estimated"
+            elif effective_height is not None:
+                # Fall back to WHO median with body build adjustment
+                estimated_weight = self.who_data.get_median_weight_for_height(
+                    sex, effective_height, age_months=age_months
+                )
+                if estimated_weight is not None:
+                    weight_adjustment = getattr(meas, 'weight_adjustment', 1.0)
+                    estimated_weight = round(estimated_weight * weight_adjustment, 2)
+                effective_weight = estimated_weight
+                weight_source = "who_median_estimated"
 
         # 5. Compute Z-scores
         haz_z = None
@@ -172,6 +190,16 @@ class AssessmentService:
                 whz_status=whz_status,
                 age_months=round(age_months, 1),
             ),
+            ml_prediction=MLPrediction(
+                estimated_weight_kg=ml_pred.estimated_weight_kg if ml_pred else None,
+                sam_probability=ml_pred.sam_probability if ml_pred else 0.0,
+                mam_probability=ml_pred.mam_probability if ml_pred else 0.0,
+                normal_probability=ml_pred.normal_probability if ml_pred else 0.0,
+                risk_probability=ml_pred.risk_probability if ml_pred else 0.0,
+                overweight_probability=ml_pred.overweight_probability if ml_pred else 0.0,
+                wasting_status=ml_pred.wasting_status if ml_pred else None,
+                wasting_method=ml_pred.wasting_method if ml_pred else "unavailable",
+            ) if ml_pred else None,
             summary=summary,
         )
 

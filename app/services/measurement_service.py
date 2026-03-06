@@ -76,20 +76,24 @@ class BodySegments:
     head_height_px: Optional[float] = None  # Top of head to chin
     torso_length_px: Optional[float] = None  # Shoulder midpoint to hip midpoint
     leg_length_px: Optional[float] = None  # Hip midpoint to heel
-    shoulder_width_px: Optional[float] = None  # Left to right shoulder
+    shoulder_width_px: Optional[float] = None  # Left to right shoulder (horizontal)
+    hip_width_px: Optional[float] = None  # Left to right hip (horizontal)
+    upper_arm_length_px: Optional[float] = None  # Shoulder to elbow (2D Euclidean)
     total_height_px: Optional[float] = None  # Top of head to heel
-    
+
     # Pixel coordinates for key points
     head_top_y: Optional[float] = None
     chin_y: Optional[float] = None
     shoulder_midpoint_y: Optional[float] = None
     hip_midpoint_y: Optional[float] = None
     heel_y: Optional[float] = None
-    
+
     # Segment visibility/confidence
     head_confidence: float = 0.0
     torso_confidence: float = 0.0
     leg_confidence: float = 0.0
+    hip_confidence: float = 0.0
+    arm_confidence: float = 0.0
 
 
 @dataclass
@@ -210,11 +214,14 @@ class MeasurementService:
         # === HIP MEASUREMENTS ===
         left_hip = get_lm(PoseLandmark.LEFT_HIP)
         right_hip = get_lm(PoseLandmark.RIGHT_HIP)
-        
+
         hip_midpoint_y = None
         if left_hip and right_hip:
             hip_midpoint_y = (left_hip[1] + right_hip[1]) / 2
             segments.hip_midpoint_y = hip_midpoint_y
+            # Hip width: horizontal pixel distance between left and right hip
+            segments.hip_width_px = abs(left_hip[0] - right_hip[0])
+            segments.hip_confidence = (left_hip[2] + right_hip[2]) / 2
         elif left_hip:
             hip_midpoint_y = left_hip[1]
             segments.hip_midpoint_y = hip_midpoint_y
@@ -222,6 +229,23 @@ class MeasurementService:
             hip_midpoint_y = right_hip[1]
             segments.hip_midpoint_y = hip_midpoint_y
         
+        # === UPPER ARM LENGTH ===
+        # Measured as 2D Euclidean distance from shoulder to elbow.
+        # Used as a proxy for arm size in the ML wasting classifier.
+        left_elbow = get_lm(PoseLandmark.LEFT_ELBOW)
+        right_elbow = get_lm(PoseLandmark.RIGHT_ELBOW)
+
+        if left_shoulder and left_elbow:
+            arm_px = ((left_shoulder[0] - left_elbow[0]) ** 2 +
+                      (left_shoulder[1] - left_elbow[1]) ** 2) ** 0.5
+            segments.upper_arm_length_px = arm_px
+            segments.arm_confidence = (left_shoulder[2] + left_elbow[2]) / 2
+        elif right_shoulder and right_elbow:
+            arm_px = ((right_shoulder[0] - right_elbow[0]) ** 2 +
+                      (right_shoulder[1] - right_elbow[1]) ** 2) ** 0.5
+            segments.upper_arm_length_px = arm_px
+            segments.arm_confidence = (right_shoulder[2] + right_elbow[2]) / 2
+
         # === TORSO LENGTH ===
         if shoulder_midpoint_y is not None and hip_midpoint_y is not None:
             segments.torso_length_px = abs(hip_midpoint_y - shoulder_midpoint_y)

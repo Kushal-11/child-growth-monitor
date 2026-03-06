@@ -21,3 +21,7 @@ pydantic>=2.5.0
 
 # Utilities
 python-dateutil>=2.8.0
+
+# Machine learning (wasting detection)
+tensorflow>=2.16.0       # MLP training + TFLite export for mobile
+scikit-learn>=1.4.0      # StandardScaler, LabelEncoder, train/test split

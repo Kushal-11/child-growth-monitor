@@ -71,9 +71,12 @@ class TestWFHLMS:
 
 class TestMedianWeight:
     def test_male_60cm(self, who_data):
-        w = who_data.get_median_weight_for_height("M", 60.0)
+        # WHO WFL boys: at length 60 cm, SD0 (median) ≈ 6.0 kg
+        # Source: wfl_boys_0-to-2-years_zscores.xlsx (verified)
+        # Previous test used wrong value from the now-fixed who_whz_reference.csv
+        w = who_data.get_median_weight_for_height("M", 60.0, age_months=6.0)
         assert w is not None
-        assert w == pytest.approx(9.0, abs=0.5)
+        assert w == pytest.approx(6.0, abs=0.4)
 
     def test_out_of_range(self, who_data):
         w = who_data.get_median_weight_for_height("F", 200.0)

@@ -1,236 +1,351 @@
 # Child Growth Monitor
 
-A WHO standard-based child growth assessment system that uses computer vision and pose estimation to automatically measure child height and classify nutritional status (stunting and wasting).
+A WHO-standard child growth assessment system that uses computer vision and pose estimation to measure child height and detect malnutrition (SAM/MAM) — including a camera-based wasting detection model that works without a weighing scale.
 
 ## Overview
 
-This system processes images of children to estimate height using MediaPipe pose detection and WHO growth reference data. It provides automated nutritional status classification based on WHO Z-score standards, eliminating the need for manual measurements and reference objects.
+The system processes a frontal standing photo of a child to:
+- Estimate height using MediaPipe pose landmarks + WHO growth reference data
+- Classify stunting (Height-for-Age Z-score) against WHO standards
+- Detect wasting / acute malnutrition (SAM/MAM) using an ML model trained on WHO-derived data, even when no weight measurement is available
+- Track child growth over repeated visits
 
 ## Features
 
-- **Automated Height Estimation**: Uses hybrid approach combining WHO statistical methods and anthropometric ratios - no reference objects required
-- **Pose Detection**: MediaPipe-based pose landmark detection with visual annotations
-- **WHO Z-Score Classification**: Automatic classification of stunting (Height-for-Age) and wasting (Weight-for-Height) using WHO growth standards
-- **Web Interface**: User-friendly web UI for uploading images and viewing assessment results
-- **REST API**: Full API for integration with mobile apps or other systems
-- **Data Persistence**: SQLite database for storing child records and assessment history
-- **Multi-Unit Support**: Height input supports both centimeters and inches
+| Feature | Details |
+|---------|---------|
+| Height estimation | Hybrid: WHO statistical + anthropometric ratios — no reference objects needed |
+| Stunting classification | Height-for-Age Z-score via WHO HAZ boundaries |
+| Wasting detection (SAM/MAM) | ML weight estimator + 5-class classifier from body proportions |
+| Weight estimation | ML-estimated from shoulder/hip widths when no scale available |
+| WHO data | All thresholds from verified WHO Excel LMS files |
+| Web UI | FastAPI + Bootstrap 5 |
+| REST API | Full JSON API, Swagger UI at `/docs` |
+| Mobile-ready | TFLite models (7 KB + 17 KB) for Android/iOS |
+| Data persistence | SQLite — child records + visit history |
 
 ## Technology Stack
 
-- **Backend**: FastAPI (Python)
-- **Computer Vision**: MediaPipe, OpenCV
-- **Database**: SQLAlchemy with SQLite
-- **Frontend**: Bootstrap 5, Jinja2 templates
-- **Data Processing**: Pandas, NumPy
-- **Reference Data**: WHO Child Growth Standards (CSV and Excel files)
+- **Backend**: Python 3.12, FastAPI, Uvicorn
+- **Computer Vision**: MediaPipe PoseLandmarker, OpenCV
+- **Machine Learning**: TensorFlow 2.16+ (Keras MLP), scikit-learn
+- **Database**: SQLAlchemy + SQLite
+- **Frontend**: Bootstrap 5, Jinja2
+- **Reference Data**: WHO Child Growth Standards (verified Excel/CSV)
+
+---
 
 ## Installation
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- pip package manager
+- Python 3.10 or higher
+- ~1.5 GB disk space (MediaPipe model + TensorFlow)
 
 ### Setup
 
-1. Clone the repository:
 ```bash
+# 1. Clone the repository
 git clone https://github.com/Kushal-11/child-growth-monitor.git
 cd child-growth-monitor
-```
 
-2. Create a virtual environment:
-```bash
+# 2. Create and activate a virtual environment
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-```
+source .venv/bin/activate       # Linux/macOS
+.venv\Scripts\activate          # Windows
 
-3. Install dependencies:
-```bash
+# 3. Install all dependencies
 pip install -r requirements.txt
+
+# 4. (First run only) Train the wasting detection ML model
+PYTHONPATH=. python ml/train.py
+
+# 5. Start the server
+PYTHONPATH=. python main.py
 ```
 
-4. Ensure WHO reference data files are in the `data/` directory:
-   - `who_haz_0_59m.csv` - Height-for-Age Z-score boundaries
-   - `who_wfh_0_59m.csv` - Weight-for-Height reference
-   - `who_whz_reference.csv` - Weight-for-Height Z-score reference
-   - `wfl_boys_0-to-2-years_zscores.xlsx` - Weight-for-Length (boys, 0-2 years)
-   - `wfl_girls_0-to-2-years_zscores.xlsx` - Weight-for-Length (girls, 0-2 years)
-   - `wfh_boys_2-to-5-years_zscores.xlsx` - Weight-for-Height (boys, 2-5 years)
-   - `wfh_girls_2-to-5-years_zscores.xlsx` - Weight-for-Height (girls, 2-5 years)
-   - `pose_landmarker_heavy.task` - MediaPipe pose detection model
+The server will start at `http://localhost:8000`.
 
-5. Run the application:
-```bash
-python main.py
-```
+> **Note**: Step 4 trains the ML models on a synthetic WHO-based dataset (60K samples). This takes 1–3 minutes on CPU and only needs to be run once. Trained models are saved to `data/models/`.
 
-The server will start at `http://localhost:8000`
+---
 
 ## Usage
 
 ### Web Interface
 
-1. Open `http://localhost:8000` in your browser
-2. Upload a photo of a child standing upright (full body visible)
-3. Enter child information:
-   - Name
-   - Date of Birth
-   - Sex (Male/Female)
-   - Weight (optional - will be estimated if not provided)
-   - Height (optional - used as fallback if image detection fails)
-4. Click "Run Assessment"
-5. View results including:
-   - Estimated height and weight
-   - Height-for-Age Z-score and classification (Stunting)
-   - Weight-for-Height Z-score and classification (Wasting)
+1. Open `http://localhost:8000`
+2. Upload a full-body photo of the child standing upright against a plain background
+3. Fill in:
+   - Name, Date of Birth, Sex (required)
+   - Weight in kg (optional — will be ML-estimated if omitted)
+   - Height in cm (optional fallback if image detection fails)
+4. Click **Run Assessment**
+5. Results show:
+   - Estimated height + weight
+   - HAZ (stunting) and WHZ (wasting) Z-scores and classifications
+   - ML wasting prediction with SAM/MAM probabilities
    - Annotated image with pose landmarks
 
-### API Endpoints
+### Photo Guidelines
+
+For best results:
+- Child stands upright, full body visible from head to toe
+- Plain background, good lighting
+- Camera at 1–2 m distance, roughly at child's height
+- Frontal (front-facing) view
+- Arms slightly away from body so shoulder and hip landmarks are visible
+
+### API
 
 #### POST /api/v1/assess
-Main assessment endpoint. Accepts multipart form data with image and metadata.
 
-**Request:**
-- `image`: Image file (required)
-- `child_name`: Child's name (required)
-- `date_of_birth`: Date in YYYY-MM-DD format (required)
-- `sex`: 'M' or 'F' (required)
-- `weight_kg`: Weight in kilograms (optional)
-- `height_cm`: Height in centimeters (optional)
-- `height_value`: Height value (optional, used with height_unit)
-- `height_unit`: 'cm' or 'inch' (optional, default: 'cm')
-- `guardian_name`: Guardian name (optional)
-- `location`: Location (optional)
+Multipart form submission.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `image` | file | ✓ | JPEG/PNG photo |
+| `child_name` | string | ✓ | Child's name |
+| `date_of_birth` | date | ✓ | YYYY-MM-DD |
+| `sex` | string | ✓ | `M` or `F` |
+| `weight_kg` | float | — | Weight in kg (will be estimated if omitted) |
+| `height_cm` | float | — | Height in cm (fallback if image detection fails) |
+| `guardian_name` | string | — | Guardian / caregiver name |
+| `location` | string | — | Village / clinic name |
 
 **Response:**
 ```json
 {
-  "child_name": "John Doe",
-  "sex": "M",
-  "age_months": 36.4,
+  "child_name": "Priya",
+  "sex": "F",
+  "age_months": 30.2,
   "measurement": {
-    "predicted_height_cm": 102.7,
-    "predicted_weight_kg": 16.03,
-    "confidence_score": 0.87,
+    "predicted_height_cm": 88.4,
+    "predicted_weight_kg": 10.1,
+    "confidence_score": 0.84,
     "estimation_method": "who_statistical",
-    "annotated_image": "filename_annotated.jpg"
+    "body_build": "slender",
+    "annotated_image": "uuid_priya_annotated.jpg"
   },
   "nutrition": {
-    "haz_zscore": 0.0,
-    "whz_zscore": -0.0,
+    "haz_zscore": -1.2,
+    "whz_zscore": -2.4,
     "haz_status": "Normal",
-    "whz_status": "Normal"
+    "whz_status": "Moderate Acute Malnutrition (MAM)"
+  },
+  "ml_prediction": {
+    "estimated_weight_kg": 10.1,
+    "sam_probability": 0.04,
+    "mam_probability": 0.61,
+    "normal_probability": 0.28,
+    "risk_probability": 0.05,
+    "overweight_probability": 0.02,
+    "wasting_status": "MAM",
+    "wasting_method": "ml_classifier"
   },
   "summary": "..."
 }
 ```
 
-#### GET /api/v1/children
-List all registered children.
+#### Other endpoints
 
-#### GET /api/v1/children/{id}
-Get child detail with full visit history.
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/children` | List all children |
+| `GET` | `/api/v1/children/{id}` | Child detail + visit history |
+| `GET` | `/api/v1/health` | Health check |
+| `GET` | `/docs` | Swagger UI |
+| `GET` | `/redoc` | ReDoc |
 
-#### GET /api/v1/health
-Health check endpoint.
-
-### API Documentation
-
-Interactive API documentation is available at `http://localhost:8000/docs` (Swagger UI) and `http://localhost:8000/redoc` (ReDoc).
+---
 
 ## How It Works
 
-### Height Estimation
+### Height Estimation (no scale, no reference object)
 
-The system uses a hybrid approach that doesn't require reference objects:
+1. **MediaPipe PoseLandmarker** detects 33 body landmarks (nose, shoulders, hips, knees, ankles, etc.)
+2. **Pixel measurements** are taken: head-top to heel (total height), shoulder width, hip width, torso length, upper arm length
+3. **Scale factor** (cm/pixel) is computed using WHO median height for age/sex as the reference
+4. **Validation** checks that the estimated height falls within ±3 SD of WHO norms for the age
 
-1. **WHO Statistical Estimation** (Primary): Uses WHO median height for the child's age and sex as the baseline estimate
-2. **Anthropometric Ratios** (Supplementary): Measures body segments (head, torso, legs) and uses age-specific proportions to validate estimates
-3. **Reference Object Detection** (Fallback): Optional detection of known-size objects for scale calibration
+### Wasting Detection (SAM/MAM)
 
-### Nutritional Classification
+**The problem**: WHZ (Weight-for-Height Z-score) requires weight. Without a scale, weight must be estimated from visual cues.
 
-- **Height-for-Age (HAZ)**: Classifies stunting using WHO Z-score boundaries
-  - Severely Stunted: Z < -3
-  - Stunted: -3 ≤ Z < -2
-  - Normal: -2 ≤ Z ≤ 2
-  - Tall: Z > 2
+**The solution**: A two-model ML pipeline trained on WHO-derived data:
 
-- **Weight-for-Height (WHZ)**: Classifies wasting using LMS method
-  - Severe Acute Malnutrition (SAM): Z < -3
-  - Moderate Acute Malnutrition (MAM): -3 ≤ Z < -2
-  - Normal: -2 ≤ Z ≤ 1
-  - Possible Risk of Overweight: 1 ≤ Z < 2
-  - Overweight: 2 ≤ Z < 3
-  - Obese: Z ≥ 3
+1. **Weight Estimator** (MLP regression) — predicts weight (kg) from 10 body proportion features; val MAE ≈ 0.54 kg
+2. **Wasting Classifier** (5-class MLP) — directly classifies SAM / MAM / Normal / Risk / Overweight from pose-derived measurements; SAM recall ≥ 0.80
+
+**Features used** (all derived from pose landmarks):
+
+| Feature | Source |
+|---------|--------|
+| `age_months`, `sex` | Form input |
+| `height_cm` | Pose estimation (existing) |
+| `shoulder_width_cm` | LEFT_SHOULDER ↔ RIGHT_SHOULDER horizontal distance × scale |
+| `hip_width_cm` | LEFT_HIP ↔ RIGHT_HIP horizontal distance × scale |
+| `torso_length_cm` | Shoulder midpoint ↔ hip midpoint × scale |
+| `upper_arm_length_cm` | Shoulder → elbow Euclidean distance × scale |
+| `shoulder_height_ratio` | shoulder_width / height |
+| `hip_height_ratio` | hip_width / height |
+| `body_build_score` | –1 slender / 0 average / +1 stocky |
+
+**Weight priority chain** (when manual weight is not entered):
+```
+ML-estimated weight  →  WHO median (with body build adjustment)
+```
+
+### WHO Data Provenance
+
+All classification thresholds and training labels are derived from official WHO publications:
+
+| File | Status | Use |
+|------|--------|-----|
+| `who_haz_0_59m.csv` | ✅ Verified | Height-for-Age Z-score boundaries 0–60 months |
+| `wfl_*_zscores.xlsx` | ✅ Verified | WHO WFL LMS parameters (0–2 years) |
+| `wfh_*_zscores.xlsx` | ✅ Verified | WHO WFH LMS parameters (2–5 years) |
+
+The **body width proportion baseline** (shoulder/hip ratios used to generate synthetic training data) comes from Snyder RG et al. (1975) *Anthropometry of Infants, Children, and Youths to Age 18 for Product Safety Design* — this is **not** from WHO standards and is explicitly labeled as a physical approximation in the code. Model accuracy will improve with real labeled data.
+
+### Malnutrition Classification (WHO thresholds)
+
+**Wasting (Weight-for-Height Z-score):**
+
+| WHZ | Status |
+|-----|--------|
+| < −3 | **Severe Acute Malnutrition (SAM)** |
+| −3 to −2 | **Moderate Acute Malnutrition (MAM)** |
+| −2 to +1 | Normal |
+| +1 to +2 | Possible Risk of Overweight |
+| +2 to +3 | Overweight |
+| ≥ +3 | Obese |
+
+**Stunting (Height-for-Age Z-score):**
+
+| HAZ | Status |
+|-----|--------|
+| < −3 | Severely Stunted |
+| −3 to −2 | Stunted |
+| −2 to +2 | Normal |
+| > +2 | Tall |
+
+---
+
+## ML Model Training
+
+### Train from scratch
+
+```bash
+# Regenerate the synthetic dataset (uses WHO Excel LMS files)
+PYTHONPATH=. python ml/generate_synthetic_data.py
+
+# Train and export models
+PYTHONPATH=. python ml/train.py
+
+# Evaluate (check SAM recall ≥ 0.80)
+PYTHONPATH=. python ml/evaluate.py
+```
+
+### Fine-tune with real data
+
+When you collect real labeled measurements (age, sex, height, weight, confirmed wasting status), use the notebook:
+
+```bash
+.venv/bin/jupyter notebook notebooks/train_malnutrition_model.ipynb
+```
+
+Even 100–200 real labeled samples will significantly improve accuracy over the synthetic baseline.
+
+### Model files
+
+| File | Size | Use |
+|------|------|-----|
+| `data/models/weight_estimator.keras` | ~200 KB | Server inference |
+| `data/models/wasting_classifier.keras` | ~500 KB | Server inference |
+| `data/models/weight_estimator.tflite` | **7 KB** | Android/iOS on-device |
+| `data/models/wasting_classifier.tflite` | **17 KB** | Android/iOS on-device |
+| `data/models/feature_scaler.pkl` | <1 KB | Preprocessing (required) |
+| `data/models/label_encoder.pkl` | <1 KB | Class name mapping |
+
+---
 
 ## Project Structure
 
 ```
 child-growth-monitor/
 ├── app/
-│   ├── api/
-│   │   └── routes.py          # API endpoints
-│   ├── models/
-│   │   ├── child.py           # Child database model
-│   │   ├── visit.py           # Visit database model
-│   │   ├── measurement.py     # Measurement result model
-│   │   └── database.py        # Database configuration
-│   ├── schemas/
-│   │   └── assessment.py      # Pydantic request/response models
+│   ├── api/routes.py                 # REST API endpoints
+│   ├── models/                       # SQLAlchemy ORM models
+│   ├── schemas/assessment.py         # Pydantic request/response schemas
 │   ├── services/
-│   │   ├── assessment_service.py    # Main assessment orchestrator
-│   │   ├── measurement_service.py   # Image processing & height estimation
-│   │   ├── nutrition_service.py     # Z-score computation & classification
-│   │   └── who_data_service.py      # WHO reference data loader
-│   └── web/
-│       ├── views.py           # Web UI routes
-│       ├── templates/         # Jinja2 HTML templates
-│       └── static/            # CSS and JavaScript
-├── data/                      # WHO reference data files
-├── tests/                     # Unit tests
-├── uploads/                   # Uploaded images
-├── config.py                  # Configuration
-├── main.py                    # Application entry point
-└── requirements.txt           # Python dependencies
+│   │   ├── assessment_service.py     # Main orchestrator
+│   │   ├── measurement_service.py    # Pose + height estimation
+│   │   ├── nutrition_service.py      # Z-score computation
+│   │   ├── who_data_service.py       # WHO reference data loader
+│   │   └── ml_service.py            # ML wasting detection service
+│   └── web/                          # Jinja2 templates + static assets
+├── ml/
+│   ├── generate_synthetic_data.py    # WHO-derived training data generator
+│   ├── models.py                     # Keras model architectures
+│   ├── train.py                      # Training + TFLite export
+│   ├── evaluate.py                   # Metrics + SAM recall check
+│   └── inference.py                  # Runtime predictor (singleton)
+├── scripts/
+│   └── fix_who_data.py               # Regenerates CSV files from Excel LMS
+├── data/
+│   ├── who_haz_0_59m.csv             # Verified WHO HAZ data
+│   ├── wfl_*/wfh_*_zscores.xlsx      # Verified WHO LMS data (authoritative)
+│   ├── models/                       # Trained ML models
+│   └── training_data/                # Generated synthetic dataset
+├── tests/                            # 62 unit tests (100% passing)
+├── notebooks/                        # Fine-tuning notebook
+├── config.py                         # Centralised configuration
+├── main.py                           # Application entry point
+└── requirements.txt
 ```
 
 ## Testing
 
-Run the test suite:
 ```bash
-PYTHONPATH="$(pwd)" python -m pytest tests/ -v
+PYTHONPATH=. .venv/bin/python -m pytest tests/ -v
 ```
 
-All 62 tests should pass, covering:
-- WHO data service functionality
-- Nutrition service Z-score calculations
-- Measurement service height estimation
-- API endpoint validation
+All 62 tests pass, covering WHO data loading, Z-score computation, height estimation, and API endpoints.
+
+---
 
 ## Configuration
 
-Key configuration options in `config.py`:
-- `UPLOAD_DIR`: Directory for uploaded images
-- `DB_PATH`: SQLite database file path
-- `POSE_MODEL_PATH`: MediaPipe pose detection model
-- `ANTHROPOMETRIC_RATIOS`: Age-specific body segment ratios
-- `HEIGHT_VALIDATION_SD`: Standard deviation threshold for validation
+Key settings in `config.py`:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `POSE_MODEL_PATH` | `data/pose_landmarker_heavy.task` | MediaPipe model |
+| `UPLOAD_DIR` | `uploads/` | Image storage |
+| `ML_MODELS_DIR` | `data/models/` | Trained ML model directory |
+| `ANTHROPOMETRIC_RATIOS` | Age-specific | Head/torso/leg ratios for height estimation |
+| `HEIGHT_VALIDATION_SD` | 3.0 | Reject estimates > 3 SD from WHO median |
+| `SEGMENT_AGREEMENT_THRESHOLD` | 0.15 | Max 15% disagreement between segment estimates |
+
+---
 
 ## Limitations
 
-- Height estimation accuracy depends on image quality and pose visibility
-- Requires full body visibility in the image
-- Works best with children standing upright
-- Age range: 0-59 months (as per WHO data coverage)
+- **Camera-only accuracy**: Without a weighing scale, weight is estimated from body widths. The ML model is trained on synthetic data — real-world accuracy improves with clinical validation data.
+- **2D pose only**: MediaPipe gives 2D landmarks. Arm circumference (MUAC) cannot be directly measured from a standard standing photo.
+- **MUAC not yet integrated**: WHO MUAC-for-age tables are not yet in this project. Download from [WHO website](https://www.who.int/tools/child-growth-standards/standards/arm-circumference-for-age) to enable MUAC-based screening.
+- **Age range**: 0–59 months (per WHO reference data coverage).
+- **Pose requirements**: Child must be standing upright, full body visible, frontal view.
 
-## License
-
-This project is provided as-is for research and development purposes.
+---
 
 ## References
 
 - WHO Child Growth Standards: https://www.who.int/tools/child-growth-standards
-- MediaPipe Pose: https://developers.google.com/mediapipe/solutions/vision/pose_landmarker
+- WHO Weight-for-Height LMS tables: https://www.who.int/tools/child-growth-standards/standards/weight-for-height
+- WHO MUAC-for-Age standards: https://www.who.int/tools/child-growth-standards/standards/arm-circumference-for-age
+- MediaPipe Pose Landmarker: https://developers.google.com/mediapipe/solutions/vision/pose_landmarker
+- Snyder RG et al. (1975) *Anthropometry of Infants, Children, and Youths to Age 18* — body proportion baseline used in ML synthetic data

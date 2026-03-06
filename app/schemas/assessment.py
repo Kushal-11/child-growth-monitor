@@ -48,10 +48,23 @@ class NutritionDetail(BaseModel):
     age_months: float
 
 
+class MLPrediction(BaseModel):
+    """Output from the ML wasting detection models."""
+    estimated_weight_kg: Optional[float] = None
+    sam_probability: float = 0.0
+    mam_probability: float = 0.0
+    normal_probability: float = 0.0
+    risk_probability: float = 0.0
+    overweight_probability: float = 0.0
+    wasting_status: Optional[str] = None
+    wasting_method: str = "ml_classifier"
+
+
 class AssessmentResponse(BaseModel):
     child_name: str
     sex: str
     age_months: float
     measurement: MeasurementDetail
     nutrition: NutritionDetail
+    ml_prediction: Optional[MLPrediction] = None
     summary: str
