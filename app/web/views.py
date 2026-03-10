@@ -11,6 +11,7 @@ import shutil
 import uuid
 from datetime import date
 from pathlib import Path
+from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse
@@ -48,6 +49,7 @@ async def index(request: Request):
 async def web_assess(
     request: Request,
     image: UploadFile = File(...),
+    image_side: Optional[UploadFile] = File(None),
     child_name: str = Form(...),
     date_of_birth: str = Form(...),
     sex: str = Form(...),
@@ -65,6 +67,13 @@ async def web_assess(
     file_path = UPLOAD_DIR / filename
     with open(file_path, "wb") as f:
         shutil.copyfileobj(image.file, f)
+
+    # Read side image bytes (optional)
+    side_image_bytes = None
+    if image_side is not None:
+        side_image_bytes = await image_side.read()
+        if not side_image_bytes:
+            side_image_bytes = None
 
     try:
         dob = date.fromisoformat(date_of_birth)
@@ -87,6 +96,7 @@ async def web_assess(
             muac_cm=muac_cm,
             guardian_name=guardian_name,
             location=location,
+            side_image=side_image_bytes,
         )
         error = None
     except Exception as e:

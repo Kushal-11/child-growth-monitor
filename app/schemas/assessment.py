@@ -38,6 +38,10 @@ class MeasurementDetail(BaseModel):
     annotated_image: Optional[str] = None  # filename of pose-annotated image
     estimation_method: str = "none"  # "who_statistical", "reference_object", "manual", "none"
     body_build: Optional[str] = None  # "slender", "average", "stocky", or None
+    # Side-view depth measurements (None when no side photo provided)
+    side_view_used: bool = False
+    chest_depth_cm: Optional[float] = None  # AP chest diameter from side view
+    abd_depth_cm: Optional[float] = None    # AP abdomen diameter from side view
 
 
 class NutritionDetail(BaseModel):

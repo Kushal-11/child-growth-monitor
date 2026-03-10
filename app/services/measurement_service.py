@@ -97,6 +97,22 @@ class BodySegments:
 
 
 @dataclass
+class SideViewSegments:
+    """
+    AP (anterior-posterior) depth measurements extracted from a side-view photo.
+
+    From a side-view image (child facing left or right), the body's depth
+    appears as the visible silhouette width. Depth is measured as the horizontal
+    span of landmark groups at each body level.
+    """
+    chest_depth_px: Optional[float] = None   # x-span of shoulder/elbow landmarks
+    abd_depth_px: Optional[float] = None     # x-span of hip/knee landmarks
+    total_height_px: Optional[float] = None  # head→heel vertical span (for scaling)
+    chest_confidence: float = 0.0            # fraction of expected landmarks visible
+    abd_confidence: float = 0.0
+
+
+@dataclass
 class MeasurementOutput:
     """Result from the measurement pipeline."""
 
@@ -106,7 +122,7 @@ class MeasurementOutput:
     confidence_score: Optional[float] = None
     height_pixels: Optional[float] = None
     annotated_image_filename: Optional[str] = None
-    
+
     # New fields for hybrid approach
     body_segments: Optional[BodySegments] = None
     estimation_method: str = "none"  # "anthropometric", "who_statistical", "reference_object", "manual"
@@ -1138,3 +1154,118 @@ class MeasurementService:
         cv2.imwrite(str(annotated_path), annotated)
 
         return annotated_filename
+
+    def process_side_image(
+        self, image_bytes: bytes, height_cm: float
+    ) -> Optional[SideViewSegments]:
+        """
+        Extract AP (anterior-posterior) depth measurements from a side-view photo.
+
+        From a side-view image (child facing left or right), the body's depth
+        appears as the horizontal silhouette width. Landmark x-coordinates span
+        from the back of the body to the front at each height level.
+
+        Landmark groups used:
+          Chest level : LEFT_SHOULDER(11), RIGHT_SHOULDER(12),
+                        LEFT_ELBOW(13), RIGHT_ELBOW(14)
+          Abdomen level: LEFT_HIP(23), RIGHT_HIP(24),
+                         LEFT_KNEE(25), RIGHT_KNEE(26)
+          Height (scale): NOSE(0) → LEFT_HEEL(29) / RIGHT_HEEL(30)
+
+        Returns None if pose detection fails or too few landmarks are visible.
+        """
+        if not image_bytes or height_cm is None or height_cm <= 0:
+            return None
+
+        try:
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if img is None:
+                return None
+
+            h, w = img.shape[:2]
+            rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            mp_image = mp.Image(
+                image_format=mp.ImageFormat.SRGB, data=rgb
+            )
+
+            with PoseLandmarker.create_from_options(self._landmarker_options) as lm:
+                result = lm.detect(mp_image)
+
+            if not result.pose_landmarks or not result.pose_landmarks[0]:
+                return None
+
+            landmarks = result.pose_landmarks[0]
+
+            def get_lm(idx, min_vis=0.25):
+                lm = landmarks[idx]
+                if lm.visibility >= min_vis:
+                    return (lm.x * w, lm.y * h, lm.visibility)
+                return None
+
+            # --- Total height from side view (for scale factor) ---
+            nose = get_lm(0)
+            l_heel = get_lm(29)
+            r_heel = get_lm(30)
+            heel = None
+            if l_heel and r_heel:
+                heel = l_heel if l_heel[1] > r_heel[1] else r_heel
+            elif l_heel:
+                heel = l_heel
+            elif r_heel:
+                heel = r_heel
+
+            total_height_px = None
+            if nose and heel:
+                total_height_px = abs(heel[1] - nose[1])
+            if not total_height_px or total_height_px < 10:
+                return None
+
+            scale = height_cm / total_height_px
+
+            # --- Chest depth (shoulder + elbow landmarks) ---
+            chest_idxs = [11, 12, 13, 14]  # LEFT/RIGHT SHOULDER, LEFT/RIGHT ELBOW
+            chest_pts = [get_lm(i) for i in chest_idxs]
+            chest_pts = [p for p in chest_pts if p is not None]
+
+            chest_depth_px = None
+            chest_confidence = 0.0
+            if len(chest_pts) >= 2:
+                xs = [p[0] for p in chest_pts]
+                chest_depth_px = max(xs) - min(xs)
+                chest_confidence = len(chest_pts) / len(chest_idxs)
+
+            # --- Abdomen depth (hip + knee landmarks) ---
+            abd_idxs = [23, 24, 25, 26]  # LEFT/RIGHT HIP, LEFT/RIGHT KNEE
+            abd_pts = [get_lm(i) for i in abd_idxs]
+            abd_pts = [p for p in abd_pts if p is not None]
+
+            abd_depth_px = None
+            abd_confidence = 0.0
+            if len(abd_pts) >= 2:
+                xs = [p[0] for p in abd_pts]
+                abd_depth_px = max(xs) - min(xs)
+                abd_confidence = len(abd_pts) / len(abd_idxs)
+
+            # Sanity: depth must be positive and plausible (> 2 cm, < 50 cm)
+            if chest_depth_px is not None:
+                chest_depth_cm = chest_depth_px * scale
+                if chest_depth_cm < 2.0 or chest_depth_cm > 50.0:
+                    chest_depth_px = None
+
+            if abd_depth_px is not None:
+                abd_depth_cm = abd_depth_px * scale
+                if abd_depth_cm < 2.0 or abd_depth_cm > 50.0:
+                    abd_depth_px = None
+
+            return SideViewSegments(
+                chest_depth_px=chest_depth_px,
+                abd_depth_px=abd_depth_px,
+                total_height_px=total_height_px,
+                chest_confidence=chest_confidence,
+                abd_confidence=abd_confidence,
+            )
+
+        except Exception as e:
+            print(f"[MeasurementService] Side-view processing error: {e}")
+            return None

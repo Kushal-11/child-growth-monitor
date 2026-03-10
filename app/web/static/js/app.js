@@ -1,25 +1,28 @@
 document.addEventListener('DOMContentLoaded', function () {
 
-    // ── Image preview ────────────────────────────────────────────────────
-    const imageInput       = document.getElementById('image');
-    const previewContainer = document.getElementById('imagePreview');
-    const previewImg       = document.getElementById('previewImg');
-
-    if (imageInput) {
-        imageInput.addEventListener('change', function (e) {
+    // ── Image preview helper ─────────────────────────────────────────────
+    function wirePreview(inputId, containerId, imgId) {
+        const input = document.getElementById(inputId);
+        const container = document.getElementById(containerId);
+        const img = document.getElementById(imgId);
+        if (!input) return;
+        input.addEventListener('change', function (e) {
             const file = e.target.files[0];
             if (file && file.type.startsWith('image/')) {
                 const reader = new FileReader();
                 reader.onload = function (evt) {
-                    previewImg.src = evt.target.result;
-                    previewContainer.classList.remove('d-none');
+                    img.src = evt.target.result;
+                    container.classList.remove('d-none');
                 };
                 reader.readAsDataURL(file);
             } else {
-                previewContainer.classList.add('d-none');
+                container.classList.add('d-none');
             }
         });
     }
+
+    wirePreview('image',      'imagePreview', 'previewImg');
+    wirePreview('image_side', 'sidePreview',  'sidePreviewImg');
 
     // ── Age-in-months ↔ Date-of-birth toggle ────────────────────────────
     const ageMonthsRow   = document.getElementById('ageMonthsRow');

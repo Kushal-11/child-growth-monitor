@@ -1,10 +1,15 @@
 """
 TensorFlow/Keras model architectures for the wasting detection pipeline.
 
-Three models share the same 10-feature input vector:
+Models use a 14-feature input vector:
   [age_months, sex_binary, height_cm, shoulder_width_cm, hip_width_cm,
    torso_length_cm, upper_arm_length_cm, shoulder_height_ratio,
-   hip_height_ratio, body_build_score]
+   hip_height_ratio, body_build_score,
+   chest_depth_cm, abd_depth_cm, chest_depth_ratio, abd_depth_ratio]
+
+Features 10-13 are AP (anterior-posterior) depth measurements from a side-view
+photo. When no side view is provided, they are imputed from lateral widths using
+Snyder 1975 AP/lateral ratios. A single model handles both cases.
 
 All are small MLPs (< 500 KB each) exportable to TFLite for mobile deployment.
 """
@@ -20,6 +25,11 @@ FEATURE_NAMES = [
     "shoulder_height_ratio",
     "hip_height_ratio",
     "body_build_score",
+    # Side-view depth features (measured or imputed)
+    "chest_depth_cm",    # AP diameter at chest/shoulder level
+    "abd_depth_cm",      # AP diameter at abdomen/hip level
+    "chest_depth_ratio", # chest_depth / height
+    "abd_depth_ratio",   # abd_depth / height
 ]
 
 N_FEATURES = len(FEATURE_NAMES)

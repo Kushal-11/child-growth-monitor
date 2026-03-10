@@ -10,6 +10,7 @@ Endpoints:
 import shutil
 import uuid
 from datetime import date
+from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -38,6 +39,7 @@ def health_check():
 @router.post("/assess", response_model=AssessmentResponse)
 async def assess_child(
     image: UploadFile = File(...),
+    image_side: Optional[UploadFile] = File(None),
     child_name: str = Form(...),
     date_of_birth: str = Form(...),  # yyyy-mm-dd (HTML5 date input)
     sex: str = Form(...),  # 'M' or 'F'
@@ -45,6 +47,7 @@ async def assess_child(
     height_cm: float = Form(None),
     height_value: float = Form(None),  # Height value (from form)
     height_unit: str = Form("cm"),  # Height unit: "cm" or "inch"
+    muac_cm: float = Form(None),
     guardian_name: str = Form(None),
     location: str = Form(None),
     db: Session = Depends(get_db),
@@ -67,12 +70,17 @@ async def assess_child(
         else:
             final_height_cm = height_value
 
-    # Save uploaded image
+    # Save front image
     UPLOAD_DIR.mkdir(exist_ok=True)
     filename = f"{uuid.uuid4().hex}_{image.filename}"
     file_path = UPLOAD_DIR / filename
     with open(file_path, "wb") as f:
         shutil.copyfileobj(image.file, f)
+
+    # Read side image bytes (kept in memory; not saved to disk)
+    side_image_bytes = None
+    if image_side is not None:
+        side_image_bytes = await image_side.read()
 
     result = svc.assess(
         db=db,
@@ -82,8 +90,10 @@ async def assess_child(
         sex=sex,
         weight_kg=weight_kg,
         height_cm=final_height_cm,
+        muac_cm=muac_cm,
         guardian_name=guardian_name,
         location=location,
+        side_image=side_image_bytes,
     )
     return result
 

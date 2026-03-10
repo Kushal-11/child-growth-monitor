@@ -180,11 +180,24 @@ def _body_widths(height_cm: float, age_months: float,
     torso_ratio  = _interp_ratio(TORSO_RATIO_NODES, age_months)
     torso_actual = height_cm * torso_ratio * rng.normal(1.0, 0.03)
 
+    # AP (anterior-posterior) depth features — side-view measurements.
+    # Depth collapses faster than lateral width in wasting: a malnourished
+    # child's chest depth reduces more visibly in profile than from the front.
+    # Baseline AP/lateral ratios from Snyder 1975:
+    #   chest AP ≈ 0.45 × shoulder lateral width (normally nourished)
+    #   abdomen AP ≈ 0.50 × hip lateral width (normally nourished)
+    # depth_scale uses exponent 0.5 (vs 1/3 for lateral) so depth drops faster.
+    depth_scale = max((weight_kg / median_weight) ** 0.5, 0.45)
+    chest_depth_actual = shoulder_actual * 0.45 * depth_scale * rng.normal(1.0, 0.04)
+    abd_depth_actual   = hip_actual * 0.50 * depth_scale * rng.normal(1.0, 0.04)
+
     return {
-        "shoulder_width_cm":    max(shoulder_actual, 5.0),
-        "hip_width_cm":         max(hip_actual,      4.0),
-        "upper_arm_length_cm":  max(arm_actual,      3.0),
-        "torso_length_cm":      max(torso_actual,    8.0),
+        "shoulder_width_cm":    max(shoulder_actual,     5.0),
+        "hip_width_cm":         max(hip_actual,          4.0),
+        "upper_arm_length_cm":  max(arm_actual,          3.0),
+        "torso_length_cm":      max(torso_actual,        8.0),
+        "chest_depth_cm":       max(chest_depth_actual,  2.0),
+        "abd_depth_cm":         max(abd_depth_actual,    2.0),
         "width_scale":          width_scale,
     }
 
@@ -268,6 +281,8 @@ def generate(n: int = N_SAMPLES, seed: int = RANDOM_SEED) -> pd.DataFrame:
 
         shoulder_height_ratio = widths["shoulder_width_cm"] / height_cm
         hip_height_ratio      = widths["hip_width_cm"]      / height_cm
+        chest_depth_ratio     = widths["chest_depth_cm"]    / height_cm
+        abd_depth_ratio       = widths["abd_depth_cm"]      / height_cm
         bds = _body_build_score(widths["shoulder_width_cm"], height_cm, age_mo)
 
         records.append({
@@ -282,6 +297,10 @@ def generate(n: int = N_SAMPLES, seed: int = RANDOM_SEED) -> pd.DataFrame:
             "shoulder_height_ratio": round(shoulder_height_ratio, 4),
             "hip_height_ratio":      round(hip_height_ratio, 4),
             "body_build_score":      bds,
+            "chest_depth_cm":        round(widths["chest_depth_cm"], 2),
+            "abd_depth_cm":          round(widths["abd_depth_cm"], 2),
+            "chest_depth_ratio":     round(chest_depth_ratio, 4),
+            "abd_depth_ratio":       round(abd_depth_ratio, 4),
             # Targets
             "weight_kg":            round(weight_kg, 3),
             "whz":                  round(whz, 3),

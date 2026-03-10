@@ -49,6 +49,7 @@ class AssessmentService:
         guardian_name: Optional[str] = None,
         location: Optional[str] = None,
         muac_cm: Optional[float] = None,
+        side_image: Optional[bytes] = None,
     ) -> AssessmentResponse:
         """Run full assessment pipeline and persist results."""
 
@@ -71,11 +72,18 @@ class AssessmentService:
         if effective_height is None and height_cm is not None:
             effective_height = height_cm
 
+        # 3b. Process side-view image for AP depth features (optional)
+        side_segments = None
+        if side_image is not None and effective_height is not None:
+            side_segments = self.measurement_svc.process_side_image(
+                side_image, effective_height
+            )
+
         # 4a. Run ML prediction (uses body proportions from pose landmarks)
         ml_pred = None
         if effective_height is not None and meas.body_segments is not None:
             ml_pred = self.ml_svc.predict(
-                meas.body_segments, age_months, sex, effective_height
+                meas.body_segments, age_months, sex, effective_height, side_segments
             )
 
         # 4b. Determine effective weight
@@ -180,6 +188,16 @@ class AssessmentService:
         if meas.body_build and isinstance(meas.body_build, dict):
             body_build_str = meas.body_build.get("body_build")
         
+        # Compute depth in cm for response (if side view was used)
+        chest_depth_cm_out = None
+        abd_depth_cm_out   = None
+        if side_segments is not None and effective_height is not None and side_segments.total_height_px:
+            side_scale = effective_height / side_segments.total_height_px
+            if side_segments.chest_depth_px and side_segments.chest_confidence >= 0.5:
+                chest_depth_cm_out = round(side_segments.chest_depth_px * side_scale, 1)
+            if side_segments.abd_depth_px and side_segments.abd_confidence >= 0.5:
+                abd_depth_cm_out = round(side_segments.abd_depth_px * side_scale, 1)
+
         return AssessmentResponse(
             child_name=child_name,
             sex=sex,
@@ -195,6 +213,9 @@ class AssessmentService:
                 annotated_image=meas.annotated_image_filename,
                 estimation_method=meas.estimation_method,
                 body_build=body_build_str,
+                side_view_used=side_segments is not None,
+                chest_depth_cm=chest_depth_cm_out,
+                abd_depth_cm=abd_depth_cm_out,
             ),
             nutrition=NutritionDetail(
                 haz_zscore=haz_z,

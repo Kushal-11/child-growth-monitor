@@ -23,8 +23,14 @@ from ml.models import FEATURE_NAMES, WASTING_LABELS
 @dataclass
 class WastingFeatures:
     """
-    10 features extracted from a single child pose measurement.
+    14 features extracted from child pose measurement(s).
     All measurements in cm (converted from pixels using height as scale reference).
+
+    Features 0-9: derived from a frontal photo (always required).
+    Features 10-13: AP depth from a side-view photo.
+      - When a side photo is provided, these are real measurements.
+      - When omitted, to_array() imputes them from lateral widths using
+        Snyder 1975 AP/lateral ratios (chest ≈ 0.45×shoulder, abd ≈ 0.50×hip).
     """
     age_months: float
     sex_binary: int            # 1 = Male, 0 = Female
@@ -36,8 +42,18 @@ class WastingFeatures:
     shoulder_height_ratio: float
     hip_height_ratio: float
     body_build_score: int      # -1 = slender, 0 = average, 1 = stocky
+    # Side-view depth features (None → imputed in to_array)
+    chest_depth_cm: Optional[float] = None
+    abd_depth_cm: Optional[float] = None
+    chest_depth_ratio: Optional[float] = None
+    abd_depth_ratio: Optional[float] = None
 
     def to_array(self) -> np.ndarray:
+        # Impute AP depth from lateral widths when side view is unavailable
+        cd  = self.chest_depth_cm    if self.chest_depth_cm    is not None else self.shoulder_width_cm * 0.45
+        ad  = self.abd_depth_cm      if self.abd_depth_cm      is not None else self.hip_width_cm * 0.50
+        cdr = self.chest_depth_ratio if self.chest_depth_ratio is not None else cd / self.height_cm
+        adr = self.abd_depth_ratio   if self.abd_depth_ratio   is not None else ad / self.height_cm
         return np.array([
             self.age_months,
             self.sex_binary,
@@ -49,6 +65,7 @@ class WastingFeatures:
             self.shoulder_height_ratio,
             self.hip_height_ratio,
             self.body_build_score,
+            cd, ad, cdr, adr,
         ], dtype="float32")
 
 

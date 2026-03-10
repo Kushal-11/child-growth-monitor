@@ -181,7 +181,11 @@
                                     <div class="metric-value">
                                         {{ "%.1f"|format(result.measurement.predicted_weight_kg) }}<span class="metric-unit">kg</span>
                                     </div>
-                                    <span class="badge bg-secondary mt-1">Estimated</span>
+                                    {% if result.measurement.side_view_used %}
+                                        <span class="badge bg-success mt-1">Side view ✓</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary mt-1">Estimated</span>
+                                    {% endif %}
                                 {% else %}
                                     <div class="metric-value text-muted fs-3">—</div>
                                     <span class="badge bg-secondary mt-1 small">N/A</span>
@@ -199,6 +203,17 @@
                                         {% elif 'Normal' in whz %}Normal
                                         {% else %}{{ whz[:10] }}{% endif %}
                                     </span>
+                                {% endif %}
+
+                                {% if result.measurement.side_view_used %}
+                                    <div class="mt-2 small text-muted">
+                                        {% if result.measurement.chest_depth_cm %}
+                                            Chest depth: {{ "%.1f"|format(result.measurement.chest_depth_cm) }} cm
+                                        {% endif %}
+                                        {% if result.measurement.abd_depth_cm %}
+                                            · Abd: {{ "%.1f"|format(result.measurement.abd_depth_cm) }} cm
+                                        {% endif %}
+                                    </div>
                                 {% endif %}
                             </div>
                         </div>
