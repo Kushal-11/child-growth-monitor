@@ -476,38 +476,54 @@ This section documents the official WHO diagnostic thresholds and formulas used 
 
 #### Z-score Calculation — LMS (Box-Cox) Method
 
-All anthropometric z-scores (HAZ, WHZ, WAZ) use the **WHO LMS method** (Cole & Green, 1992):
+All anthropometric z-scores (HAZ, WHZ, WAZ) use the **WHO LMS method** (Cole & Green, 1992).
 
-```
-Z = [ (X / M)^L  −  1 ]  /  (L × S)       when L ≠ 0
-Z = ln(X / M) / S                            when L = 0
-```
+**General formula:**
 
-Where:
-- **X** = observed measurement (height in cm, or weight in kg)
-- **L** = Box-Cox power transformation parameter (skew correction)
-- **M** = median reference value for the child's age, sex (and height for WHZ)
-- **S** = coefficient of variation
+$$
+Z = \begin{cases}
+\dfrac{\left(\dfrac{X}{M}\right)^{\!L} - 1}{L \cdot S} & \text{if } L \neq 0 \\[12pt]
+\dfrac{\ln(X/M)}{S} & \text{if } L = 0
+\end{cases}
+$$
 
-The L, M, S parameters come from the **WHO 2006 Child Growth Standards** Excel tables:
+**Parameters:**
+
+| Symbol | Meaning |
+|--------|---------|
+| $X$ | Observed measurement (height in cm, or weight in kg) |
+| $L$ | Box-Cox power — corrects for skewness of the reference distribution |
+| $M$ | Median reference value for the child's age, sex (and height for WHZ) |
+| $S$ | Coefficient of variation of the reference population |
+
+The $L$, $M$, $S$ parameters come from the **WHO 2006 Child Growth Standards** Excel tables:
 - `data/wfl/wfl_boys_zscores.xlsx` / `wfl_girls_zscores.xlsx` — weight-for-length (< 2 years)
 - `data/wfh/wfh_boys_zscores.xlsx` / `wfh_girls_zscores.xlsx` — weight-for-height (≥ 2 years)
-- `data/who_haz_0_59m.csv` — pre-computed HAZ boundary values (Z = −3, −2, −1, 0, +1, +2, +3)
+- `data/who_haz_0_59m.csv` — pre-computed HAZ boundary values at $Z \in \{-3, -2, -1, 0, +1, +2, +3\}$
 
-> For measurements beyond ±3 SD, WHO recommends a linear extrapolation using the SD3 distance to avoid over-compression. This system applies that correction in `nutrition_service.py`.
+**Extreme-value correction** — for $|Z| > 3$, WHO recommends linear extrapolation to avoid over-compression:
+
+$$
+Z_{\text{adj}} = \begin{cases}
+-3 + \dfrac{X - \text{SD3neg}}{\text{SD3neg} - \text{SD2neg}} & \text{if } Z < -3 \\[10pt]
++3 + \dfrac{X - \text{SD3pos}}{\text{SD4pos} - \text{SD3pos}} & \text{if } Z > +3
+\end{cases}
+$$
+
+where $\text{SD}k\text{neg}$ and $\text{SD}k\text{pos}$ are the reference values at $-k$ and $+k$ SD for the child's age/sex. Applied in `nutrition_service.py`.
 
 ---
 
 #### Acute Malnutrition — Wasting Criteria
 
-**WHO / UNICEF / WFP / IASC 2023** define acute malnutrition by **any one** of three independent indicators:
+**WHO / UNICEF / WFP / IASC 2023** define acute malnutrition by **any one** of the following independent indicators:
 
 | Indicator | SAM threshold | MAM threshold | Age range |
 |-----------|--------------|---------------|-----------|
-| **WHZ** (Weight-for-Height Z-score) | < −3 SD | −3 to −2 SD | 0–59 months |
-| **MUAC** (Mid-Upper Arm Circumference) | < 11.5 cm | 11.5–12.5 cm | 6–59 months |
+| **WHZ** (Weight-for-Height Z-score) | $Z < -3$ | $-3 \leq Z < -2$ | 0–59 months |
+| **MUAC** (Mid-Upper Arm Circumference) | $< 11.5\,\text{cm}$ | $11.5\text{–}12.5\,\text{cm}$ | 6–59 months |
 | **Bilateral pitting oedema** | Present (any grade) | — | Any age |
-| **WAZ** (Weight-for-Age Z-score) | < −3 SD | −3 to −2 SD | 0–59 months (if height unavailable) |
+| **WAZ** (Weight-for-Age Z-score) | $Z < -3$ | $-3 \leq Z < -2$ | 0–59 months (if height unavailable) |
 
 > Each indicator is sufficient on its own for a SAM/MAM diagnosis. MUAC and WHZ identify overlapping but **not identical** populations — using both improves case detection.
 
@@ -515,20 +531,20 @@ The L, M, S parameters come from the **WHO 2006 Child Growth Standards** Excel t
 
 | WHZ Z-score | Status |
 |-------------|--------|
-| < −3 SD | **Severe Acute Malnutrition (SAM)** |
-| −3 to −2 SD | **Moderate Acute Malnutrition (MAM)** |
-| −2 to +1 SD | Normal |
-| +1 to +2 SD | Possible risk of overweight |
-| +2 to +3 SD | Overweight |
-| > +3 SD | Obese |
+| $Z < -3$ | **Severe Acute Malnutrition (SAM)** |
+| $-3 \leq Z < -2$ | **Moderate Acute Malnutrition (MAM)** |
+| $-2 \leq Z \leq +1$ | Normal |
+| $+1 < Z \leq +2$ | Possible risk of overweight |
+| $+2 < Z \leq +3$ | Overweight |
+| $Z > +3$ | Obese |
 
 **MUAC classification (6–59 months, absolute — not age-adjusted):**
 
 | MUAC | Status |
 |------|--------|
-| < 11.5 cm | **Severe Acute Malnutrition (SAM)** |
-| 11.5–12.4 cm | **At Risk / Moderate Acute Malnutrition (MAM)** |
-| ≥ 12.5 cm | Normal |
+| $< 11.5\,\text{cm}$ | **Severe Acute Malnutrition (SAM)** |
+| $11.5 \leq \text{MUAC} < 12.5\,\text{cm}$ | **At Risk / Moderate Acute Malnutrition (MAM)** |
+| $\geq 12.5\,\text{cm}$ | Normal |
 
 > MUAC thresholds are **absolute** (same for all ages 6–59 months). They are **not z-score based**. Source: WHO/UNICEF 2009 Joint Statement on MUAC.
 
@@ -536,16 +552,16 @@ The L, M, S parameters come from the **WHO 2006 Child Growth Standards** Excel t
 
 #### Chronic Malnutrition — Stunting Criteria
 
-Stunting reflects **cumulative long-term** nutritional deficiency and is assessed by **Height-for-Age Z-score (HAZ)**:
+Stunting reflects **cumulative long-term** nutritional deficiency, assessed via **Height-for-Age Z-score (HAZ)**:
 
 | HAZ Z-score | Status |
 |-------------|--------|
-| < −3 SD | **Severely Stunted** |
-| −3 to −2 SD | **Stunted** |
-| −2 to +3 SD | Normal |
-| > +3 SD | Tall (possible data error — verify) |
+| $Z < -3$ | **Severely Stunted** |
+| $-3 \leq Z < -2$ | **Stunted** |
+| $-2 \leq Z \leq +3$ | Normal |
+| $Z > +3$ | Tall (possible measurement error — verify) |
 
-> Stunting threshold: HAZ < −2 SD. Source: WHO 2006 Child Growth Standards.
+> Stunting threshold: $\text{HAZ} < -2\,\text{SD}$. Source: WHO 2006 Child Growth Standards.
 
 ---
 
@@ -553,10 +569,10 @@ Stunting reflects **cumulative long-term** nutritional deficiency and is assesse
 
 | WAZ Z-score | Status |
 |-------------|--------|
-| < −3 SD | Severely Underweight |
-| −3 to −2 SD | Underweight |
-| −2 to +2 SD | Normal |
-| > +2 SD | Possible overweight |
+| $Z < -3$ | Severely Underweight |
+| $-3 \leq Z < -2$ | Underweight |
+| $-2 \leq Z \leq +2$ | Normal |
+| $Z > +2$ | Possible overweight |
 
 > Note: WAZ alone cannot distinguish wasting from stunting. WHO recommends WHZ as the primary wasting indicator.
 
@@ -566,14 +582,28 @@ Stunting reflects **cumulative long-term** nutritional deficiency and is assesse
 
 When a physical MUAC tape measurement is not provided, MUAC is **estimated** using WHO MUAC-for-age medians and the child's WHZ:
 
-```
-MUAC_estimated = MUAC_median(age, sex) × [1 + 0.087 × clamp(WHZ, −3, +3)]
-```
+$$
+\widehat{\text{MUAC}} = \bar{\mu}(\text{age},\,\text{sex}) \;\times\; \bigl[1 + 0.087 \times \text{clamp}(\text{WHZ},\,-3,\,+3)\bigr]
+$$
 
-Where:
-- **MUAC_median** is interpolated from WHO 2006 MUAC-for-age tables (L=0 median M values)
-- **0.087** is the calibration coefficient — at WHZ = −3, a 24-month boy maps to ≈ 11.6 cm (near the SAM threshold)
-- WHZ is clamped to [−3, +3] to prevent extrapolation artefacts
+$$
+\text{clamp}(x, a, b) = \max\!\bigl(a,\;\min(b,\,x)\bigr)
+$$
+
+**Parameters:**
+
+| Symbol | Meaning |
+|--------|---------|
+| $\widehat{\text{MUAC}}$ | Estimated MUAC in cm |
+| $\bar{\mu}(\text{age},\,\text{sex})$ | WHO 2006 MUAC-for-age median ($M$ column, $L=0$), linearly interpolated |
+| $0.087$ | Calibration coefficient: at $\text{WHZ} = -3$, a 24-month boy maps to $\approx 11.6\,\text{cm}$ |
+| $\text{clamp}$ | Prevents extrapolation beyond the SAM/obese extremes |
+
+**Calibration check:**
+
+$$
+\bar{\mu}(24\,\text{mo},\,\text{M}) = 15.7\,\text{cm} \implies \widehat{\text{MUAC}}\big|_{\text{WHZ}=-3} = 15.7 \times (1 - 0.261) \approx 11.6\,\text{cm}
+$$
 
 This estimate is clearly labeled as "Estimated" in the UI. **Always confirm SAM/MAM with a physical tape measurement before clinical action.**
 
@@ -583,12 +613,12 @@ This estimate is clearly labeled as "Estimated" in the UI. **Always confirm SAM/
 
 | Indicator | Source in this system | WHO Threshold for SAM |
 |-----------|-----------------------|-----------------------|
-| HAZ (stunting) | WHO LMS tables via `nutrition_service.py` | < −3 SD |
-| WHZ (wasting) | WHO LMS tables via `nutrition_service.py` | < −3 SD |
-| MUAC | Manual tape (preferred) or WHZ-estimated | < 11.5 cm |
-| ML wasting classifier | Trained on WHZ labels from WHO LMS data | SAM recall ≥ 0.80 |
+| HAZ (stunting) | WHO LMS tables via `nutrition_service.py` | $Z < -3$ |
+| WHZ (wasting) | WHO LMS tables via `nutrition_service.py` | $Z < -3$ |
+| MUAC | Manual tape (preferred) or WHZ-estimated | $< 11.5\,\text{cm}$ |
+| ML wasting classifier | Trained on WHZ labels from WHO LMS data | SAM recall $\geq 0.80$ |
 
-> **Clinical decision rule**: For treatment referral, WHO recommends acting on **either** WHZ < −3 **or** MUAC < 11.5 cm — whichever flags the child first.
+> **Clinical decision rule**: For treatment referral, WHO recommends acting on **either** $\text{WHZ} < -3$ **or** $\text{MUAC} < 11.5\,\text{cm}$ — whichever flags the child first.
 
 **References:**
 - WHO 2006 Child Growth Standards — https://www.who.int/tools/child-growth-standards
