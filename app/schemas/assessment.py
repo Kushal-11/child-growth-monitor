@@ -60,6 +60,14 @@ class MLPrediction(BaseModel):
     wasting_method: str = "ml_classifier"
 
 
+class MUACDetail(BaseModel):
+    """MUAC measurement or estimate."""
+    muac_cm: Optional[float] = None
+    muac_status: Optional[str] = None  # "SAM" | "At Risk (MAM)" | "Normal"
+    muac_method: str = "estimated_from_whz"  # "manual" | "estimated_from_whz"
+    age_in_range: bool = True  # False if age outside 6-59 months
+
+
 class AssessmentResponse(BaseModel):
     child_name: str
     sex: str
@@ -67,4 +75,5 @@ class AssessmentResponse(BaseModel):
     measurement: MeasurementDetail
     nutrition: NutritionDetail
     ml_prediction: Optional[MLPrediction] = None
+    muac: Optional[MUACDetail] = None
     summary: str

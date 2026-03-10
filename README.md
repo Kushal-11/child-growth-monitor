@@ -35,38 +35,248 @@ The system processes a frontal standing photo of a child to:
 
 ---
 
-## Installation
+## Running the Project
 
-### Prerequisites
+### System Requirements (Server / Laptop)
 
-- Python 3.10 or higher
-- ~1.5 GB disk space (MediaPipe model + TensorFlow)
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| Python | 3.10 | 3.12 |
+| RAM | 2 GB | 4 GB |
+| Disk space | 1.5 GB | 2 GB |
+| OS | Linux / macOS / Windows | Ubuntu 22.04+ |
+| CPU | Any x86-64 | 4+ cores |
+| GPU | Not required | Optional (speeds up training only) |
 
-### Setup
+### Step-by-step Setup
 
 ```bash
 # 1. Clone the repository
 git clone https://github.com/Kushal-11/child-growth-monitor.git
 cd child-growth-monitor
 
-# 2. Create and activate a virtual environment
-python -m venv .venv
-source .venv/bin/activate       # Linux/macOS
-.venv\Scripts\activate          # Windows
+# 2. Create a virtual environment (required — keeps dependencies isolated)
+python3 -m venv .venv
 
-# 3. Install all dependencies
+# 3. Activate the virtual environment
+source .venv/bin/activate          # Linux / macOS
+.venv\Scripts\activate             # Windows (Command Prompt)
+.venv\Scripts\Activate.ps1         # Windows (PowerShell)
+
+# 4. Install all dependencies (~5 min, downloads ~1.5 GB)
 pip install -r requirements.txt
 
-# 4. (First run only) Train the wasting detection ML model
-PYTHONPATH=. python ml/train.py
+# 5. Train the wasting detection models (first run only — ~2 min on CPU)
+PYTHONPATH=. .venv/bin/python ml/train.py
 
-# 5. Start the server
-PYTHONPATH=. python main.py
+# 6. Start the server
+PYTHONPATH=. .venv/bin/python main.py
 ```
 
-The server will start at `http://localhost:8000`.
+> The server starts at **http://localhost:8000**
+> API documentation: **http://localhost:8000/docs**
 
-> **Note**: Step 4 trains the ML models on a synthetic WHO-based dataset (60K samples). This takes 1–3 minutes on CPU and only needs to be run once. Trained models are saved to `data/models/`.
+> **Step 5 only needs to be run once.** It generates 60K synthetic training samples from WHO data and trains both models. Output is saved to `data/models/` and is not committed to git.
+
+### Verifying the Installation
+
+```bash
+# Run all tests (should show 62 passed)
+PYTHONPATH=. .venv/bin/python -m pytest tests/ -v
+
+# Check model performance (SAM recall target ≥ 0.80)
+PYTHONPATH=. .venv/bin/python ml/evaluate.py
+```
+
+### Restarting the Server
+
+Every subsequent run only needs:
+```bash
+source .venv/bin/activate
+PYTHONPATH=. .venv/bin/python main.py
+```
+
+---
+
+## Android Deployment Guide
+
+There are two deployment options for Android. Choose based on your use case:
+
+| Option | Latency | Internet needed | Complexity | Best for |
+|--------|---------|-----------------|------------|----------|
+| **A. Web app** (phone browser → server) | ~2–5 s | Yes (WiFi/4G) | Low | Clinic with internet |
+| **B. On-device TFLite** (native Android app) | < 0.5 s | No | High | Field / offline use |
+
+---
+
+### Option A — Use the Web App on Android (no app install needed)
+
+The FastAPI server already serves a mobile-responsive web UI. You just need the phone and the server on the same network.
+
+**On the server machine:**
+
+```bash
+# Find your local IP address
+ip a | grep "inet " | grep -v 127        # Linux
+ipconfig                                  # Windows
+
+# Start the server accessible from other devices on the network
+PYTHONPATH=. .venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+**On the Android phone:**
+
+1. Connect to the **same WiFi network** as the server
+2. Open Chrome and go to `http://<server-ip>:8000`
+   Example: `http://192.168.1.5:8000`
+3. For **camera access**, tap the file input → select camera → take photo directly
+4. Optional: tap **⋮ → Add to Home screen** in Chrome to create an app icon
+
+**Android requirements for Option A:**
+- Any Android 6.0+ phone
+- Chrome 80+ (or any modern browser)
+- WiFi / mobile data to reach the server
+
+---
+
+### Option B — Native Android App (Offline / TFLite)
+
+The two trained models are already exported as TFLite:
+- `data/models/weight_estimator.tflite` — 8 KB
+- `data/models/wasting_classifier.tflite` — 20 KB
+
+The Android app would run MediaPipe pose detection on-device and feed features into these TFLite models — **no internet or server required**.
+
+#### Recommended Tech Stack
+
+| Component | Library | Notes |
+|-----------|---------|-------|
+| Pose detection | [MediaPipe Android SDK](https://developers.google.com/mediapipe/solutions/vision/pose_landmarker/android) | Same model as server (30 MB .task file) |
+| TFLite inference | `org.tensorflow:tensorflow-lite:2.14.0` | Weight estimator + classifier |
+| Camera | CameraX (`androidx.camera`) | Best for Android 5.0+ |
+| UI | Kotlin + Jetpack Compose | Or Java + XML layouts |
+| Pre-processing | Port `ml/inference.py` to Kotlin/Java | StandardScaler must be ported |
+
+#### Minimum Android Specs
+
+| Spec | Minimum | Recommended |
+|------|---------|-------------|
+| Android version | 8.0 (API 26) | 10.0+ (API 29+) |
+| RAM | 2 GB | 3 GB+ |
+| Storage | 150 MB free | 300 MB free |
+| Camera | 5 MP, autofocus | 8 MP+ |
+| CPU | Any ARMv8 (64-bit) | Snapdragon 660+ or equivalent |
+| NPU/DSP | Not required | Speeds up TFLite inference |
+
+> The heaviest component is MediaPipe's pose model (30 MB). TFLite ML models are tiny (28 KB total). Total app size would be ~80–120 MB installed.
+
+#### Key Integration Steps
+
+**1. Add dependencies to `build.gradle`:**
+```gradle
+dependencies {
+    implementation 'com.google.mediapipe:tasks-vision:0.10.7'
+    implementation 'org.tensorflow:tensorflow-lite:2.14.0'
+    implementation 'androidx.camera:camera-camera2:1.3.0'
+    implementation 'androidx.camera:camera-lifecycle:1.3.0'
+    implementation 'androidx.camera:camera-view:1.3.0'
+}
+```
+
+**2. Copy model files into `assets/`:**
+```
+app/src/main/assets/
+├── pose_landmarker_heavy.task      # 30 MB — copy from data/
+├── weight_estimator.tflite         # 8 KB  — copy from data/models/
+├── wasting_classifier.tflite       # 20 KB — copy from data/models/
+└── feature_scaler_params.json      # export scaler mean/std (see below)
+```
+
+**3. Export the StandardScaler parameters** (run once on the server):
+```bash
+PYTHONPATH=. .venv/bin/python -c "
+import pickle, json
+with open('data/models/feature_scaler.pkl', 'rb') as f:
+    scaler = pickle.load(f)
+params = {'mean': scaler.mean_.tolist(), 'scale': scaler.scale_.tolist(),
+          'feature_names': ['age_months','sex_binary','height_cm',
+                            'shoulder_width_cm','hip_width_cm','torso_length_cm',
+                            'upper_arm_length_cm','shoulder_height_ratio',
+                            'hip_height_ratio','body_build_score']}
+print(json.dumps(params, indent=2))
+" > android/app/src/main/assets/feature_scaler_params.json
+```
+
+**4. Inference flow in Kotlin (pseudocode):**
+```kotlin
+// 1. Run MediaPipe on camera frame → get 33 landmarks
+val landmarks = poseLandmarker.detect(bitmap)
+
+// 2. Extract the 10 features (same logic as ml_service.py)
+val features = extractFeatures(landmarks, ageMonths, sex, heightCm)
+
+// 3. Normalise using scaler params from JSON
+val scaledFeatures = (features - scalerMean) / scalerScale
+
+// 4. Run weight estimator TFLite
+val estimatedWeight = runWeightEstimator(scaledFeatures)  // → Float
+
+// 5. Run wasting classifier TFLite
+val probabilities = runWastingClassifier(scaledFeatures)  // → FloatArray(5)
+// Classes in order: MAM, Normal, Overweight, Risk_Overweight, SAM
+val wastingLabel = WASTING_LABELS[probabilities.indexOfMax()]
+
+// 6. Display result
+```
+
+**5. Label order for the classifier output** (must match `label_encoder.pkl`):
+```kotlin
+val WASTING_LABELS = arrayOf("MAM", "Normal", "Overweight", "Risk_Overweight", "SAM")
+// Index 0 = MAM, 1 = Normal, 2 = Overweight, 3 = Risk_Overweight, 4 = SAM
+```
+
+#### Testing TFLite Models Before Building the App
+
+Verify the TFLite models produce correct output on your machine:
+```bash
+PYTHONPATH=. .venv/bin/python -c "
+import numpy as np
+import tensorflow as tf
+
+# Load TFLite weight estimator
+interp = tf.lite.Interpreter('data/models/weight_estimator.tflite')
+interp.allocate_tensors()
+inp = interp.get_input_details()
+out = interp.get_output_details()
+print('Input shape:', inp[0]['shape'])    # expect (1, 10)
+print('Output shape:', out[0]['shape'])   # expect (1, 1)
+
+# Load TFLite classifier
+interp2 = tf.lite.Interpreter('data/models/wasting_classifier.tflite')
+interp2.allocate_tensors()
+inp2 = interp2.get_input_details()
+out2 = interp2.get_output_details()
+print('Classifier input shape:', inp2[0]['shape'])   # expect (1, 10)
+print('Classifier output shape:', out2[0]['shape'])  # expect (1, 5)
+"
+```
+
+---
+
+### HTTPS for Remote Access (optional)
+
+To access the web app from outside your local network (or to use HTTPS, which is needed for camera access on some Android browsers):
+
+```bash
+# Quick option: expose with ngrok (for testing only)
+ngrok http 8000
+# → gives you a public https://xxxx.ngrok.io URL
+
+# Production option: run behind nginx with a Let's Encrypt certificate
+# See: https://fastapi.tiangolo.com/deployment/https/
+```
+
+> Chrome on Android requires HTTPS to access the camera from non-localhost URLs. If you host the server on a remote machine, you need HTTPS or use the `--host 0.0.0.0` option on a local network.
 
 ---
 
@@ -75,26 +285,68 @@ The server will start at `http://localhost:8000`.
 ### Web Interface
 
 1. Open `http://localhost:8000`
-2. Upload a full-body photo of the child standing upright against a plain background
-3. Fill in:
-   - Name, Date of Birth, Sex (required)
-   - Weight in kg (optional — will be ML-estimated if omitted)
-   - Height in cm (optional fallback if image detection fails)
-4. Click **Run Assessment**
-5. Results show:
-   - Estimated height + weight
-   - HAZ (stunting) and WHZ (wasting) Z-scores and classifications
-   - ML wasting prediction with SAM/MAM probabilities
-   - Annotated image with pose landmarks
+2. **Upload a photo** — full body, standing upright, head to toe visible (see Photo Guidelines below)
+3. **Child Information** (required):
+   - Child name and sex
+   - **Age in months** (e.g. `24`) — the default input. Or click "Or enter exact date of birth" to use a date picker instead.
+4. **Optional Measurements** (improve accuracy when available):
+   - **Weight (kg)** — from a weighing scale; if omitted, the ML model estimates it from the photo
+   - **MUAC (cm)** — from a physical MUAC tape; if omitted, MUAC is estimated from WHZ
+   - **Height** — manual fallback if image detection fails (accepts cm or inches)
+   - Guardian name and location/clinic for record-keeping
+5. Click **Run Assessment**
+
+**Results page shows:**
+- A coloured **status banner**: SAM (red) / MAM (orange) / Normal (green)
+- **Three metric cards**: Height (+ stunting/HAZ), Weight (+ wasting/WHZ), MUAC (+ status)
+- **ML confidence bars**: SAM, MAM, Normal probability from the camera-based model
+- **Pose-annotated photo** (with tab to toggle to original)
+
+### Processing Videos
+
+Extract the best standing frame from a walking video before uploading:
+
+```bash
+PYTHONPATH=. .venv/bin/python scripts/extract_best_frame.py footage/child.mp4 photos/child.jpg
+
+# Batch a whole folder:
+for f in footage/*.mp4; do
+    python scripts/extract_best_frame.py "$f" "photos/$(basename ${f%.mp4}).jpg"
+done
+```
+
+### Batch Assessment
+
+To process multiple photos and compare against known measurements:
+
+```bash
+# 1. Generate a blank ground-truth template
+PYTHONPATH=. .venv/bin/python scripts/batch_assess.py --template
+# → writes data/ground_truth_template.csv
+
+# 2. Fill in your measurements (child name, DOB, sex, height, weight per photo)
+# Save as data/ground_truth.csv
+
+# 3. Run batch assessment
+PYTHONPATH=. .venv/bin/python scripts/batch_assess.py \
+    --images /path/to/photos/ \
+    --ground-truth data/ground_truth.csv \
+    --output data/batch_results.csv
+```
+
+Output CSV includes: predicted vs actual height/weight, Z-scores, wasting status, and pose features ready for model fine-tuning.
 
 ### Photo Guidelines
 
-For best results:
-- Child stands upright, full body visible from head to toe
-- Plain background, good lighting
-- Camera at 1–2 m distance, roughly at child's height
-- Frontal (front-facing) view
-- Arms slightly away from body so shoulder and hip landmarks are visible
+| Requirement | Details |
+|-------------|---------|
+| **Pose** | Standing upright, facing directly at the camera |
+| **Coverage** | Full body in frame — top of head to soles of feet |
+| **Distance** | 1–2 metres from camera |
+| **Background** | Plain, contrasting background preferred |
+| **Lighting** | Even lighting, avoid harsh shadows |
+| **Arms** | Slightly away from body (so hip landmarks are visible) |
+| **Clothing** | Fitted clothing gives better body proportion measurements |
 
 ### API
 
@@ -110,8 +362,9 @@ Multipart form submission.
 | `child_name` | string | ✓ | Child's name |
 | `date_of_birth` | date | ✓ | YYYY-MM-DD |
 | `sex` | string | ✓ | `M` or `F` |
-| `weight_kg` | float | — | Weight in kg (will be estimated if omitted) |
+| `weight_kg` | float | — | Weight in kg (ML-estimated if omitted) |
 | `height_cm` | float | — | Height in cm (fallback if image detection fails) |
+| `muac_cm` | float | — | MUAC tape measurement in cm (estimated from WHZ if omitted) |
 | `guardian_name` | string | — | Guardian / caregiver name |
 | `location` | string | — | Village / clinic name |
 
@@ -133,7 +386,8 @@ Multipart form submission.
     "haz_zscore": -1.2,
     "whz_zscore": -2.4,
     "haz_status": "Normal",
-    "whz_status": "Moderate Acute Malnutrition (MAM)"
+    "whz_status": "Moderate Acute Malnutrition (MAM)",
+    "age_months": 30.2
   },
   "ml_prediction": {
     "estimated_weight_kg": 10.1,
@@ -144,6 +398,12 @@ Multipart form submission.
     "overweight_probability": 0.02,
     "wasting_status": "MAM",
     "wasting_method": "ml_classifier"
+  },
+  "muac": {
+    "muac_cm": 13.2,
+    "muac_status": "At Risk (MAM)",
+    "muac_method": "estimated_from_whz",
+    "age_in_range": true
   },
   "summary": "..."
 }
@@ -251,11 +511,21 @@ PYTHONPATH=. python ml/evaluate.py
 
 ### Fine-tune with real data
 
-When you collect real labeled measurements (age, sex, height, weight, confirmed wasting status), use the notebook:
+When you collect real labeled measurements (age, sex, height, weight, confirmed wasting status):
 
-```bash
-.venv/bin/jupyter notebook notebooks/train_malnutrition_model.ipynb
-```
+1. Run batch assessment to extract pose features alongside your ground-truth measurements:
+   ```bash
+   PYTHONPATH=. .venv/bin/python scripts/batch_assess.py \
+       --images /path/to/photos/ \
+       --ground-truth data/ground_truth.csv \
+       --output data/batch_results.csv
+   ```
+
+2. Open the fine-tuning notebook:
+   ```bash
+   .venv/bin/jupyter notebook notebooks/finetune_with_real_data.ipynb
+   ```
+   The notebook mixes your real samples (repeated 20× by default) with the 60K synthetic dataset and retrains both models. It shows a per-class confusion matrix and SAM recall before saving updated `.keras` and `.tflite` files.
 
 Even 100–200 real labeled samples will significantly improve accuracy over the synthetic baseline.
 
@@ -285,7 +555,8 @@ child-growth-monitor/
 │   │   ├── measurement_service.py    # Pose + height estimation
 │   │   ├── nutrition_service.py      # Z-score computation
 │   │   ├── who_data_service.py       # WHO reference data loader
-│   │   └── ml_service.py            # ML wasting detection service
+│   │   ├── ml_service.py            # ML wasting detection service
+│   │   └── muac_service.py          # MUAC estimation (WHO medians + WHZ)
 │   └── web/                          # Jinja2 templates + static assets
 ├── ml/
 │   ├── generate_synthetic_data.py    # WHO-derived training data generator
@@ -294,7 +565,9 @@ child-growth-monitor/
 │   ├── evaluate.py                   # Metrics + SAM recall check
 │   └── inference.py                  # Runtime predictor (singleton)
 ├── scripts/
-│   └── fix_who_data.py               # Regenerates CSV files from Excel LMS
+│   ├── fix_who_data.py               # Regenerates CSV files from Excel LMS
+│   ├── extract_best_frame.py         # Extract best upright frame from a video
+│   └── batch_assess.py               # Batch assess photos + ground-truth comparison
 ├── data/
 │   ├── who_haz_0_59m.csv             # Verified WHO HAZ data
 │   ├── wfl_*/wfh_*_zscores.xlsx      # Verified WHO LMS data (authoritative)
@@ -334,11 +607,11 @@ Key settings in `config.py`:
 
 ## Limitations
 
-- **Camera-only accuracy**: Without a weighing scale, weight is estimated from body widths. The ML model is trained on synthetic data — real-world accuracy improves with clinical validation data.
-- **2D pose only**: MediaPipe gives 2D landmarks. Arm circumference (MUAC) cannot be directly measured from a standard standing photo.
-- **MUAC not yet integrated**: WHO MUAC-for-age tables are not yet in this project. Download from [WHO website](https://www.who.int/tools/child-growth-standards/standards/arm-circumference-for-age) to enable MUAC-based screening.
-- **Age range**: 0–59 months (per WHO reference data coverage).
-- **Pose requirements**: Child must be standing upright, full body visible, frontal view.
+- **Camera-only accuracy**: Without a weighing scale, weight is estimated from body widths. The ML model is trained on synthetic data — real-world accuracy improves with labeled clinical data (see Fine-tuning section).
+- **MUAC is estimated, not measured**: When no tape measurement is provided, MUAC is estimated from WHZ using WHO MUAC-for-age medians. This is clearly labeled in the UI. Always confirm SAM/MAM with a physical tape measurement for clinical decisions.
+- **2D pose only**: MediaPipe gives 2D landmarks from a single camera. Body widths assume a frontal view with no perspective distortion.
+- **Age range**: 0–59 months (per WHO reference data coverage). MUAC classification only applies to 6–59 months.
+- **Pose requirements**: Child must be standing upright, full body visible, frontal view, 1–2 m from camera.
 
 ---
 

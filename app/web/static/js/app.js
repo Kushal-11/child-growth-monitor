@@ -1,8 +1,9 @@
-// Image preview on file selection
 document.addEventListener('DOMContentLoaded', function () {
-    const imageInput = document.getElementById('image');
+
+    // ── Image preview ────────────────────────────────────────────────────
+    const imageInput       = document.getElementById('image');
     const previewContainer = document.getElementById('imagePreview');
-    const previewImg = document.getElementById('previewImg');
+    const previewImg       = document.getElementById('previewImg');
 
     if (imageInput) {
         imageInput.addEventListener('change', function (e) {
@@ -20,80 +21,104 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // ── Age-in-months ↔ Date-of-birth toggle ────────────────────────────
+    const ageMonthsRow   = document.getElementById('ageMonthsRow');
+    const dobRow         = document.getElementById('dobRow');
+    const ageMonthsInput = document.getElementById('age_months_input');
+    const dobPicker      = document.getElementById('dob_picker');
+    const dobHidden      = document.getElementById('dob_hidden');
+    const toggleDobLink  = document.getElementById('toggleDobLink');
+    const toggleAgeLink  = document.getElementById('toggleAgeLink');
 
-    // Height unit conversion: convert to cm before submission
+    // Convert fractional months to approximate YYYY-MM-DD
+    function monthsToDob(months) {
+        const ms  = Math.round(months * 30.4375 * 86400 * 1000);
+        const dob = new Date(Date.now() - ms);
+        return dob.toISOString().slice(0, 10);
+    }
+
+    function syncFromAge() {
+        const val = parseFloat(ageMonthsInput ? ageMonthsInput.value : '');
+        if (dobHidden) {
+            dobHidden.value = (!isNaN(val) && val >= 0 && val <= 120)
+                ? monthsToDob(val) : '';
+        }
+    }
+
+    function syncFromDob() {
+        if (dobHidden && dobPicker) dobHidden.value = dobPicker.value;
+    }
+
+    if (ageMonthsInput) ageMonthsInput.addEventListener('input', syncFromAge);
+    if (dobPicker)       dobPicker.addEventListener('change', syncFromDob);
+
+    if (toggleDobLink) {
+        toggleDobLink.addEventListener('click', function (e) {
+            e.preventDefault();
+            ageMonthsRow.classList.add('d-none');
+            dobRow.classList.remove('d-none');
+            if (ageMonthsInput) ageMonthsInput.value = '';
+            if (dobHidden) dobHidden.value = '';
+        });
+    }
+
+    if (toggleAgeLink) {
+        toggleAgeLink.addEventListener('click', function (e) {
+            e.preventDefault();
+            dobRow.classList.add('d-none');
+            ageMonthsRow.classList.remove('d-none');
+            if (dobPicker) dobPicker.value = '';
+            if (dobHidden) dobHidden.value = '';
+        });
+    }
+
+    // ── Height unit conversion ───────────────────────────────────────────
     const heightValueInput = document.getElementById('height_value');
     const heightUnitSelect = document.getElementById('height_unit');
+
     if (heightValueInput && heightUnitSelect) {
-        // Update max value based on selected unit
-        function updateMaxValue() {
-            const unit = heightUnitSelect.value;
-            if (unit === 'inch') {
-                heightValueInput.max = 80; // ~200 cm in inches
-                heightValueInput.placeholder = 'Optional (max 80 inches)';
-            } else {
-                heightValueInput.max = 200;
-                heightValueInput.placeholder = 'Optional (max 200 cm)';
-            }
-        }
-        heightUnitSelect.addEventListener('change', updateMaxValue);
-        updateMaxValue(); // Set initial max value
-        
-        // Create hidden input for height_cm
-        const hiddenHeightInput = document.createElement('input');
-        hiddenHeightInput.type = 'hidden';
-        hiddenHeightInput.name = 'height_cm';
-        hiddenHeightInput.id = 'height_cm';
-        document.getElementById('assessForm').appendChild(hiddenHeightInput);
-        
-        // Update hidden input when value or unit changes
+        const hiddenHeight = document.createElement('input');
+        hiddenHeight.type  = 'hidden';
+        hiddenHeight.name  = 'height_cm';
+        const form = document.getElementById('assessForm');
+        if (form) form.appendChild(hiddenHeight);
+
         function updateHeightCm() {
-            const value = parseFloat(heightValueInput.value);
-            if (!isNaN(value) && value > 0) {
-                const unit = heightUnitSelect.value;
-                const heightCm = unit === 'inch' ? value * 2.54 : value;
-                hiddenHeightInput.value = heightCm.toFixed(1);
-            } else {
-                hiddenHeightInput.value = '';
-            }
+            const val = parseFloat(heightValueInput.value);
+            hiddenHeight.value = (!isNaN(val) && val > 0)
+                ? ((heightUnitSelect.value === 'inch') ? (val * 2.54).toFixed(1) : val.toFixed(1))
+                : '';
         }
-        
+
         heightValueInput.addEventListener('input', updateHeightCm);
-        heightUnitSelect.addEventListener('change', function() {
-            updateMaxValue();
+        heightUnitSelect.addEventListener('change', function () {
+            heightValueInput.max = (heightUnitSelect.value === 'inch') ? 80 : 200;
             updateHeightCm();
         });
     }
 
-    // Show loading state on form submit
-    const form = document.getElementById('assessForm');
+    // ── Form submission validation + loading state ───────────────────────
+    const form      = document.getElementById('assessForm');
     const submitBtn = document.getElementById('submitBtn');
 
     if (form && submitBtn) {
         form.addEventListener('submit', function (e) {
-            // Validate date format before submission
-            if (dateInput && dateInput.value) {
-                const isoDate = dateInput.getAttribute('data-iso-date');
-                if (!isoDate) {
-                    e.preventDefault();
-                    alert('Please enter a valid date in dd/mm/yyyy format (e.g., 15/01/2022)');
-                    dateInput.focus();
-                    dateInput.classList.add('is-invalid');
-                    return false;
+            const dob = dobHidden ? dobHidden.value : '';
+            if (!dob) {
+                e.preventDefault();
+                alert("Please enter the child's age (in months) or date of birth.");
+                if (ageMonthsInput && ageMonthsRow && !ageMonthsRow.classList.contains('d-none')) {
+                    ageMonthsInput.focus();
+                } else if (dobPicker) {
+                    dobPicker.focus();
                 }
-                // Create hidden input with ISO date format for backend
-                const hiddenDateInput = document.createElement('input');
-                hiddenDateInput.type = 'hidden';
-                hiddenDateInput.name = 'date_of_birth';
-                hiddenDateInput.value = isoDate;
-                form.appendChild(hiddenDateInput);
-                // Temporarily disable original input to prevent duplicate submission
-                const originalName = dateInput.name;
-                dateInput.removeAttribute('name');
+                return false;
             }
-            
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+            submitBtn.innerHTML =
+                '<span class="spinner-border spinner-border-sm me-2" ' +
+                'role="status" aria-hidden="true"></span>Processing…';
         });
     }
+
 });

@@ -53,6 +53,7 @@ async def web_assess(
     sex: str = Form(...),
     weight_kg: float = Form(None),
     height_cm: float = Form(None),
+    muac_cm: float = Form(None),
     guardian_name: str = Form(None),
     location: str = Form(None),
     db: Session = Depends(get_db),
@@ -83,6 +84,7 @@ async def web_assess(
             sex=sex,
             weight_kg=weight_kg,
             height_cm=height_cm,
+            muac_cm=muac_cm,
             guardian_name=guardian_name,
             location=location,
         )

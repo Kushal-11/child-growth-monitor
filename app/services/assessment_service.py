@@ -20,10 +20,12 @@ from app.schemas.assessment import (
     AssessmentResponse,
     MeasurementDetail,
     MLPrediction,
+    MUACDetail,
     NutritionDetail,
 )
 from app.services.measurement_service import MeasurementOutput, MeasurementService
 from app.services.ml_service import MLService
+from app.services.muac_service import MUACService
 from app.services.nutrition_service import NutritionService
 from app.services.who_data_service import WHODataService
 
@@ -46,6 +48,7 @@ class AssessmentService:
         height_cm: Optional[float] = None,
         guardian_name: Optional[str] = None,
         location: Optional[str] = None,
+        muac_cm: Optional[float] = None,
     ) -> AssessmentResponse:
         """Run full assessment pipeline and persist results."""
 
@@ -120,6 +123,14 @@ class AssessmentService:
                 whz_status = self.nutrition_svc.classify_whz(whz_z)
                 whz_z = round(whz_z, 2)
 
+        # 5b. Estimate MUAC from WHZ (or use manual tape measurement)
+        muac_result = MUACService.estimate(
+            age_months=age_months,
+            sex=sex,
+            whz=whz_z,
+            manual_muac_cm=muac_cm,
+        )
+
         # 6. Persist to database
         child = self._get_or_create_child(
             db, child_name, dob, sex, guardian_name, location
@@ -160,6 +171,8 @@ class AssessmentService:
             haz_status,
             whz_status,
             meas.reference_object_detected,
+            muac_result.muac_cm,
+            muac_result.muac_status,
         )
 
         # Extract body build from measurement result
@@ -200,6 +213,12 @@ class AssessmentService:
                 wasting_status=ml_pred.wasting_status if ml_pred else None,
                 wasting_method=ml_pred.wasting_method if ml_pred else "unavailable",
             ) if ml_pred else None,
+            muac=MUACDetail(
+                muac_cm=muac_result.muac_cm,
+                muac_status=muac_result.muac_status,
+                muac_method=muac_result.muac_method,
+                age_in_range=muac_result.age_in_range,
+            ),
             summary=summary,
         )
 
@@ -243,7 +262,8 @@ class AssessmentService:
     @staticmethod
     def _build_summary(
         name, age_months, effective_height, predicted_height, manual_height,
-        weight, haz_status, whz_status, ref_detected
+        weight, haz_status, whz_status, ref_detected,
+        muac_cm=None, muac_status=None,
     ) -> str:
         """Build a human-readable summary string."""
         lines = [f"Assessment for {name} ({age_months:.1f} months old):"]
@@ -264,10 +284,13 @@ class AssessmentService:
         if weight is not None:
             lines.append(f"  Weight: {weight:.1f} kg")
 
+        if muac_cm is not None:
+            lines.append(f"  MUAC: {muac_cm:.1f} cm ({muac_status or 'N/A'})")
+
         if haz_status:
-            lines.append(f"  Height-for-Age: {haz_status}")
+            lines.append(f"  Stunting (HAZ): {haz_status}")
         if whz_status:
-            lines.append(f"  Weight-for-Height: {whz_status}")
+            lines.append(f"  Wasting (WHZ): {whz_status}")
 
         if not haz_status and not whz_status:
             lines.append("  Nutritional status could not be determined.")

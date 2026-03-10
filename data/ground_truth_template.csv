@@ -1,0 +1,4 @@
+image_file,child_name,date_of_birth,sex,actual_height_cm,actual_weight_kg,notes
+child1.jpg,Child 1,2022-03-15,M,85.0,11.2,
+child2.jpg,Child 2,2023-07-01,F,78.5,,weight not available
+child3.jpg,Child 3,2021-11-20,M,,,height and weight unknown

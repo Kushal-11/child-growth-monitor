@@ -4,95 +4,150 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-8">
-        <h2 class="mb-4">Child Growth Assessment</h2>
-        <p class="text-muted mb-4">
-            Upload a photo of the child standing upright for automatic height estimation.
-            The system will compute WHO Z-scores and classify nutritional status.
-        </p>
+
+        <h2 class="mb-1">Child Growth Assessment</h2>
+        <p class="text-muted mb-4">Upload a photo to automatically estimate height, weight, and MUAC,
+            then classify stunting and wasting using WHO standards.</p>
+
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
 
         <form action="/assess" method="post" enctype="multipart/form-data" id="assessForm">
+
+            <!-- Photo Upload -->
             <div class="card mb-4">
-                <div class="card-header"><strong>Photo Upload</strong></div>
+                <div class="card-header fw-semibold">Photo Upload</div>
                 <div class="card-body">
-                        <div class="mb-3">
-                        <label for="image" class="form-label">Child Photo</label>
-                        <input type="file" class="form-control" id="image" name="image"
-                               accept="image/*" required>
-                        <div class="form-text">
-                            For best results, the child should be standing upright with full body visible in the frame.
-                        </div>
+                    <div class="photo-guidance mb-3">
+                        <div class="guidance-icon">📷</div>
+                        <ul class="guidance-tips">
+                            <li>Child standing upright, facing the camera</li>
+                            <li>Full body visible — head to feet</li>
+                            <li>1–2 metres from camera, good lighting</li>
+                            <li>Plain background preferred</li>
+                        </ul>
                     </div>
-                    <div id="imagePreview" class="text-center d-none">
-                        <img id="previewImg" class="img-fluid rounded" style="max-height: 300px;" alt="Preview">
+                    <input type="file" class="form-control" id="image" name="image"
+                           accept="image/*" capture="environment" required>
+                    <div id="imagePreview" class="text-center d-none mt-3">
+                        <img id="previewImg" class="img-fluid rounded preview-img" alt="Preview">
                     </div>
                 </div>
             </div>
 
+            <!-- Child Information -->
             <div class="card mb-4">
-                <div class="card-header"><strong>Child Information</strong></div>
+                <div class="card-header fw-semibold">Child Information</div>
                 <div class="card-body">
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="child_name" class="form-label">Child Name *</label>
-                            <input type="text" class="form-control" id="child_name" name="child_name" required>
+                            <input type="text" class="form-control" id="child_name"
+                                   name="child_name" required maxlength="100">
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="date_of_birth" class="form-label">Date of Birth *</label>
-                            <input type="date" class="form-control" id="date_of_birth" name="date_of_birth" required>
-                        </div>
-                    </div>
-                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Sex *</label>
-                            <div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="sex" id="sexM" value="M" required>
+                            <div class="d-flex gap-3 mt-1">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="sex"
+                                           id="sexM" value="M" required>
                                     <label class="form-check-label" for="sexM">Male</label>
                                 </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="sex" id="sexF" value="F">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="sex"
+                                           id="sexF" value="F">
                                     <label class="form-check-label" for="sexF">Female</label>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="weight_kg" class="form-label">Weight (kg)</label>
-                            <input type="number" class="form-control" id="weight_kg" name="weight_kg"
-                                   step="0.1" min="0.5" max="50" placeholder="Optional - leave blank to estimate">
+                    </div>
+
+                    <!-- Age: months OR exact DOB toggle -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3" id="ageMonthsRow">
+                            <label for="age_months_input" class="form-label">
+                                Age (months) *
+                            </label>
+                            <input type="number" class="form-control" id="age_months_input"
+                                   min="0" max="59" step="1" placeholder="0 – 59">
+                            <div class="form-text">
+                                <a href="#" id="toggleDobLink">Or enter exact date of birth</a>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3 d-none" id="dobRow">
+                            <label for="dob_picker" class="form-label">Date of Birth *</label>
+                            <input type="date" class="form-control" id="dob_picker">
+                            <div class="form-text">
+                                <a href="#" id="toggleAgeLink">Or enter age in months</a>
+                            </div>
                         </div>
                     </div>
+                    <!-- Hidden field submitted to backend -->
+                    <input type="hidden" id="dob_hidden" name="date_of_birth">
+
+                </div>
+            </div>
+
+            <!-- Optional Measurements -->
+            <div class="card mb-4">
+                <div class="card-header fw-semibold">
+                    Optional Measurements
+                    <span class="text-muted fw-normal small ms-1">— improve accuracy if available</span>
+                </div>
+                <div class="card-body">
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
+                            <label for="weight_kg" class="form-label">Weight (kg)</label>
+                            <input type="number" class="form-control" id="weight_kg"
+                                   name="weight_kg" step="0.1" min="0.5" max="50"
+                                   placeholder="e.g. 11.5">
+                            <div class="form-text">From weighing scale</div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="muac_input" class="form-label">MUAC (cm)</label>
+                            <input type="number" class="form-control" id="muac_input"
+                                   name="muac_cm" step="0.1" min="5" max="30"
+                                   placeholder="e.g. 13.5">
+                            <div class="form-text">MUAC tape measurement</div>
+                        </div>
+                        <div class="col-md-4 mb-3">
                             <label for="height_value" class="form-label">Height</label>
                             <div class="input-group">
-                                <input type="number" class="form-control" id="height_value" name="height_value"
-                                       step="0.1" min="10" max="200" placeholder="Optional - used if image detection fails">
-                                <select class="form-select" id="height_unit" name="height_unit" style="max-width: 100px;">
+                                <input type="number" class="form-control" id="height_value"
+                                       name="height_value" step="0.1" min="10" max="200"
+                                       placeholder="Optional">
+                                <select class="form-select" id="height_unit" name="height_unit"
+                                        style="max-width:90px;">
                                     <option value="cm" selected>cm</option>
                                     <option value="inch">inch</option>
                                 </select>
                             </div>
-                            <div class="form-text">
-                                Leave blank to rely on image-based height estimation. Enter a value as fallback.
-                            </div>
+                            <div class="form-text">Fallback if image fails</div>
                         </div>
-                        <div class="col-md-6 mb-3">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
                             <label for="guardian_name" class="form-label">Guardian Name</label>
-                            <input type="text" class="form-control" id="guardian_name" name="guardian_name">
+                            <input type="text" class="form-control" id="guardian_name"
+                                   name="guardian_name" placeholder="Optional">
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="location" class="form-label">Location</label>
-                            <input type="text" class="form-control" id="location" name="location">
+                        <div class="col-md-6 mb-2">
+                            <label for="location" class="form-label">Location / Clinic</label>
+                            <input type="text" class="form-control" id="location"
+                                   name="location" placeholder="Optional">
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="d-grid">
+            <div class="d-grid mb-5">
                 <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
                     Run Assessment
                 </button>
             </div>
+
         </form>
     </div>
 </div>
