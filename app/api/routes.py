@@ -40,6 +40,7 @@ def health_check():
 async def assess_child(
     image: UploadFile = File(...),
     image_side: Optional[UploadFile] = File(None),
+    image_back: Optional[UploadFile] = File(None),
     child_name: str = Form(...),
     date_of_birth: str = Form(...),  # yyyy-mm-dd (HTML5 date input)
     sex: str = Form(...),  # 'M' or 'F'

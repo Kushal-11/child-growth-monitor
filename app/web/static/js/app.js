@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     wirePreview('image',      'imagePreview', 'previewImg');
+    wirePreview('image_back', 'backPreview',  'backPreviewImg');
     wirePreview('image_side', 'sidePreview',  'sidePreviewImg');
 
     // ── Age-in-months ↔ Date-of-birth toggle ────────────────────────────

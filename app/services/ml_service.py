@@ -121,9 +121,16 @@ class MLService:
         if side_segments is not None and side_segments.total_height_px:
             side_scale = height_cm / side_segments.total_height_px
             if side_segments.chest_depth_px and side_segments.chest_confidence >= 0.5:
-                chest_depth_cm = float(side_segments.chest_depth_px * side_scale)
+                raw_chest = float(side_segments.chest_depth_px * side_scale)
+                # Validate: true side-view AP depth ≈ 35–55% of lateral shoulder width.
+                # A frontal photo gives x-span ≈ shoulder width (ratio ~0.8–1.1), so
+                # depth/shoulder > 0.65 indicates a frontal image, not a side profile → discard.
+                if 0.15 * shoulder_cm < raw_chest < 0.65 * shoulder_cm:
+                    chest_depth_cm = raw_chest
             if side_segments.abd_depth_px and side_segments.abd_confidence >= 0.5:
-                abd_depth_cm = float(side_segments.abd_depth_px * side_scale)
+                raw_abd = float(side_segments.abd_depth_px * side_scale)
+                if 0.15 * hip_cm < raw_abd < 0.65 * hip_cm:
+                    abd_depth_cm = raw_abd
 
         return WastingFeatures(
             age_months=float(age_months),

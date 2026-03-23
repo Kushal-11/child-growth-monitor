@@ -94,11 +94,25 @@ class AssessmentService:
 
         if effective_weight is None:
             # Try ML weight estimate first (captures wasting signal)
-            if ml_pred is not None and ml_pred.estimated_weight_kg is not None:
-                effective_weight = ml_pred.estimated_weight_kg
-                estimated_weight = effective_weight
-                weight_source = "ml_estimated"
-            elif effective_height is not None:
+            if ml_pred is not None and ml_pred.estimated_weight_kg is not None and effective_height is not None:
+                ml_weight = ml_pred.estimated_weight_kg
+                # Sanity check against WHO physiological bounds.
+                # If ML output is outside 45–180% of WHO median, bad input features
+                # (e.g. frontal photo uploaded as side view) caused extrapolation —
+                # fall through to WHO median instead.
+                who_median_ref = self.who_data.get_median_weight_for_height(
+                    sex, effective_height, age_months=age_months
+                )
+                weight_in_bounds = (
+                    who_median_ref is None
+                    or (0.45 * who_median_ref <= ml_weight <= 1.80 * who_median_ref)
+                )
+                if weight_in_bounds:
+                    effective_weight = ml_weight
+                    estimated_weight = effective_weight
+                    weight_source = "ml_estimated"
+
+            if effective_weight is None and effective_height is not None:
                 # Fall back to WHO median with body build adjustment
                 estimated_weight = self.who_data.get_median_weight_for_height(
                     sex, effective_height, age_months=age_months
@@ -188,15 +202,23 @@ class AssessmentService:
         if meas.body_build and isinstance(meas.body_build, dict):
             body_build_str = meas.body_build.get("body_build")
         
-        # Compute depth in cm for response (if side view was used)
+        # Compute depth in cm for response (if side view was used and measurements are valid)
         chest_depth_cm_out = None
         abd_depth_cm_out   = None
         if side_segments is not None and effective_height is not None and side_segments.total_height_px:
             side_scale = effective_height / side_segments.total_height_px
+            # Reference widths for validation (Snyder 1975 mean ratios at ~36 months)
+            approx_shoulder = effective_height * 0.211
+            approx_hip      = approx_shoulder * 0.88
             if side_segments.chest_depth_px and side_segments.chest_confidence >= 0.5:
-                chest_depth_cm_out = round(side_segments.chest_depth_px * side_scale, 1)
+                raw = round(side_segments.chest_depth_px * side_scale, 1)
+                # Accept only if within true side-view range (15–65% of shoulder width)
+                if 0.15 * approx_shoulder < raw < 0.65 * approx_shoulder:
+                    chest_depth_cm_out = raw
             if side_segments.abd_depth_px and side_segments.abd_confidence >= 0.5:
-                abd_depth_cm_out = round(side_segments.abd_depth_px * side_scale, 1)
+                raw = round(side_segments.abd_depth_px * side_scale, 1)
+                if 0.15 * approx_hip < raw < 0.65 * approx_hip:
+                    abd_depth_cm_out = raw
 
         return AssessmentResponse(
             child_name=child_name,
@@ -213,7 +235,7 @@ class AssessmentService:
                 annotated_image=meas.annotated_image_filename,
                 estimation_method=meas.estimation_method,
                 body_build=body_build_str,
-                side_view_used=side_segments is not None,
+                side_view_used=chest_depth_cm_out is not None or abd_depth_cm_out is not None,
                 chest_depth_cm=chest_depth_cm_out,
                 abd_depth_cm=abd_depth_cm_out,
             ),

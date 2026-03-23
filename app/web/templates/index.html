@@ -38,28 +38,92 @@
                 </div>
             </div>
 
-            <!-- Side View Photo (optional) -->
+            <!-- Multi-View Photos / Video (optional) -->
             <div class="card mb-4">
                 <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
-                    <span>Side View Photo</span>
-                    <span class="badge bg-success">+30–40% weight accuracy</span>
+                    <span>Additional Views <span class="text-muted fw-normal small">— Optional</span></span>
+                    <span class="badge bg-success">Best accuracy</span>
                 </div>
                 <div class="card-body">
-                    <div class="photo-guidance mb-3">
-                        <div class="guidance-icon">↔️</div>
-                        <ul class="guidance-tips">
-                            <li>Child standing sideways — left or right side toward camera</li>
-                            <li>Full body visible — head to feet</li>
-                            <li>Same distance and lighting as front photo</li>
-                            <li>Measures chest and abdomen depth for better weight estimate</li>
-                        </ul>
-                    </div>
-                    <input type="file" class="form-control" id="image_side" name="image_side"
-                           accept="image/*" capture="environment">
-                    <div class="form-text text-muted">Optional — omitting it uses estimated depth values instead</div>
-                    <div id="sidePreview" class="text-center d-none mt-3">
-                        <img id="sidePreviewImg" class="img-fluid rounded preview-img" alt="Side Preview">
-                    </div>
+                    <p class="text-muted small mb-3">
+                        Upload photos from multiple angles or a short 360° video for the most accurate estimate.
+                        You can provide any combination of <strong>front</strong>, <strong>back</strong>, and
+                        <strong>side</strong> views. The <strong>side view</strong> is especially valuable —
+                        it measures chest and abdomen depth.
+                    </p>
+
+                    <!-- Tab selector: Photos | Video -->
+                    <ul class="nav nav-tabs mb-3" id="multiViewTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="photos-tab" data-bs-toggle="tab"
+                                    data-bs-target="#photosPane" type="button" role="tab">
+                                Multiple Photos
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="video-tab" data-bs-toggle="tab"
+                                    data-bs-target="#videoPane" type="button" role="tab">
+                                360° Video
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+
+                        <!-- Photos pane: front already captured above; back + side here -->
+                        <div class="tab-pane fade show active" id="photosPane" role="tabpanel">
+                            <div class="row g-3">
+
+                                <!-- Back View -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Back View</label>
+                                    <input type="file" class="form-control" id="image_back"
+                                           name="image_back" accept="image/*" capture="environment">
+                                    <div class="form-text">Child facing away, full body visible</div>
+                                    <div id="backPreview" class="text-center d-none mt-2">
+                                        <img id="backPreviewImg" class="img-fluid rounded preview-img"
+                                             alt="Back Preview">
+                                    </div>
+                                </div>
+
+                                <!-- Side View -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">
+                                        Side View
+                                        <span class="badge bg-success ms-1" style="font-size:.7rem;">+30–40% weight accuracy</span>
+                                    </label>
+                                    <input type="file" class="form-control" id="image_side"
+                                           name="image_side" accept="image/*" capture="environment">
+                                    <div class="form-text">Child standing sideways — left or right side toward camera</div>
+                                    <div id="sidePreview" class="text-center d-none mt-2">
+                                        <img id="sidePreviewImg" class="img-fluid rounded preview-img"
+                                             alt="Side Preview">
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Video pane -->
+                        <div class="tab-pane fade" id="videoPane" role="tabpanel">
+                            <div class="photo-guidance mb-3">
+                                <div class="guidance-icon">🎥</div>
+                                <ul class="guidance-tips">
+                                    <li>Child standing upright while slowly rotating 360°</li>
+                                    <li>Full body visible — head to feet throughout</li>
+                                    <li>10–15 seconds at steady pace is sufficient</li>
+                                    <li>Good lighting, plain background preferred</li>
+                                </ul>
+                            </div>
+                            <input type="file" class="form-control" id="video_input"
+                                   name="video_input" accept="video/*" capture="environment">
+                            <div class="form-text text-muted">
+                                Best frames are extracted automatically from the video.
+                                <span class="badge bg-secondary ms-1">Coming soon</span>
+                            </div>
+                        </div>
+
+                    </div><!-- /tab-content -->
                 </div>
             </div>
 

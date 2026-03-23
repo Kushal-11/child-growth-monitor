@@ -50,6 +50,7 @@ async def web_assess(
     request: Request,
     image: UploadFile = File(...),
     image_side: Optional[UploadFile] = File(None),
+    image_back: Optional[UploadFile] = File(None),
     child_name: str = Form(...),
     date_of_birth: str = Form(...),
     sex: str = Form(...),
