@@ -1,40 +1,49 @@
 {% extends "base.html" %}
-{% block title %}{{ child.name if child else "Not Found" }} - Child Growth Monitor{% endblock %}
+{% block title %}{% if child %}{{ child.name }} - {{ t.app_title }}{% else %}{{ t.page_title_not_found }}{% endif %}{% endblock %}
 
 {% block content %}
 {% if child %}
 <div class="row">
     <div class="col-lg-4 mb-4">
         <div class="card">
-            <div class="card-header"><strong>Child Profile</strong></div>
+            <div class="card-header"><strong>{{ t.child_profile }}</strong></div>
             <div class="card-body">
                 <h5>{{ child.name }}</h5>
-                <p class="mb-1"><strong>DOB:</strong> {{ child.date_of_birth }}</p>
-                <p class="mb-1"><strong>Sex:</strong> {{ "Male" if child.sex == "M" else "Female" }}</p>
+                <p class="mb-1"><strong>{{ t.label_dob }}</strong> {{ child.date_of_birth }}</p>
+                <p class="mb-1"><strong>{{ t.label_sex }}</strong> {% if child.sex == "M" %}{{ t.male }}{% else %}{{ t.female }}{% endif %}</p>
                 {% if child.guardian_name %}
-                <p class="mb-1"><strong>Guardian:</strong> {{ child.guardian_name }}</p>
+                <p class="mb-1"><strong>{{ t.label_guardian }}</strong> {{ child.guardian_name }}</p>
                 {% endif %}
                 {% if child.location %}
-                <p class="mb-1"><strong>Location:</strong> {{ child.location }}</p>
+                <p class="mb-1"><strong>{{ t.label_location }}</strong> {{ child.location }}</p>
                 {% endif %}
-                <p class="mb-0"><strong>Total Visits:</strong> {{ child.visits | length }}</p>
+                <p class="mb-0"><strong>{{ t.total_visits }}</strong> {{ child.visits | length }}</p>
             </div>
         </div>
     </div>
 
     <div class="col-lg-8">
-        <h4 class="mb-3">Visit History</h4>
+        {% if show_growth_chart %}
+        <div class="card mb-4">
+            <div class="card-header fw-semibold">{{ t.growth_chart_title }}</div>
+            <div class="card-body">
+                <canvas id="growthChart" height="120" aria-label="{{ t.growth_chart_title }}"></canvas>
+            </div>
+        </div>
+        {% endif %}
+
+        <h4 class="mb-3">{{ t.visit_history }}</h4>
         {% if child.visits %}
         <div class="table-responsive">
             <table class="table table-striped">
                 <thead>
                     <tr>
-                        <th>Date</th>
-                        <th>Age (months)</th>
-                        <th>Height (cm)</th>
-                        <th>Weight (kg)</th>
-                        <th>HAZ Status</th>
-                        <th>WHZ Status</th>
+                        <th>{{ t.th_date }}</th>
+                        <th>{{ t.th_age_months }}</th>
+                        <th>{{ t.th_height_cm }}</th>
+                        <th>{{ t.th_weight_kg }}</th>
+                        <th>{{ t.th_haz_status }}</th>
+                        <th>{{ t.th_whiz_status }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -43,7 +52,7 @@
                         <td>{{ visit.visit_date.strftime('%Y-%m-%d') if visit.visit_date else "-" }}</td>
                         <td>{{ "%.1f"|format(visit.age_months) }}</td>
                         {% if visit.measurement %}
-                            <td>{{ "%.1f"|format(visit.measurement.predicted_height_cm) if visit.measurement.predicted_height_cm else "-" }}</td>
+                            <td>{% if visit.measurement.predicted_height_cm %}{{ "%.1f"|format(visit.measurement.predicted_height_cm) }}{% elif visit.measurement.manual_height_cm %}{{ "%.1f"|format(visit.measurement.manual_height_cm) }}{% else %}-{% endif %}</td>
                             <td>{{ "%.1f"|format(visit.measurement.manual_weight_kg or visit.measurement.predicted_weight_kg or 0) if (visit.measurement.manual_weight_kg or visit.measurement.predicted_weight_kg) else "-" }}</td>
                             <td>
                                 {% set haz = visit.measurement.haz_status %}
@@ -53,7 +62,10 @@
                                     {% elif haz == 'Stunted' %}bg-warning text-dark
                                     {% elif haz == 'Severely Stunted' %}bg-danger
                                     {% else %}bg-info{% endif %}">
-                                    {{ haz }}
+                                    {% if haz == 'Normal' %}{{ t.haz_normal }}
+                                    {% elif haz == 'Stunted' %}{{ t.haz_stunted }}
+                                    {% elif haz == 'Severely Stunted' %}{{ t.haz_severely_stunted }}
+                                    {% else %}{{ haz }}{% endif %}
                                 </span>
                                 {% else %}-{% endif %}
                             </td>
@@ -61,16 +73,19 @@
                                 {% set whz = visit.measurement.whz_status %}
                                 {% if whz %}
                                 <span class="badge
-                                    {% if whz == 'Normal' %}bg-success
+                                    {% if 'Normal' in whz %}bg-success
                                     {% elif 'MAM' in whz %}bg-warning text-dark
                                     {% elif 'SAM' in whz %}bg-danger
                                     {% else %}bg-info{% endif %}">
-                                    {{ whz }}
+                                    {% if 'SAM' in whz %}{{ t.whz_sam }}
+                                    {% elif 'MAM' in whz %}{{ t.whz_mam }}
+                                    {% elif 'Normal' in whz %}{{ t.whz_normal }}
+                                    {% else %}{{ whz[:10] }}{% endif %}
                                 </span>
                                 {% else %}-{% endif %}
                             </td>
                         {% else %}
-                            <td colspan="4">No measurement data</td>
+                            <td colspan="4">{{ t.no_measurement_data }}</td>
                         {% endif %}
                     </tr>
                     {% endfor %}
@@ -78,14 +93,78 @@
             </table>
         </div>
         {% else %}
-        <div class="alert alert-info">No visits recorded yet.</div>
+        <div class="alert alert-info">{{ t.no_visits_yet }}</div>
         {% endif %}
     </div>
 </div>
 
-<a href="/children" class="btn btn-outline-secondary mt-3">Back to Children</a>
+<a href="/children" class="btn btn-outline-secondary mt-3">{{ t.back_to_children }}</a>
 {% else %}
-<div class="alert alert-warning">Child not found.</div>
-<a href="/children" class="btn btn-outline-secondary">Back to Children</a>
+<div class="alert alert-warning">{{ t.child_not_found }}</div>
+<a href="/children" class="btn btn-outline-secondary">{{ t.back_to_children }}</a>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if child and show_growth_chart %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    var raw = {{ growth_chart_json | safe }};
+    if (!raw || raw.length < 2) return;
+    var labels = raw.map(function (p) { return p.label || '—'; });
+    var heights = raw.map(function (p) { return p.height; });
+    var weights = raw.map(function (p) { return p.weight; });
+    var ctx = document.getElementById('growthChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: {{ t.chart_height_cm | tojson }},
+                    data: heights,
+                    borderColor: 'rgb(13, 110, 253)',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    tension: 0.2,
+                    spanGaps: true,
+                    yAxisID: 'y'
+                },
+                {
+                    label: {{ t.chart_weight_kg | tojson }},
+                    data: weights,
+                    borderColor: 'rgb(25, 135, 84)',
+                    backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                    tension: 0.2,
+                    spanGaps: true,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            stacked: false,
+            plugins: { legend: { position: 'top' } },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: { display: true, text: {{ t.chart_height_cm | tojson }} }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    grid: { drawOnChartArea: false },
+                    title: { display: true, text: {{ t.chart_weight_kg | tojson }} }
+                }
+            }
+        }
+    });
+})();
+</script>
 {% endif %}
 {% endblock %}

@@ -1,181 +1,183 @@
 {% extends "base.html" %}
-{% block title %}Assess a Child - Child Growth Monitor{% endblock %}
+{% block title %}{{ t.page_title_assess }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-8">
 
-        <h2 class="mb-1">Child Growth Assessment</h2>
-        <p class="text-muted mb-4">Upload a photo to automatically estimate height, weight, and MUAC,
-            then classify stunting and wasting using WHO standards.</p>
+        <h2 class="mb-1">{{ t.assess_heading }}</h2>
+        <p class="text-muted mb-4">{{ t.assess_subtitle }}</p>
 
         {% if error %}
-        <div class="alert alert-danger">{{ error }}</div>
+        <div class="alert alert-danger" role="alert">{{ error }}</div>
         {% endif %}
 
-        <form action="/assess" method="post" enctype="multipart/form-data" id="assessForm">
+        <form action="/assess" method="post" enctype="multipart/form-data" id="assessForm"
+              data-msg-age-required="{{ t.age_required_feedback | e }}"
+              data-label-processing="{{ t.processing | e }}">
 
             <!-- Photo Upload -->
             <div class="card mb-4">
                 <div class="card-header fw-semibold">
-                    Front View Photo <span class="text-danger">*</span>
+                    {{ t.front_view_photo }} <span class="text-danger">{{ t.required_star }}</span>
                 </div>
                 <div class="card-body">
                     <div class="photo-guidance mb-3">
-                        <div class="guidance-icon">📷</div>
+                        <div class="guidance-icon" aria-hidden="true">📷</div>
                         <ul class="guidance-tips">
-                            <li>Child standing upright, facing the camera</li>
-                            <li>Full body visible — head to feet</li>
-                            <li>1–2 metres from camera, good lighting</li>
-                            <li>Plain background preferred</li>
+                            <li>{{ t.tip_front_1 }}</li>
+                            <li>{{ t.tip_front_2 }}</li>
+                            <li>{{ t.tip_front_3 }}</li>
+                            <li>{{ t.tip_front_4 }}</li>
                         </ul>
                     </div>
-                    <input type="file" class="form-control" id="image" name="image"
-                           accept="image/*" capture="environment" required>
+                    <div class="image-dropzone" id="imageDropzone">
+                        <i class="bi bi-cloud-arrow-up dropzone-icon" aria-hidden="true"></i>
+                        <p class="mb-0 dropzone-text">{{ t.dropzone_hint }}</p>
+                        <input type="file" class="form-control dropzone-input" id="image" name="image"
+                               accept="image/*" capture="environment" required
+                               aria-label="{{ t.dropzone_hint | e }}">
+                    </div>
                     <div id="imagePreview" class="text-center d-none mt-3">
-                        <img id="previewImg" class="img-fluid rounded preview-img" alt="Preview">
+                        <img id="previewImg" class="img-fluid rounded preview-img" alt="{{ t.preview_alt }}">
                     </div>
                 </div>
             </div>
 
             <!-- Multi-View Photos / Video (optional) -->
             <div class="card mb-4">
-                <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
-                    <span>Additional Views <span class="text-muted fw-normal small">— Optional</span></span>
-                    <span class="badge bg-success">Best accuracy</span>
+                <div class="card-header fw-semibold d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span>{{ t.additional_views }} <span class="text-muted fw-normal small">— {{ t.optional_label }}</span></span>
+                    <span class="badge bg-success">{{ t.best_accuracy }}</span>
                 </div>
                 <div class="card-body">
                     <p class="text-muted small mb-3">
-                        Upload photos from multiple angles or a short 360° video for the most accurate estimate.
-                        You can provide any combination of <strong>front</strong>, <strong>back</strong>, and
-                        <strong>side</strong> views. The <strong>side view</strong> is especially valuable —
-                        it measures chest and abdomen depth.
+                        {{ t.multi_view_intro }}
+                        <strong>{{ t.multi_view_front }}</strong>, <strong>{{ t.multi_view_back }}</strong>,
+                        {{ t.multi_view_and }} <strong>{{ t.multi_view_side }}</strong>
+                        {{ t.multi_view_side_valuable }}
                     </p>
 
-                    <!-- Tab selector: Photos | Video -->
                     <ul class="nav nav-tabs mb-3" id="multiViewTab" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="photos-tab" data-bs-toggle="tab"
                                     data-bs-target="#photosPane" type="button" role="tab">
-                                Multiple Photos
+                                {{ t.multiple_photos }}
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="video-tab" data-bs-toggle="tab"
                                     data-bs-target="#videoPane" type="button" role="tab">
-                                360° Video
+                                {{ t.video_360 }}
                             </button>
                         </li>
                     </ul>
 
                     <div class="tab-content">
 
-                        <!-- Photos pane: front already captured above; back + side here -->
                         <div class="tab-pane fade show active" id="photosPane" role="tabpanel">
                             <div class="row g-3">
 
-                                <!-- Back View -->
                                 <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Back View</label>
+                                    <label class="form-label fw-semibold" for="image_back">{{ t.back_view }}</label>
                                     <input type="file" class="form-control" id="image_back"
                                            name="image_back" accept="image/*" capture="environment">
-                                    <div class="form-text">Child facing away, full body visible</div>
+                                    <div class="form-text">{{ t.back_view_help }}</div>
                                     <div id="backPreview" class="text-center d-none mt-2">
                                         <img id="backPreviewImg" class="img-fluid rounded preview-img"
-                                             alt="Back Preview">
+                                             alt="{{ t.back_preview_alt }}">
                                     </div>
                                 </div>
 
-                                <!-- Side View -->
                                 <div class="col-md-6">
-                                    <label class="form-label fw-semibold">
-                                        Side View
-                                        <span class="badge bg-success ms-1" style="font-size:.7rem;">+30–40% weight accuracy</span>
+                                    <label class="form-label fw-semibold" for="image_side">
+                                        {{ t.side_view }}
+                                        <span class="badge bg-success ms-1" style="font-size:.7rem;">{{ t.side_accuracy_badge }}</span>
                                     </label>
                                     <input type="file" class="form-control" id="image_side"
                                            name="image_side" accept="image/*" capture="environment">
-                                    <div class="form-text">Child standing sideways — left or right side toward camera</div>
+                                    <div class="form-text">{{ t.side_view_help }}</div>
                                     <div id="sidePreview" class="text-center d-none mt-2">
                                         <img id="sidePreviewImg" class="img-fluid rounded preview-img"
-                                             alt="Side Preview">
+                                             alt="{{ t.side_preview_alt }}">
                                     </div>
                                 </div>
 
                             </div>
                         </div>
 
-                        <!-- Video pane -->
                         <div class="tab-pane fade" id="videoPane" role="tabpanel">
                             <div class="photo-guidance mb-3">
-                                <div class="guidance-icon">🎥</div>
+                                <div class="guidance-icon" aria-hidden="true">🎥</div>
                                 <ul class="guidance-tips">
-                                    <li>Child standing upright while slowly rotating 360°</li>
-                                    <li>Full body visible — head to feet throughout</li>
-                                    <li>10–15 seconds at steady pace is sufficient</li>
-                                    <li>Good lighting, plain background preferred</li>
+                                    <li>{{ t.video_tip_1 }}</li>
+                                    <li>{{ t.video_tip_2 }}</li>
+                                    <li>{{ t.video_tip_3 }}</li>
+                                    <li>{{ t.video_tip_4 }}</li>
                                 </ul>
                             </div>
                             <input type="file" class="form-control" id="video_input"
                                    name="video_input" accept="video/*" capture="environment">
                             <div class="form-text text-muted">
-                                Best frames are extracted automatically from the video.
-                                <span class="badge bg-secondary ms-1">Coming soon</span>
+                                {{ t.video_frames_help }}
+                                <span class="badge bg-secondary ms-1">{{ t.coming_soon }}</span>
                             </div>
                         </div>
 
-                    </div><!-- /tab-content -->
+                    </div>
                 </div>
             </div>
 
             <!-- Child Information -->
             <div class="card mb-4">
-                <div class="card-header fw-semibold">Child Information</div>
+                <div class="card-header fw-semibold">{{ t.child_information }}</div>
                 <div class="card-body">
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="child_name" class="form-label">Child Name *</label>
+                            <label for="child_name" class="form-label">{{ t.child_name }} {{ t.required_star }}</label>
                             <input type="text" class="form-control" id="child_name"
                                    name="child_name" required maxlength="100">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Sex *</label>
+                            <label class="form-label">{{ t.sex }} {{ t.required_star }}</label>
                             <div class="d-flex gap-3 mt-1">
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="sex"
                                            id="sexM" value="M" required>
-                                    <label class="form-check-label" for="sexM">Male</label>
+                                    <label class="form-check-label" for="sexM">{{ t.male }}</label>
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="sex"
                                            id="sexF" value="F">
-                                    <label class="form-check-label" for="sexF">Female</label>
+                                    <label class="form-check-label" for="sexF">{{ t.female }}</label>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Age: months OR exact DOB toggle -->
                     <div class="row">
                         <div class="col-md-6 mb-3" id="ageMonthsRow">
                             <label for="age_months_input" class="form-label">
-                                Age (months) *
+                                {{ t.age_months }} {{ t.required_star }}
                             </label>
                             <input type="number" class="form-control" id="age_months_input"
-                                   min="0" max="59" step="1" placeholder="0 – 59">
+                                   min="0" max="59" step="1" placeholder="{{ t.placeholder_age_months }}"
+                                   aria-describedby="ageDobFeedback">
                             <div class="form-text">
-                                <a href="#" id="toggleDobLink">Or enter exact date of birth</a>
+                                <a href="#" id="toggleDobLink">{{ t.toggle_dob }}</a>
                             </div>
                         </div>
                         <div class="col-md-6 mb-3 d-none" id="dobRow">
-                            <label for="dob_picker" class="form-label">Date of Birth *</label>
-                            <input type="date" class="form-control" id="dob_picker">
+                            <label for="dob_picker" class="form-label">{{ t.date_of_birth }} {{ t.required_star }}</label>
+                            <input type="date" class="form-control" id="dob_picker"
+                                   aria-describedby="ageDobFeedback">
                             <div class="form-text">
-                                <a href="#" id="toggleAgeLink">Or enter age in months</a>
+                                <a href="#" id="toggleAgeLink">{{ t.toggle_age_months }}</a>
                             </div>
                         </div>
                     </div>
-                    <!-- Hidden field submitted to backend -->
+                    <div id="ageDobFeedback" class="alert alert-danger py-2 d-none mt-2" role="alert"></div>
                     <input type="hidden" id="dob_hidden" name="date_of_birth">
 
                 </div>
@@ -184,50 +186,50 @@
             <!-- Optional Measurements -->
             <div class="card mb-4">
                 <div class="card-header fw-semibold">
-                    Optional Measurements
-                    <span class="text-muted fw-normal small ms-1">— improve accuracy if available</span>
+                    {{ t.optional_measurements }}
+                    <span class="text-muted fw-normal small ms-1">{{ t.optional_measurements_note }}</span>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label for="weight_kg" class="form-label">Weight (kg)</label>
+                            <label for="weight_kg" class="form-label">{{ t.weight_kg }}</label>
                             <input type="number" class="form-control" id="weight_kg"
                                    name="weight_kg" step="0.1" min="0.5" max="50"
-                                   placeholder="e.g. 11.5">
-                            <div class="form-text">From weighing scale</div>
+                                   placeholder="{{ t.weight_placeholder }}">
+                            <div class="form-text">{{ t.weight_help }}</div>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label for="muac_input" class="form-label">MUAC (cm)</label>
+                            <label for="muac_input" class="form-label">{{ t.muac_cm }}</label>
                             <input type="number" class="form-control" id="muac_input"
                                    name="muac_cm" step="0.1" min="5" max="30"
-                                   placeholder="e.g. 13.5">
-                            <div class="form-text">MUAC tape measurement</div>
+                                   placeholder="{{ t.muac_placeholder }}">
+                            <div class="form-text">{{ t.muac_help }}</div>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label for="height_value" class="form-label">Height</label>
+                            <label for="height_value" class="form-label">{{ t.height }}</label>
                             <div class="input-group">
                                 <input type="number" class="form-control" id="height_value"
                                        name="height_value" step="0.1" min="10" max="200"
-                                       placeholder="Optional">
+                                       placeholder="{{ t.height_placeholder }}">
                                 <select class="form-select" id="height_unit" name="height_unit"
                                         style="max-width:90px;">
-                                    <option value="cm" selected>cm</option>
-                                    <option value="inch">inch</option>
+                                    <option value="cm" selected>{{ t.unit_cm }}</option>
+                                    <option value="inch">{{ t.unit_inch }}</option>
                                 </select>
                             </div>
-                            <div class="form-text">Fallback if image fails</div>
+                            <div class="form-text">{{ t.height_fallback }}</div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-2">
-                            <label for="guardian_name" class="form-label">Guardian Name</label>
+                            <label for="guardian_name" class="form-label">{{ t.guardian_name }}</label>
                             <input type="text" class="form-control" id="guardian_name"
-                                   name="guardian_name" placeholder="Optional">
+                                   name="guardian_name" placeholder="{{ t.placeholder_optional }}">
                         </div>
                         <div class="col-md-6 mb-2">
-                            <label for="location" class="form-label">Location / Clinic</label>
+                            <label for="location" class="form-label">{{ t.location_clinic }}</label>
                             <input type="text" class="form-control" id="location"
-                                   name="location" placeholder="Optional">
+                                   name="location" placeholder="{{ t.placeholder_optional }}">
                         </div>
                     </div>
                 </div>
@@ -235,7 +237,7 @@
 
             <div class="d-grid mb-5">
                 <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
-                    Run Assessment
+                    {{ t.run_assessment }}
                 </button>
             </div>
 

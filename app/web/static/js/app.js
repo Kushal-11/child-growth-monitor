@@ -21,22 +21,53 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    wirePreview('image',      'imagePreview', 'previewImg');
-    wirePreview('image_back', 'backPreview',  'backPreviewImg');
-    wirePreview('image_side', 'sidePreview',  'sidePreviewImg');
+    wirePreview('image', 'imagePreview', 'previewImg');
+    wirePreview('image_back', 'backPreview', 'backPreviewImg');
+    wirePreview('image_side', 'sidePreview', 'sidePreviewImg');
+
+    // ── Front photo dropzone ─────────────────────────────────────────────
+    const imageInput = document.getElementById('image');
+    const imageDropzone = document.getElementById('imageDropzone');
+    if (imageInput && imageDropzone) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function (ev) {
+            imageInput.addEventListener(ev, function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+        ['dragenter', 'dragover'].forEach(function (ev) {
+            imageInput.addEventListener(ev, function () {
+                imageDropzone.classList.add('dropzone-active');
+            });
+        });
+        ['dragleave', 'drop'].forEach(function (ev) {
+            imageInput.addEventListener(ev, function () {
+                imageDropzone.classList.remove('dropzone-active');
+            });
+        });
+        imageInput.addEventListener('drop', function (e) {
+            const dt = e.dataTransfer;
+            if (!dt || !dt.files || !dt.files.length) return;
+            const f = dt.files[0];
+            if (f && f.type.startsWith('image/')) {
+                imageInput.files = dt.files;
+                imageInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+    }
 
     // ── Age-in-months ↔ Date-of-birth toggle ────────────────────────────
-    const ageMonthsRow   = document.getElementById('ageMonthsRow');
-    const dobRow         = document.getElementById('dobRow');
+    const ageMonthsRow = document.getElementById('ageMonthsRow');
+    const dobRow = document.getElementById('dobRow');
     const ageMonthsInput = document.getElementById('age_months_input');
-    const dobPicker      = document.getElementById('dob_picker');
-    const dobHidden      = document.getElementById('dob_hidden');
-    const toggleDobLink  = document.getElementById('toggleDobLink');
-    const toggleAgeLink  = document.getElementById('toggleAgeLink');
+    const dobPicker = document.getElementById('dob_picker');
+    const dobHidden = document.getElementById('dob_hidden');
+    const toggleDobLink = document.getElementById('toggleDobLink');
+    const toggleAgeLink = document.getElementById('toggleAgeLink');
+    const ageDobFeedback = document.getElementById('ageDobFeedback');
 
-    // Convert fractional months to approximate YYYY-MM-DD
     function monthsToDob(months) {
-        const ms  = Math.round(months * 30.4375 * 86400 * 1000);
+        const ms = Math.round(months * 30.4375 * 86400 * 1000);
         const dob = new Date(Date.now() - ms);
         return dob.toISOString().slice(0, 10);
     }
@@ -53,12 +84,39 @@ document.addEventListener('DOMContentLoaded', function () {
         if (dobHidden && dobPicker) dobHidden.value = dobPicker.value;
     }
 
-    if (ageMonthsInput) ageMonthsInput.addEventListener('input', syncFromAge);
-    if (dobPicker)       dobPicker.addEventListener('change', syncFromDob);
+    function clearAgeDobError() {
+        if (!ageDobFeedback) return;
+        ageDobFeedback.classList.add('d-none');
+        ageDobFeedback.textContent = '';
+        [ageMonthsInput, dobPicker].forEach(function (el) {
+            if (el) el.classList.remove('is-invalid');
+        });
+    }
+
+    function showAgeDobError(msg) {
+        if (!ageDobFeedback) return;
+        ageDobFeedback.textContent = msg;
+        ageDobFeedback.classList.remove('d-none');
+        if (ageMonthsRow && !ageMonthsRow.classList.contains('d-none') && ageMonthsInput) {
+            ageMonthsInput.classList.add('is-invalid');
+        } else if (dobPicker) {
+            dobPicker.classList.add('is-invalid');
+        }
+    }
+
+    if (ageMonthsInput) ageMonthsInput.addEventListener('input', function () {
+        clearAgeDobError();
+        syncFromAge();
+    });
+    if (dobPicker) dobPicker.addEventListener('change', function () {
+        clearAgeDobError();
+        syncFromDob();
+    });
 
     if (toggleDobLink) {
         toggleDobLink.addEventListener('click', function (e) {
             e.preventDefault();
+            clearAgeDobError();
             ageMonthsRow.classList.add('d-none');
             dobRow.classList.remove('d-none');
             if (ageMonthsInput) ageMonthsInput.value = '';
@@ -69,6 +127,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (toggleAgeLink) {
         toggleAgeLink.addEventListener('click', function (e) {
             e.preventDefault();
+            clearAgeDobError();
             dobRow.classList.add('d-none');
             ageMonthsRow.classList.remove('d-none');
             if (dobPicker) dobPicker.value = '';
@@ -82,8 +141,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (heightValueInput && heightUnitSelect) {
         const hiddenHeight = document.createElement('input');
-        hiddenHeight.type  = 'hidden';
-        hiddenHeight.name  = 'height_cm';
+        hiddenHeight.type = 'hidden';
+        hiddenHeight.name = 'height_cm';
         const form = document.getElementById('assessForm');
         if (form) form.appendChild(hiddenHeight);
 
@@ -102,15 +161,19 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ── Form submission validation + loading state ───────────────────────
-    const form      = document.getElementById('assessForm');
+    const form = document.getElementById('assessForm');
     const submitBtn = document.getElementById('submitBtn');
 
     if (form && submitBtn) {
+        const msgAge = form.getAttribute('data-msg-age-required') || '';
+        const labelProcessing = form.getAttribute('data-label-processing') || 'Processing…';
+
         form.addEventListener('submit', function (e) {
+            clearAgeDobError();
             const dob = dobHidden ? dobHidden.value : '';
             if (!dob) {
                 e.preventDefault();
-                alert("Please enter the child's age (in months) or date of birth.");
+                showAgeDobError(msgAge);
                 if (ageMonthsInput && ageMonthsRow && !ageMonthsRow.classList.contains('d-none')) {
                     ageMonthsInput.focus();
                 } else if (dobPicker) {
@@ -121,8 +184,31 @@ document.addEventListener('DOMContentLoaded', function () {
             submitBtn.disabled = true;
             submitBtn.innerHTML =
                 '<span class="spinner-border spinner-border-sm me-2" ' +
-                'role="status" aria-hidden="true"></span>Processing…';
+                'role="status" aria-hidden="true"></span>' + labelProcessing;
         });
     }
 
+    // ── Children list search ────────────────────────────────────────────
+    const searchInput = document.getElementById('childrenSearch');
+    const childrenTable = document.getElementById('childrenTable');
+    const noMatchMsg = document.getElementById('childrenNoMatch');
+
+    if (searchInput && childrenTable) {
+        const tbody = childrenTable.querySelector('tbody');
+        if (tbody) {
+            searchInput.addEventListener('input', function () {
+                const q = (searchInput.value || '').trim().toLowerCase();
+                let anyVisible = false;
+                tbody.querySelectorAll('tr').forEach(function (row) {
+                    const name = (row.getAttribute('data-child-name') || '');
+                    const show = !q || name.indexOf(q) !== -1;
+                    row.classList.toggle('d-none', !show);
+                    if (show) anyVisible = true;
+                });
+                if (noMatchMsg) {
+                    noMatchMsg.classList.toggle('d-none', anyVisible || !q);
+                }
+            });
+        }
+    }
 });

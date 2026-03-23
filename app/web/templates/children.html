@@ -1,41 +1,50 @@
 {% extends "base.html" %}
-{% block title %}Children - Child Growth Monitor{% endblock %}
+{% block title %}{{ t.page_title_children }}{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">Registered Children</h2>
+<h2 class="mb-4">{{ t.registered_children }}</h2>
 
 {% if children %}
+<div class="mb-3">
+    <label for="childrenSearch" class="visually-hidden">{{ t.search_children_placeholder }}</label>
+    <div class="input-group input-group-lg max-w-children-search">
+        <span class="input-group-text" aria-hidden="true"><i class="bi bi-search"></i></span>
+        <input type="search" class="form-control" id="childrenSearch"
+               placeholder="{{ t.search_children_placeholder }}" autocomplete="off">
+    </div>
+</div>
 <div class="table-responsive">
-    <table class="table table-striped table-hover">
+    <table class="table table-striped table-hover" id="childrenTable">
         <thead>
             <tr>
-                <th>Name</th>
-                <th>Date of Birth</th>
-                <th>Sex</th>
-                <th>Guardian</th>
-                <th>Location</th>
-                <th>Visits</th>
+                <th>{{ t.th_name }}</th>
+                <th>{{ t.th_dob }}</th>
+                <th>{{ t.th_sex }}</th>
+                <th>{{ t.th_guardian }}</th>
+                <th>{{ t.th_location }}</th>
+                <th>{{ t.th_visits }}</th>
                 <th></th>
             </tr>
         </thead>
         <tbody>
             {% for child in children %}
-            <tr>
+            <tr data-child-name="{{ child.name | lower | e }}">
                 <td>{{ child.name }}</td>
                 <td>{{ child.date_of_birth }}</td>
-                <td>{{ "Male" if child.sex == "M" else "Female" }}</td>
+                <td>{% if child.sex == "M" %}{{ t.male }}{% else %}{{ t.female }}{% endif %}</td>
                 <td>{{ child.guardian_name or "-" }}</td>
                 <td>{{ child.location or "-" }}</td>
                 <td>{{ child.visits | length }}</td>
-                <td><a href="/children/{{ child.id }}" class="btn btn-sm btn-outline-primary">View</a></td>
+                <td><a href="/children/{{ child.id }}" class="btn btn-sm btn-outline-primary">{{ t.view }}</a></td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+<p class="text-muted small d-none" id="childrenNoMatch" role="status">{{ t.search_no_results }}</p>
 {% else %}
 <div class="alert alert-info">
-    No children registered yet. <a href="/" class="alert-link">Run an assessment</a> to get started.
+    {{ t.empty_children }} <a href="/" class="alert-link">{{ t.empty_children_link }}</a> {{ t.empty_children_suffix }}
 </div>
 {% endif %}
 {% endblock %}

@@ -1,16 +1,23 @@
 /* ── Base ───────────────────────────────────────────────────────────────── */
 body {
-    background-color: #f0f2f5;
+    background: linear-gradient(165deg, #eef2f7 0%, #f5f0f8 45%, #f0f4fa 100%);
+    min-height: 100vh;
 }
 
 .card {
-    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     border-color: #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
 }
 
-.card-header {
-    background-color: #f8fafc;
-    border-bottom-color: #e5e7eb;
+.card-header:first-child {
+    border-radius: 12px 12px 0 0;
+}
+
+.card-img-top,
+.card-img-bottom {
+    border-radius: 0;
 }
 
 pre {
@@ -24,14 +31,26 @@ pre {
     font-size: 0.9rem;
 }
 
-/* ── Photo upload guidance box ──────────────────────────────────────────── */
+/* ── Navbar language toggle ─────────────────────────────────────────────── */
+.lang-toggle-wrap .btn-group .btn.lang-btn.active {
+    background-color: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.6);
+    color: #fff;
+    font-weight: 600;
+}
+
+.max-w-children-search {
+    max-width: 28rem;
+}
+
+/* ── Photo upload dropzone ──────────────────────────────────────────────── */
 .photo-guidance {
     display: flex;
     align-items: flex-start;
     gap: 12px;
     background: #f0f7ff;
     border: 1px solid #cce0ff;
-    border-radius: 8px;
+    border-radius: 10px;
     padding: 12px 16px;
 }
 
@@ -52,15 +71,65 @@ pre {
     margin-bottom: 2px;
 }
 
+.image-dropzone {
+    position: relative;
+    min-height: 140px;
+    border: 2px dashed #94a3b8;
+    border-radius: 12px;
+    background: #fafbfc;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem 1rem;
+    transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.image-dropzone:focus {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+
+.image-dropzone.dropzone-active {
+    border-color: #0d6efd;
+    background: #eef5ff;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+}
+
+.image-dropzone .dropzone-icon {
+    font-size: 2rem;
+    color: #64748b;
+    margin-bottom: 0.35rem;
+    pointer-events: none;
+}
+
+.image-dropzone .dropzone-text {
+    font-size: 0.9rem;
+    color: #64748b;
+    text-align: center;
+    max-width: 20rem;
+    pointer-events: none;
+}
+
+.image-dropzone .dropzone-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
 .preview-img {
     max-height: 280px;
     border: 2px solid #dee2e6;
-    border-radius: 8px;
+    border-radius: 10px;
 }
 
 /* ── Status banners ─────────────────────────────────────────────────────── */
 .status-banner {
-    border-radius: 10px;
+    border-radius: 12px;
     padding: 1.1rem 1.4rem;
     margin-bottom: 1.5rem;
 }
@@ -110,7 +179,7 @@ pre {
 
 /* ── Metric cards ───────────────────────────────────────────────────────── */
 .metric-card {
-    border-radius: 10px;
+    border-radius: 12px;
 }
 
 .metric-label {
@@ -162,4 +231,42 @@ pre {
     border-radius: 5px;
     transition: width 0.4s ease;
     min-width: 2px;
+}
+
+/* ── Print ──────────────────────────────────────────────────────────────── */
+@media print {
+    body {
+        background: #fff !important;
+    }
+
+    .navbar,
+    footer,
+    .d-print-none {
+        display: none !important;
+    }
+
+    main.container {
+        margin-top: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #dee2e6 !important;
+        break-inside: avoid;
+    }
+
+    .status-banner {
+        break-inside: avoid;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .result-photo {
+        max-height: 240px;
+    }
+
+    a[href]:after {
+        content: none !important;
+    }
 }

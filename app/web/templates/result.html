@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Assessment Result - Child Growth Monitor{% endblock %}
+{% block title %}{{ t.page_title_result }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -7,13 +7,12 @@
 
     {% if error %}
         <div class="alert alert-danger">
-            <strong>Assessment Error:</strong> {{ error }}
+            <strong>{{ t.assessment_error }}</strong> {{ error }}
         </div>
-        <a href="/" class="btn btn-primary">Try Again</a>
+        <a href="/" class="btn btn-primary">{{ t.try_again }}</a>
 
     {% elif result %}
 
-        {# ── Compute highest-severity status ───────────────────────────── #}
         {% set whz = result.nutrition.whz_status or "" %}
         {% set muac_st = (result.muac.muac_status or "") if result.muac else "" %}
         {% set ml_st = (result.ml_prediction.wasting_status or "") if result.ml_prediction else "" %}
@@ -22,34 +21,38 @@
         {% if "SAM" in whz or muac_st == "SAM" or ml_st == "SAM" %}
             {% set banner_class = "status-sam" %}
             {% set banner_icon = "⚠" %}
-            {% set banner_title = "Severe Acute Malnutrition (SAM)" %}
-            {% set banner_msg = "Immediate referral for therapeutic feeding is required." %}
+            {% set banner_title = t.banner_sam_title %}
+            {% set banner_msg = t.banner_sam_msg %}
         {% elif "MAM" in whz or "At Risk" in muac_st or ml_st == "MAM" %}
             {% set banner_class = "status-mam" %}
             {% set banner_icon = "⚠" %}
-            {% set banner_title = "Moderate Acute Malnutrition (MAM)" %}
-            {% set banner_msg = "Supplementary feeding and close monitoring recommended." %}
+            {% set banner_title = t.banner_mam_title %}
+            {% set banner_msg = t.banner_mam_msg %}
         {% elif "Stunted" in haz %}
             {% set banner_class = "status-stunted" %}
             {% set banner_icon = "📋" %}
-            {% set banner_title = haz %}
-            {% set banner_msg = "Child shows signs of chronic undernutrition. Follow-up recommended." %}
+            {% if "Severely" in haz %}
+                {% set banner_title = t.haz_severely_stunted %}
+            {% else %}
+                {% set banner_title = t.haz_stunted %}
+            {% endif %}
+            {% set banner_msg = t.banner_stunted_msg %}
         {% elif result.nutrition.haz_zscore is not none or result.nutrition.whz_zscore is not none %}
             {% set banner_class = "status-normal" %}
             {% set banner_icon = "✓" %}
-            {% set banner_title = "Normal Nutritional Status" %}
-            {% set banner_msg = "No acute malnutrition detected. Continue routine monitoring." %}
+            {% set banner_title = t.banner_normal_title %}
+            {% set banner_msg = t.banner_normal_msg %}
         {% else %}
             {% set banner_class = "status-unknown" %}
             {% set banner_icon = "?" %}
-            {% set banner_title = "Status Could Not Be Determined" %}
-            {% set banner_msg = "Provide weight and height if possible for a complete assessment." %}
+            {% set banner_title = t.banner_unknown_title %}
+            {% set banner_msg = t.banner_unknown_msg %}
         {% endif %}
 
-        {# ── Status Banner ─────────────────────────────────────────────── #}
+        <div id="printableReport">
         <div class="status-banner {{ banner_class }}">
             <div class="d-flex align-items-center gap-3">
-                <span class="status-banner-icon">{{ banner_icon }}</span>
+                <span class="status-banner-icon" aria-hidden="true">{{ banner_icon }}</span>
                 <div class="flex-grow-1">
                     <div class="status-banner-title">{{ banner_title }}</div>
                     <div class="status-banner-msg">{{ banner_msg }}</div>
@@ -57,15 +60,14 @@
                 <div class="text-end d-none d-sm-block">
                     <div class="small opacity-75">{{ result.child_name }}</div>
                     <div class="small opacity-75">
-                        {{ "%.1f"|format(result.age_months) }} months &bull;
-                        {{ "Male" if result.sex == "M" else "Female" }}
+                        {{ "%.1f"|format(result.age_months) }} {{ t.months_unit }} &bull;
+                        {% if result.sex == "M" %}{{ t.male }}{% else %}{{ t.female }}{% endif %}
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="row">
-            {# ── Left column: photo ──────────────────────────────────── #}
             <div class="col-md-4 mb-4">
 
                 {% if result.measurement.annotated_image %}
@@ -74,11 +76,11 @@
                         <ul class="nav nav-tabs card-header-tabs px-3 pt-2">
                             <li class="nav-item">
                                 <a class="nav-link active small py-1" data-bs-toggle="tab"
-                                   href="#tabAnnotated">Pose</a>
+                                   href="#tabAnnotated">{{ t.tab_pose }}</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link small py-1" data-bs-toggle="tab"
-                                   href="#tabOriginal">Original</a>
+                                   href="#tabOriginal">{{ t.tab_original }}</a>
                             </li>
                         </ul>
                     </div>
@@ -86,27 +88,26 @@
                         <div class="tab-pane fade show active" id="tabAnnotated">
                             <img src="/uploads/{{ result.measurement.annotated_image }}"
                                  class="card-img-bottom result-photo"
-                                 alt="Pose landmarks detected">
+                                 alt="{{ t.alt_pose_landmarks }}">
                         </div>
                         <div class="tab-pane fade" id="tabOriginal">
                             <img src="/uploads/{{ image_filename }}"
-                                 class="card-img-bottom result-photo" alt="Original photo">
+                                 class="card-img-bottom result-photo" alt="{{ t.alt_original_photo }}">
                         </div>
                     </div>
                 </div>
                 {% else %}
                 <div class="card mb-3">
                     <img src="/uploads/{{ image_filename }}"
-                         class="card-img-top result-photo" alt="Child photo">
+                         class="card-img-top result-photo" alt="{{ t.alt_child_photo }}">
                 </div>
                 {% endif %}
 
-                {# Pose confidence bar #}
                 {% if result.measurement.confidence_score is not none %}
                 <div class="card mb-2">
                     <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-between">
-                            <small class="text-muted">Pose confidence</small>
+                            <small class="text-muted">{{ t.pose_confidence }}</small>
                             <small class="fw-semibold">
                                 {{ "%.0f"|format(result.measurement.confidence_score * 100) }}%
                             </small>
@@ -125,29 +126,26 @@
 
             </div>
 
-            {# ── Right column: results ───────────────────────────────── #}
             <div class="col-md-8">
 
-                {# Three metric cards #}
                 <div class="row g-2 mb-3">
-                    {# Height card #}
                     <div class="col-4">
                         <div class="card metric-card h-100 text-center">
                             <div class="card-body px-2 py-3">
-                                <div class="metric-label">Height</div>
+                                <div class="metric-label">{{ t.metric_height }}</div>
                                 {% if result.measurement.predicted_height_cm %}
                                     <div class="metric-value">
-                                        {{ "%.1f"|format(result.measurement.predicted_height_cm) }}<span class="metric-unit">cm</span>
+                                        {{ "%.1f"|format(result.measurement.predicted_height_cm) }}<span class="metric-unit">{{ t.unit_cm }}</span>
                                     </div>
-                                    <span class="badge bg-success mt-1">Image</span>
+                                    <span class="badge bg-success mt-1">{{ t.badge_image }}</span>
                                 {% elif result.measurement.manual_height_cm %}
                                     <div class="metric-value">
-                                        {{ "%.1f"|format(result.measurement.manual_height_cm) }}<span class="metric-unit">cm</span>
+                                        {{ "%.1f"|format(result.measurement.manual_height_cm) }}<span class="metric-unit">{{ t.unit_cm }}</span>
                                     </div>
-                                    <span class="badge bg-info mt-1">Manual</span>
+                                    <span class="badge bg-info mt-1">{{ t.badge_manual }}</span>
                                 {% else %}
                                     <div class="metric-value text-muted fs-3">—</div>
-                                    <span class="badge bg-warning text-dark mt-1 small">Undetected</span>
+                                    <span class="badge bg-warning text-dark mt-1 small">{{ t.badge_undetected }}</span>
                                 {% endif %}
 
                                 {% if result.nutrition.haz_zscore is not none %}
@@ -157,9 +155,9 @@
                                         {% elif 'Stunted' in haz %}bg-warning text-dark
                                         {% elif 'Normal' in haz %}bg-success
                                         {% else %}bg-info{% endif %} small">
-                                        {% if 'Severely' in haz %}Sev. Stunted
-                                        {% elif 'Stunted' in haz %}Stunted
-                                        {% elif 'Normal' in haz %}Normal
+                                        {% if 'Severely' in haz %}{{ t.sev_stunted_short }}
+                                        {% elif 'Stunted' in haz %}{{ t.stunted_label }}
+                                        {% elif 'Normal' in haz %}{{ t.normal_label }}
                                         {% else %}{{ haz }}{% endif %}
                                     </span>
                                 {% endif %}
@@ -167,28 +165,27 @@
                         </div>
                     </div>
 
-                    {# Weight card #}
                     <div class="col-4">
                         <div class="card metric-card h-100 text-center">
                             <div class="card-body px-2 py-3">
-                                <div class="metric-label">Weight</div>
+                                <div class="metric-label">{{ t.metric_weight }}</div>
                                 {% if result.measurement.manual_weight_kg %}
                                     <div class="metric-value">
                                         {{ "%.1f"|format(result.measurement.manual_weight_kg) }}<span class="metric-unit">kg</span>
                                     </div>
-                                    <span class="badge bg-info mt-1">Manual</span>
+                                    <span class="badge bg-info mt-1">{{ t.badge_manual }}</span>
                                 {% elif result.measurement.predicted_weight_kg %}
                                     <div class="metric-value">
                                         {{ "%.1f"|format(result.measurement.predicted_weight_kg) }}<span class="metric-unit">kg</span>
                                     </div>
                                     {% if result.measurement.side_view_used %}
-                                        <span class="badge bg-success mt-1">Side view ✓</span>
+                                        <span class="badge bg-success mt-1">{{ t.badge_side_view_ok }}</span>
                                     {% else %}
-                                        <span class="badge bg-secondary mt-1">Estimated</span>
+                                        <span class="badge bg-secondary mt-1">{{ t.badge_estimated }}</span>
                                     {% endif %}
                                 {% else %}
                                     <div class="metric-value text-muted fs-3">—</div>
-                                    <span class="badge bg-secondary mt-1 small">N/A</span>
+                                    <span class="badge bg-secondary mt-1 small">{{ t.badge_na }}</span>
                                 {% endif %}
 
                                 {% if result.nutrition.whz_zscore is not none %}
@@ -198,9 +195,9 @@
                                         {% elif 'MAM' in whz %}bg-warning text-dark
                                         {% elif 'Normal' in whz %}bg-success
                                         {% else %}bg-secondary{% endif %} small">
-                                        {% if 'SAM' in whz %}SAM
-                                        {% elif 'MAM' in whz %}MAM
-                                        {% elif 'Normal' in whz %}Normal
+                                        {% if 'SAM' in whz %}{{ t.whz_sam }}
+                                        {% elif 'MAM' in whz %}{{ t.whz_mam }}
+                                        {% elif 'Normal' in whz %}{{ t.whz_normal }}
                                         {% else %}{{ whz[:10] }}{% endif %}
                                     </span>
                                 {% endif %}
@@ -208,10 +205,10 @@
                                 {% if result.measurement.side_view_used %}
                                     <div class="mt-2 small text-muted">
                                         {% if result.measurement.chest_depth_cm %}
-                                            Chest depth: {{ "%.1f"|format(result.measurement.chest_depth_cm) }} cm
+                                            {{ t.chest_depth }} {{ "%.1f"|format(result.measurement.chest_depth_cm) }} {{ t.unit_cm }}
                                         {% endif %}
                                         {% if result.measurement.abd_depth_cm %}
-                                            · Abd: {{ "%.1f"|format(result.measurement.abd_depth_cm) }} cm
+                                            · {{ t.abd_depth }} {{ "%.1f"|format(result.measurement.abd_depth_cm) }} {{ t.unit_cm }}
                                         {% endif %}
                                     </div>
                                 {% endif %}
@@ -219,52 +216,50 @@
                         </div>
                     </div>
 
-                    {# MUAC card #}
                     <div class="col-4">
                         <div class="card metric-card h-100 text-center">
                             <div class="card-body px-2 py-3">
-                                <div class="metric-label">MUAC</div>
+                                <div class="metric-label">{{ t.metric_muac }}</div>
                                 {% if result.muac and result.muac.muac_cm %}
                                     <div class="metric-value">
-                                        {{ "%.1f"|format(result.muac.muac_cm) }}<span class="metric-unit">cm</span>
+                                        {{ "%.1f"|format(result.muac.muac_cm) }}<span class="metric-unit">{{ t.unit_cm }}</span>
                                     </div>
                                     {% if result.muac.muac_method == "manual" %}
-                                        <span class="badge bg-info mt-1">Tape</span>
+                                        <span class="badge bg-info mt-1">{{ t.badge_tape }}</span>
                                     {% else %}
-                                        <span class="badge bg-secondary mt-1">Est.</span>
+                                        <span class="badge bg-secondary mt-1">{{ t.badge_est }}</span>
                                     {% endif %}
                                     {% if result.muac.muac_status %}
                                         <div class="metric-zscore">
-                                            {{ "&lt;11.5" if result.muac.muac_status == "SAM" else "11.5–12.5" if "At Risk" in result.muac.muac_status else "≥12.5" }}
+                                            {{ t.muac_range_sam if result.muac.muac_status == "SAM" else (t.muac_range_mam if "At Risk" in result.muac.muac_status else t.muac_range_normal) }}
                                         </div>
                                         <span class="badge mt-1
                                             {% if result.muac.muac_status == 'SAM' %}bg-danger
                                             {% elif 'At Risk' in result.muac.muac_status %}bg-warning text-dark
                                             {% else %}bg-success{% endif %} small">
-                                            {% if result.muac.muac_status == 'SAM' %}SAM
-                                            {% elif 'At Risk' in result.muac.muac_status %}MAM
-                                            {% else %}Normal{% endif %}
+                                            {% if result.muac.muac_status == 'SAM' %}{{ t.whz_sam }}
+                                            {% elif 'At Risk' in result.muac.muac_status %}{{ t.whz_mam }}
+                                            {% else %}{{ t.normal_label }}{% endif %}
                                         </span>
                                     {% endif %}
                                 {% elif result.muac and not result.muac.age_in_range %}
                                     <div class="metric-value text-muted fs-3">—</div>
-                                    <span class="badge bg-secondary mt-1 small">Not applicable</span>
-                                    <div class="metric-zscore">Age outside 6–59m</div>
+                                    <span class="badge bg-secondary mt-1 small">{{ t.badge_not_applicable }}</span>
+                                    <div class="metric-zscore">{{ t.age_outside_muac }}</div>
                                 {% else %}
                                     <div class="metric-value text-muted fs-3">—</div>
-                                    <span class="badge bg-secondary mt-1 small">N/A</span>
+                                    <span class="badge bg-secondary mt-1 small">{{ t.badge_na }}</span>
                                 {% endif %}
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {# ML Wasting probability bars #}
                 {% if result.ml_prediction and result.ml_prediction.wasting_method != "unavailable" %}
                 <div class="card mb-3">
                     <div class="card-header fw-semibold small py-2">
-                        ML Wasting Detection
-                        <span class="text-muted fw-normal">&mdash; camera-based body proportions</span>
+                        {{ t.ml_wasting_title }}
+                        <span class="text-muted fw-normal">{{ t.ml_wasting_sub }}</span>
                     </div>
                     <div class="card-body py-3">
                         {% set sam_pct = (result.ml_prediction.sam_probability * 100)|round|int %}
@@ -273,7 +268,7 @@
 
                         <div class="mb-2">
                             <div class="d-flex justify-content-between mb-1">
-                                <small class="fw-semibold text-danger">SAM probability</small>
+                                <small class="fw-semibold text-danger">{{ t.sam_probability }}</small>
                                 <small class="fw-semibold">{{ sam_pct }}%</small>
                             </div>
                             <div class="prob-track">
@@ -282,7 +277,7 @@
                         </div>
                         <div class="mb-2">
                             <div class="d-flex justify-content-between mb-1">
-                                <small class="fw-semibold" style="color:#fd7e14">MAM probability</small>
+                                <small class="fw-semibold" style="color:#fd7e14">{{ t.mam_probability }}</small>
                                 <small class="fw-semibold">{{ mam_pct }}%</small>
                             </div>
                             <div class="prob-track">
@@ -291,7 +286,7 @@
                         </div>
                         <div class="mb-1">
                             <div class="d-flex justify-content-between mb-1">
-                                <small class="fw-semibold text-success">Normal probability</small>
+                                <small class="fw-semibold text-success">{{ t.normal_probability }}</small>
                                 <small class="fw-semibold">{{ nor_pct }}%</small>
                             </div>
                             <div class="prob-track">
@@ -301,7 +296,7 @@
 
                         {% if result.ml_prediction.estimated_weight_kg %}
                         <div class="small text-muted mt-2 pt-2 border-top">
-                            ML estimated weight:
+                            {{ t.ml_estimated_weight }}
                             <strong>{{ "%.1f"|format(result.ml_prediction.estimated_weight_kg) }} kg</strong>
                         </div>
                         {% endif %}
@@ -309,23 +304,34 @@
                 </div>
                 {% endif %}
 
-                {# MUAC estimated note #}
                 {% if result.muac and result.muac.muac_cm and result.muac.muac_method == "estimated_from_whz" %}
                 <div class="alert alert-light border small py-2 mb-3">
-                    <strong>MUAC note:</strong> Value estimated from WHZ — not a direct tape measurement.
-                    Confirm with a physical MUAC tape for clinical decisions.
+                    <strong>{{ t.muac_note_strong }}</strong> {{ t.muac_note_text }}
                 </div>
                 {% endif %}
 
             </div>
         </div>
+        </div><!-- /printableReport -->
 
-        <div class="d-flex gap-2 mb-5">
-            <a href="/" class="btn btn-primary">Assess Another Child</a>
-            <a href="/children" class="btn btn-outline-secondary">View All Children</a>
+        <div class="d-flex flex-wrap gap-2 mb-5">
+            <button type="button" class="btn btn-outline-dark d-print-none" id="btnPrintReport">
+                <i class="bi bi-printer me-1" aria-hidden="true"></i>{{ t.print_report }}
+            </button>
+            <a href="/" class="btn btn-primary">{{ t.assess_another }}</a>
+            <a href="/children" class="btn btn-outline-secondary">{{ t.view_all_children }}</a>
         </div>
 
     {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var btn = document.getElementById('btnPrintReport');
+    if (btn) btn.addEventListener('click', function () { window.print(); });
+})();
+</script>
 {% endblock %}
