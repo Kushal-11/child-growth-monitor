@@ -31,6 +31,24 @@ pre {
     font-size: 0.9rem;
 }
 
+/* ── SNEH logo ──────────────────────────────────────────────────────────── */
+.sneh-navbar-logo {
+    height: 26px;
+    width: auto;
+}
+
+.sneh-footer-logo {
+    height: 34px;
+    width: auto;
+    margin-bottom: 6px;
+}
+
+.sneh-navbar-logo,
+.sneh-footer-logo {
+    object-fit: contain;
+    max-width: 100%;
+}
+
 /* ── Navbar language toggle ─────────────────────────────────────────────── */
 .lang-toggle-wrap .btn-group .btn.lang-btn.active {
     background-color: rgba(255, 255, 255, 0.25);
