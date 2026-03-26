@@ -756,3 +756,64 @@ Key settings in `config.py`:
 - WHO MUAC-for-Age standards: https://www.who.int/tools/child-growth-standards/standards/arm-circumference-for-age
 - MediaPipe Pose Landmarker: https://developers.google.com/mediapipe/solutions/vision/pose_landmarker
 - Snyder RG et al. (1975) *Anthropometry of Infants, Children, and Youths to Age 18* — body proportion baseline used in ML synthetic data
+
+## Flutter Mobile Scaffold (`flutter_app/`)
+
+A starter Flutter client has been added in `flutter_app/` and wired to existing FastAPI endpoints:
+
+- `GET /api/v1/health` for backend connectivity checks
+- `GET /api/v1/children` to list registered children
+- `GET /api/v1/children/{id}` for child-level visit history
+- `POST /api/v1/assess` (multipart) for submitting front/side/back image assessments
+
+Flutter app capabilities currently include:
+- Camera/gallery image selection via `image_picker`
+- Full assessment payload support (`height_value`, `height_unit`, `muac_cm`, optional side/back images)
+- Persisted API base URL using `shared_preferences`
+- Child list + child detail timeline view
+
+### Run the Flutter app
+
+```bash
+cd flutter_app
+flutter pub get
+flutter run
+```
+
+Default API base URL in the app is `http://10.0.2.2:8000` (Android emulator mapping to localhost).
+Change it in-app when targeting a physical device/server.
+
+### Build a Downloadable Android APK
+
+You can now build a downloadable Android APK either locally or via GitHub Actions.
+
+#### Option 1: Local build
+
+```bash
+cd flutter_app
+./scripts/build_android_release.sh
+```
+
+The release APK will be generated at:
+
+```text
+flutter_app/build/app/outputs/flutter-apk/app-release.apk
+```
+
+You can install it on an Android phone using:
+
+```bash
+adb install -r flutter_app/build/app/outputs/flutter-apk/app-release.apk
+```
+
+#### Option 2: GitHub Actions (recommended for sharing APK)
+
+A workflow has been added at `.github/workflows/flutter-android-apk.yml`.
+
+- Trigger the workflow from **Actions → Build Android APK → Run workflow**
+- Download the artifact named `child-growth-monitor-release-apk`
+- Share that APK file with field devices
+
+To set production backend URL for release builds, set repository variable:
+
+- `API_BASE_URL` (for example, `https://api.yourdomain.com`)
