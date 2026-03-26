@@ -148,8 +148,9 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
       if (!mounted) return;
       setState(() => _error = e.toString());
     } finally {
-      if (!mounted) return;
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -170,9 +171,9 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
       if (requestToken != _childDetailRequestToken) return;
       setState(() => _error = e.toString());
     } finally {
-      if (!mounted) return;
-      if (requestToken != _childDetailRequestToken) return;
-      setState(() => _loadingChildDetail = false);
+      if (mounted && requestToken == _childDetailRequestToken) {
+        setState(() => _loadingChildDetail = false);
+      }
     }
   }
 
@@ -218,8 +219,9 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
         _error = e.toString();
       });
     } finally {
-      if (!mounted) return;
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -308,8 +310,9 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
       if (!mounted) return;
       setState(() => _error = e.toString());
     } finally {
-      if (!mounted) return;
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -409,7 +412,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
                 readOnly: true,
               ),
               DropdownButtonFormField<String>(
-                value: _sex,
+                initialValue: _sex,
                 decoration: const InputDecoration(labelText: 'Sex'),
                 items: const [
                   DropdownMenuItem(value: 'M', child: Text('Male (M)')),
