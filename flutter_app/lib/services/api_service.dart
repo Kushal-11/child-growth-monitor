@@ -23,9 +23,19 @@ class ApiService {
   static const Duration apiTimeout = Duration(seconds: 20);
 
   Uri _uri(String path) {
-    final normalizedBaseUrl = baseUrl.trim().replaceAll(RegExp(r'/+$'), '');
-    final normalizedPath = path.startsWith('/') ? path.substring(1) : path;
-    return Uri.parse('$normalizedBaseUrl/').resolve(normalizedPath);
+    try {
+      final normalizedBaseUrl = baseUrl.trim().replaceAll(RegExp(r'/+$'), '');
+      final normalizedPath = path.startsWith('/') ? path.substring(1) : path;
+      return Uri.parse('$normalizedBaseUrl/').resolve(normalizedPath);
+    } on ArgumentError catch (error) {
+      throw ApiException(
+        'Invalid API URL configuration for base "$baseUrl" and path "$path": $error',
+      );
+    } on FormatException catch (error) {
+      throw ApiException(
+        'Invalid API URL format for base "$baseUrl" and path "$path": $error',
+      );
+    }
   }
 
   Future<bool> checkHealth() async {
@@ -35,6 +45,10 @@ class ApiService {
       return response.statusCode == 200;
     } on TimeoutException {
       throw ApiException('Request timed out while checking backend health.');
+    } on http.ClientException catch (error) {
+      throw ApiException('Network error while checking backend health: $error');
+    } on ArgumentError catch (error) {
+      throw ApiException('Invalid API URL while checking backend health: $error');
     }
   }
 
@@ -52,6 +66,10 @@ class ApiService {
           .toList();
     } on TimeoutException {
       throw ApiException('Request timed out while loading children.');
+    } on http.ClientException catch (error) {
+      throw ApiException('Network error while loading children: $error');
+    } on ArgumentError catch (error) {
+      throw ApiException('Invalid API URL while loading children: $error');
     }
   }
 
@@ -67,6 +85,10 @@ class ApiService {
       return ChildDetail.fromJson(decoded);
     } on TimeoutException {
       throw ApiException('Request timed out while loading child detail.');
+    } on http.ClientException catch (error) {
+      throw ApiException('Network error while loading child detail: $error');
+    } on ArgumentError catch (error) {
+      throw ApiException('Invalid API URL while loading child detail: $error');
     }
   }
 
@@ -85,7 +107,12 @@ class ApiService {
     String? guardianName,
     String? location,
   }) async {
-    final request = http.MultipartRequest('POST', _uri('/api/v1/assess'));
+    late final http.MultipartRequest request;
+    try {
+      request = http.MultipartRequest('POST', _uri('/api/v1/assess'));
+    } on ArgumentError catch (error) {
+      throw ApiException('Invalid API URL while preparing assessment: $error');
+    }
 
     request.files.add(
       await http.MultipartFile.fromPath('image', frontImagePath),
@@ -132,6 +159,10 @@ class ApiService {
       streamed = await request.send().timeout(apiTimeout);
     } on TimeoutException {
       throw ApiException('Request timed out while uploading assessment.');
+    } on http.ClientException catch (error) {
+      throw ApiException('Network error while uploading assessment: $error');
+    } on ArgumentError catch (error) {
+      throw ApiException('Invalid request while uploading assessment: $error');
     }
 
     late final http.Response response;
@@ -139,6 +170,10 @@ class ApiService {
       response = await http.Response.fromStream(streamed).timeout(apiTimeout);
     } on TimeoutException {
       throw ApiException('Request timed out while reading assessment response.');
+    } on http.ClientException catch (error) {
+      throw ApiException('Network error while reading assessment response: $error');
+    } on ArgumentError catch (error) {
+      throw ApiException('Invalid response while reading assessment: $error');
     }
 
     if (response.statusCode != 200) {
