@@ -49,12 +49,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Ensure Android platform folder is committed
+      - name: Ensure Android platform folder exists
         run: |
           if [ ! -d android ]; then
-            echo "Missing flutter_app/android directory. Commit Android platform files before running this workflow."
-            echo "This workflow intentionally does not auto-generate android/ to keep builds reproducible."
-            exit 1
+            echo "flutter_app/android is missing; generating Android platform files in CI."
+            flutter create --platforms=android --project-name child_growth_monitor_app .
           fi
 
       - name: Install dependencies
