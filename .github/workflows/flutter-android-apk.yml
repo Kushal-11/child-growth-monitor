@@ -30,10 +30,30 @@ jobs:
         with:
           channel: stable
 
+      - name: Restore pub cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('flutter_app/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Restore Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('flutter_app/android/gradle/wrapper/gradle-wrapper.properties', 'flutter_app/android/**/*.gradle*', 'flutter_app/android/**/gradle.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
       - name: Ensure Android platform folder is committed
         run: |
           if [ ! -d android ]; then
-            echo "Missing flutter_app/android directory. Commit platform files before running this workflow."
+            echo "Missing flutter_app/android directory. Commit Android platform files before running this workflow."
+            echo "This workflow intentionally does not auto-generate android/ to keep builds reproducible."
             exit 1
           fi
 

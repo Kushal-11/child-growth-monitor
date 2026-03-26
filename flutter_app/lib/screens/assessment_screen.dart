@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -17,6 +18,13 @@ class AssessmentScreen extends StatefulWidget {
 
 class _AssessmentScreenState extends State<AssessmentScreen> {
   static const _developmentBaseUrl = 'http://10.0.2.2:8000';
+  static const _productionBaseUrl = 'https://api.child-growth-monitor.org';
+  static const Set<String> _approvedHosts = {
+    '10.0.2.2',
+    'localhost',
+    '127.0.0.1',
+    'api.child-growth-monitor.org',
+  };
   static const defaultBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: _developmentBaseUrl,
@@ -51,8 +59,9 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
   AssessmentResult? _result;
   List<ChildSummary> _children = const [];
   ChildDetail? _selectedChild;
+  int _childDetailRequestToken = 0;
 
-  ApiService get _api => ApiService(baseUrl: _baseUrlController.text.trim());
+  ApiService get _api => ApiService(baseUrl: _effectiveBaseUrl());
 
   @override
   void initState() {
@@ -81,12 +90,6 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     final persisted = prefs.getString(_prefsBaseUrlKey);
-
-    final hasCompileTimeApiUrl = defaultBaseUrl != _developmentBaseUrl;
-    if (hasCompileTimeApiUrl) {
-      return;
-    }
-
     if (persisted != null && persisted.isNotEmpty) {
       setState(() => _baseUrlController.text = persisted);
     }
@@ -151,6 +154,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
   }
 
   Future<void> _loadChildDetail(int childId) async {
+    final requestToken = ++_childDetailRequestToken;
     setState(() {
       _loadingChildDetail = true;
       _error = null;
@@ -159,13 +163,40 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
     try {
       final detail = await _api.getChildDetail(childId);
       if (!mounted) return;
+      if (requestToken != _childDetailRequestToken) return;
       setState(() => _selectedChild = detail);
     } catch (e) {
       if (!mounted) return;
+      if (requestToken != _childDetailRequestToken) return;
       setState(() => _error = e.toString());
     } finally {
       if (!mounted) return;
+      if (requestToken != _childDetailRequestToken) return;
       setState(() => _loadingChildDetail = false);
+    }
+  }
+
+  String _effectiveBaseUrl() {
+    final inputUrl = _baseUrlController.text.trim();
+    if (_isAllowlistedHost(inputUrl)) {
+      return inputUrl;
+    }
+    if (_isAllowlistedHost(defaultBaseUrl)) {
+      return defaultBaseUrl;
+    }
+    return _productionBaseUrl;
+  }
+
+  bool _isAllowlistedHost(String baseUrl) {
+    if (baseUrl.isEmpty) {
+      return false;
+    }
+    try {
+      final uri = Uri.parse(baseUrl);
+      return (uri.scheme == 'http' || uri.scheme == 'https') &&
+          _approvedHosts.contains(uri.host);
+    } on FormatException {
+      return false;
     }
   }
 
@@ -247,9 +278,15 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
     });
 
     try {
+      final effectiveBaseUrl = _effectiveBaseUrl();
+      if (!_isAllowlistedHost(_baseUrlController.text.trim()) && mounted) {
+        setState(() {
+          _baseUrlController.text = effectiveBaseUrl;
+        });
+      }
       await _saveBaseUrl();
       if (!mounted) return;
-      final result = await _api.submitAssessment(
+      final result = await ApiService(baseUrl: effectiveBaseUrl).submitAssessment(
         frontImagePath: _frontImage!.path,
         sideImagePath: _sideImage?.path,
         backImagePath: _backImage?.path,
@@ -287,15 +324,21 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextFormField(
-                controller: _baseUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'FastAPI Base URL',
-                  helperText: 'Use http://10.0.2.2:8000 for Android emulator',
+              if (!kReleaseMode)
+                TextFormField(
+                  controller: _baseUrlController,
+                  decoration: const InputDecoration(
+                    labelText: 'FastAPI Base URL',
+                    helperText: 'Use http://10.0.2.2:8000 for Android emulator',
+                  ),
+                  validator: (value) =>
+                      (value == null || value.trim().isEmpty) ? 'Required' : null,
                 ),
-                validator: (value) =>
-                    (value == null || value.trim().isEmpty) ? 'Required' : null,
-              ),
+              if (!kReleaseMode)
+                Text(
+                  'Developer mode: only allowlisted backend hosts are permitted.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,

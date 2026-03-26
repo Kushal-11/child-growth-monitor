@@ -14,12 +14,28 @@ class ChildSummary {
   final int visitCount;
 
   factory ChildSummary.fromJson(Map<String, dynamic> json) {
+    int parseIntField(String key) {
+      final value = json[key];
+      if (value is int) return value;
+      if (value is String) {
+        final parsed = int.tryParse(value);
+        if (parsed != null) return parsed;
+      }
+      throw FormatException('Invalid "$key" in child summary: $value');
+    }
+
+    String parseStringField(String key) {
+      final value = json[key];
+      if (value is String && value.isNotEmpty) return value;
+      throw FormatException('Invalid "$key" in child summary: $value');
+    }
+
     return ChildSummary(
-      id: json['id'] as int,
-      name: json['name'] as String,
-      dateOfBirth: json['date_of_birth'] as String,
-      sex: json['sex'] as String,
-      visitCount: json['visit_count'] as int,
+      id: parseIntField('id'),
+      name: parseStringField('name'),
+      dateOfBirth: parseStringField('date_of_birth'),
+      sex: parseStringField('sex'),
+      visitCount: parseIntField('visit_count'),
     );
   }
 }
