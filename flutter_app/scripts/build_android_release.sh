@@ -13,8 +13,10 @@ if ! command -v flutter >/dev/null 2>&1; then
 fi
 
 if [ ! -d android ]; then
-  echo "Android project missing. Generating platform files..."
-  flutter create --platforms=android .
+  echo "Android project missing at flutter_app/android." >&2
+  echo "Please generate and commit the android/ directory before running release builds." >&2
+  echo "Example (run once, then commit generated files): flutter create --platforms=android flutter_app" >&2
+  exit 1
 fi
 
 flutter pub get

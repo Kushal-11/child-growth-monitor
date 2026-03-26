@@ -16,9 +16,10 @@ class AssessmentScreen extends StatefulWidget {
 }
 
 class _AssessmentScreenState extends State<AssessmentScreen> {
+  static const _developmentBaseUrl = 'http://10.0.2.2:8000';
   static const defaultBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8000',
+    defaultValue: _developmentBaseUrl,
   );
   static const _prefsBaseUrlKey = 'api_base_url';
 
@@ -78,7 +79,14 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
 
   Future<void> _loadBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     final persisted = prefs.getString(_prefsBaseUrlKey);
+
+    final hasCompileTimeApiUrl = defaultBaseUrl != _developmentBaseUrl;
+    if (hasCompileTimeApiUrl) {
+      return;
+    }
+
     if (persisted != null && persisted.isNotEmpty) {
       setState(() => _baseUrlController.text = persisted);
     }
@@ -91,6 +99,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
 
   Future<void> _pickImage(ImageSource source, String role) async {
     final file = await _picker.pickImage(source: source, imageQuality: 90);
+    if (!mounted) return;
     if (file == null) {
       return;
     }
@@ -114,6 +123,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
       firstDate: DateTime(2000, 1, 1),
       lastDate: DateTime.now(),
     );
+    if (!mounted) return;
 
     if (selected != null) {
       setState(() {
@@ -129,10 +139,13 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
     });
     try {
       final children = await _api.getChildren();
+      if (!mounted) return;
       setState(() => _children = children);
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = e.toString());
     } finally {
+      if (!mounted) return;
       setState(() => _loading = false);
     }
   }
@@ -145,10 +158,13 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
 
     try {
       final detail = await _api.getChildDetail(childId);
+      if (!mounted) return;
       setState(() => _selectedChild = detail);
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = e.toString());
     } finally {
+      if (!mounted) return;
       setState(() => _loadingChildDetail = false);
     }
   }
@@ -160,14 +176,18 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
     });
     try {
       await _saveBaseUrl();
+      if (!mounted) return;
       final healthy = await _api.checkHealth();
+      if (!mounted) return;
       setState(() => _healthy = healthy);
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _healthy = false;
         _error = e.toString();
       });
     } finally {
+      if (!mounted) return;
       setState(() => _loading = false);
     }
   }
@@ -211,6 +231,15 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
       return;
     }
 
+    final parsedHeightCm = double.tryParse(_heightCmController.text.trim());
+    final parsedHeightValue = double.tryParse(_heightValueController.text.trim());
+    if (parsedHeightCm != null && parsedHeightValue != null) {
+      setState(() {
+        _error = 'Please provide either height in cm OR height value/unit, not both.';
+      });
+      return;
+    }
+
     setState(() {
       _loading = true;
       _error = null;
@@ -219,6 +248,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
 
     try {
       await _saveBaseUrl();
+      if (!mounted) return;
       final result = await _api.submitAssessment(
         frontImagePath: _frontImage!.path,
         sideImagePath: _sideImage?.path,
@@ -227,18 +257,21 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
         dateOfBirth: _dobController.text.trim(),
         sex: _sex,
         weightKg: double.tryParse(_weightController.text.trim()),
-        heightCm: double.tryParse(_heightCmController.text.trim()),
-        heightValue: double.tryParse(_heightValueController.text.trim()),
+        heightCm: parsedHeightCm,
+        heightValue: parsedHeightValue,
         heightUnit: _heightUnit,
         muacCm: double.tryParse(_muacController.text.trim()),
         guardianName: _guardianController.text.trim(),
         location: _locationController.text.trim(),
       );
+      if (!mounted) return;
       setState(() => _result = result);
       await _refreshChildren();
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = e.toString());
     } finally {
+      if (!mounted) return;
       setState(() => _loading = false);
     }
   }

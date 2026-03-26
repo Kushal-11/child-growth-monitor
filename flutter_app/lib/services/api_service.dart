@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -19,34 +20,54 @@ class ApiService {
   ApiService({required this.baseUrl});
 
   final String baseUrl;
+  static const Duration apiTimeout = Duration(seconds: 20);
 
-  Uri _uri(String path) => Uri.parse('$baseUrl$path');
+  Uri _uri(String path) {
+    final normalizedBaseUrl = baseUrl.trim().replaceAll(RegExp(r'/+$'), '');
+    final normalizedPath = path.startsWith('/') ? path.substring(1) : path;
+    return Uri.parse('$normalizedBaseUrl/').resolve(normalizedPath);
+  }
 
   Future<bool> checkHealth() async {
-    final response = await http.get(_uri('/api/v1/health'));
-    return response.statusCode == 200;
+    try {
+      final response =
+          await http.get(_uri('/api/v1/health')).timeout(apiTimeout);
+      return response.statusCode == 200;
+    } on TimeoutException {
+      throw ApiException('Request timed out while checking backend health.');
+    }
   }
 
   Future<List<ChildSummary>> getChildren() async {
-    final response = await http.get(_uri('/api/v1/children'));
-    if (response.statusCode != 200) {
-      throw _apiError(response, fallback: 'Failed to load children');
-    }
+    try {
+      final response =
+          await http.get(_uri('/api/v1/children')).timeout(apiTimeout);
+      if (response.statusCode != 200) {
+        throw _apiError(response, fallback: 'Failed to load children');
+      }
 
-    final decoded = jsonDecode(response.body) as List<dynamic>;
-    return decoded
-        .map((item) => ChildSummary.fromJson(item as Map<String, dynamic>))
-        .toList();
+      final decoded = jsonDecode(response.body) as List<dynamic>;
+      return decoded
+          .map((item) => ChildSummary.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } on TimeoutException {
+      throw ApiException('Request timed out while loading children.');
+    }
   }
 
   Future<ChildDetail> getChildDetail(int childId) async {
-    final response = await http.get(_uri('/api/v1/children/$childId'));
-    if (response.statusCode != 200) {
-      throw _apiError(response, fallback: 'Failed to load child detail');
-    }
+    try {
+      final response =
+          await http.get(_uri('/api/v1/children/$childId')).timeout(apiTimeout);
+      if (response.statusCode != 200) {
+        throw _apiError(response, fallback: 'Failed to load child detail');
+      }
 
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    return ChildDetail.fromJson(decoded);
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      return ChildDetail.fromJson(decoded);
+    } on TimeoutException {
+      throw ApiException('Request timed out while loading child detail.');
+    }
   }
 
   Future<AssessmentResult> submitAssessment({
@@ -106,8 +127,19 @@ class ApiService {
       request.fields['location'] = location;
     }
 
-    final streamed = await request.send();
-    final response = await http.Response.fromStream(streamed);
+    late final http.StreamedResponse streamed;
+    try {
+      streamed = await request.send().timeout(apiTimeout);
+    } on TimeoutException {
+      throw ApiException('Request timed out while uploading assessment.');
+    }
+
+    late final http.Response response;
+    try {
+      response = await http.Response.fromStream(streamed).timeout(apiTimeout);
+    } on TimeoutException {
+      throw ApiException('Request timed out while reading assessment response.');
+    }
 
     if (response.statusCode != 200) {
       throw _apiError(response, fallback: 'Assessment failed');

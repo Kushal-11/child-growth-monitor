@@ -30,10 +30,11 @@ jobs:
         with:
           channel: stable
 
-      - name: Generate platform folders if missing
+      - name: Ensure Android platform folder is committed
         run: |
           if [ ! -d android ]; then
-            flutter create --platforms=android .
+            echo "Missing flutter_app/android directory. Commit platform files before running this workflow."
+            exit 1
           fi
 
       - name: Install dependencies
