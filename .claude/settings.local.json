@@ -23,26 +23,19 @@
       "Bash(git push origin main)",
       "Bash(PYTHONPATH=. .venv/bin/python scripts/batch_assess.py --template)",
       "Bash(PYTHONPATH=. .venv/bin/python -c \":*)",
-      "Bash(PYTHONPATH=. .venv/bin/python scripts/extract_best_frame.py --help)"
+      "Bash(PYTHONPATH=. .venv/bin/python scripts/extract_best_frame.py --help)",
+      "Skill(update-config)",
+      "Bash(git add:*)"
     ]
   },
   "hooks": {
-    "FileChanged": [
+    "PostToolUse": [
       {
-        "matcher": "flutter_app/**/*.dart",
+        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "cd flutter_app && flutter analyze --no-pub 2>&1 | tail -5"
-          }
-        ]
-      },
-      {
-        "matcher": "**/*.py",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "PYTHONPATH=. .venv/bin/python -m py_compile $FILE 2>&1"
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath // empty' | { read -r f; case \"$f\" in */flutter_app/*.dart) cd flutter_app && flutter analyze --no-pub 2>&1 | tail -5 ;; *.py) PYTHONPATH=. .venv/bin/python -m py_compile \"$f\" 2>&1 ;; esac; } || true"
           }
         ]
       }
