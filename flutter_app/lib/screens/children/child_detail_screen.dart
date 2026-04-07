@@ -220,7 +220,7 @@ class ChildDetailScreen extends ConsumerWidget {
                     topTitles: const AxisTitles(
                         sideTitles: SideTitles(showTitles: false)),
                   ),
-                  gridData: FlGridData(
+                  gridData: const FlGridData(
                     show: true,
                     drawHorizontalLine: true,
                     drawVerticalLine: false,

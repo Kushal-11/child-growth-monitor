@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../l10n/l10n_provider.dart';
 import '../../models/assessment_result.dart';
-import '../../providers/api_provider.dart';
 import '../../providers/assessment_provider.dart';
 import '../shared/app_scaffold.dart';
 import '../shared/status_badge.dart';
@@ -98,7 +97,7 @@ class ResultScreen extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         border: Border(left: BorderSide(color: color, width: 4)),
         borderRadius: BorderRadius.circular(8),
       ),
