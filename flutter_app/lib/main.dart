@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'screens/assessment_screen.dart';
+import 'router.dart';
 
 void main() {
-  runApp(const ChildGrowthApp());
+  runApp(const ProviderScope(child: ChildGrowthApp()));
 }
 
 class ChildGrowthApp extends StatelessWidget {
@@ -11,13 +12,13 @@ class ChildGrowthApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Child Growth Monitor',
+    return MaterialApp.router(
+      title: 'SNEH Growth Monitor',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
       ),
-      home: const AssessmentScreen(),
+      routerConfig: appRouter,
     );
   }
 }
