@@ -17,10 +17,29 @@ dependencies:
   go_router: ^14.8.1
   fl_chart: ^0.70.2
 
+  # Local processing
+  google_mlkit_pose_detection: ^0.12.0
+  tflite_flutter: ^0.11.0
+  excel: ^4.0.6
+  csv: ^6.0.0
+
+  # Local database
+  drift: ^2.22.1
+  sqlite3_flutter_libs: ^0.5.28
+  path_provider: ^2.1.5
+
+  # Connectivity
+  connectivity_plus: ^6.1.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  drift_dev: ^2.22.1
+  build_runner: ^2.4.14
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/models/
+    - assets/who_data/
