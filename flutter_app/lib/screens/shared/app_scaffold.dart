@@ -42,6 +42,8 @@ class AppScaffold extends ConsumerWidget {
               context.go('/');
             case 1:
               context.go('/children');
+            case 2:
+              context.go('/settings');
           }
         },
         destinations: [
@@ -52,6 +54,10 @@ class AppScaffold extends ConsumerWidget {
           NavigationDestination(
             icon: const Icon(Icons.people),
             label: t('nav_children', ref),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.settings),
+            label: t('nav_settings', ref),
           ),
         ],
       ),

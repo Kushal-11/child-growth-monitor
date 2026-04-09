@@ -4,6 +4,7 @@ import 'screens/assessment/assessment_screen.dart';
 import 'screens/assessment/result_screen.dart';
 import 'screens/children/child_detail_screen.dart';
 import 'screens/children/children_list_screen.dart';
+import 'screens/settings/settings_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -26,6 +27,10 @@ final appRouter = GoRouter(
         final id = int.parse(state.pathParameters['id']!);
         return ChildDetailScreen(childId: id);
       },
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const SettingsScreen(),
     ),
   ],
 );

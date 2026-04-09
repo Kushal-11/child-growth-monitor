@@ -252,4 +252,15 @@ const Map<String, Map<String, String>> translations = {
   },
   'api_base_url': {'en': 'FastAPI Base URL', 'mr': 'FastAPI बेस URL'},
   'check_health': {'en': 'Check Health', 'mr': 'आरोग्य तपासा'},
+  'nav_settings': {'en': 'Settings', 'mr': 'सेटिंग्ज'},
+  'settings_heading': {'en': 'Settings', 'mr': 'सेटिंग्ज'},
+  'server_connection': {'en': 'Server Connection', 'mr': 'सर्व्हर कनेक्शन'},
+  'save_and_test': {'en': 'Save & Test', 'mr': 'सेव्ह आणि तपासा'},
+  'reset_default': {'en': 'Reset to Default', 'mr': 'डीफॉल्ट वर रीसेट'},
+  'connected_ms': {'en': 'Connected', 'mr': 'कनेक्ट'},
+  'connection_failed': {'en': 'Connection failed', 'mr': 'कनेक्शन अयशस्वी'},
+  'invalid_url': {
+    'en': 'Invalid URL — must be a private IP or approved host',
+    'mr': 'अवैध URL — खाजगी IP किंवा मान्य होस्ट असणे आवश्यक',
+  },
 };
