@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'providers/api_provider.dart';
 import 'router.dart';
 
-void main() {
-  runApp(const ProviderScope(child: ChildGrowthApp()));
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final savedUrl = await loadSavedBaseUrl();
+  runApp(
+    ProviderScope(
+      overrides: [
+        baseUrlProvider.overrideWith((ref) => savedUrl),
+      ],
+      child: const ChildGrowthApp(),
+    ),
+  );
 }
 
 class ChildGrowthApp extends StatelessWidget {

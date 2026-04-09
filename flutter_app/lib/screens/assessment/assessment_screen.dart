@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,7 +21,6 @@ class AssessmentScreen extends ConsumerStatefulWidget {
 
 class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _baseUrlController = TextEditingController();
   final _childNameController = TextEditingController();
   final _dobController = TextEditingController();
   final _ageMonthsController = TextEditingController();
@@ -38,7 +36,6 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
   String _heightUnit = 'cm';
   bool _useDob = true;
   bool _loading = false;
-  bool? _healthy;
   String? _error;
 
   XFile? _frontImage;
@@ -51,19 +48,10 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
     _dobController.text = DateFormat('yyyy-MM-dd').format(
       DateTime.now().subtract(const Duration(days: 365 * 3)),
     );
-    _initBaseUrl();
-  }
-
-  Future<void> _initBaseUrl() async {
-    final saved = await loadSavedBaseUrl();
-    if (!mounted) return;
-    _baseUrlController.text = saved;
-    ref.read(baseUrlProvider.notifier).state = saved;
   }
 
   @override
   void dispose() {
-    _baseUrlController.dispose();
     _childNameController.dispose();
     _dobController.dispose();
     _ageMonthsController.dispose();
@@ -125,29 +113,6 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
     return _dobController.text.trim();
   }
 
-  Future<void> _checkHealth() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final url = _baseUrlController.text.trim();
-      await saveBaseUrl(url);
-      ref.read(baseUrlProvider.notifier).state = url;
-      final healthy = await ref.read(apiProvider).checkHealth();
-      if (!mounted) return;
-      setState(() => _healthy = healthy);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _healthy = false;
-        _error = e.toString();
-      });
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_frontImage == null) {
@@ -167,10 +132,6 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
     });
 
     try {
-      final url = _baseUrlController.text.trim();
-      await saveBaseUrl(url);
-      ref.read(baseUrlProvider.notifier).state = url;
-
       final result = await ref.read(apiProvider).submitAssessment(
             frontImagePath: _frontImage!.path,
             sideImagePath: _sideImage?.path,
@@ -219,45 +180,6 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
-
-              // Debug: API URL
-              if (kDebugMode) ...[
-                TextFormField(
-                  controller: _baseUrlController,
-                  decoration: InputDecoration(
-                    labelText: t('api_base_url', ref),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.check_circle_outline),
-                      onPressed: _loading ? null : _checkHealth,
-                      tooltip: t('check_health', ref),
-                    ),
-                  ),
-                ),
-                if (_healthy != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4, bottom: 8),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _healthy! ? Icons.check_circle : Icons.error,
-                          color: _healthy! ? Colors.green : Colors.red,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _healthy!
-                              ? t('backend_healthy', ref)
-                              : t('backend_unhealthy', ref),
-                          style: TextStyle(
-                            color: _healthy! ? Colors.green : Colors.red,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 8),
-              ],
 
               // === IMAGES ===
               _sectionHeader(t('front_view_photo', ref), required: true),
