@@ -26,9 +26,11 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (migrator, from, to) async {
           if (from < 2) {
             // No production users yet — destructive recreate is acceptable.
-            await migrator.deleteTable('visits');
-            await migrator.deleteTable('measurements');
+            // Drop dependents first to respect foreign-key constraints; the
+            // children table is left intact (no schema change needed there).
             await migrator.deleteTable('sync_queue');
+            await migrator.deleteTable('measurements');
+            await migrator.deleteTable('visits');
             await migrator.createTable(visits);
             await migrator.createTable(measurements);
             await migrator.createTable(syncQueue);
