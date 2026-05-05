@@ -122,6 +122,10 @@ const Map<String, Map<String, String>> translations = {
     'en': 'to get started.',
     'mr': 'सुरुवात करण्यासाठी.',
   },
+  'fallback_used': {
+    'en': 'WHO median fallback used (on-device ML unavailable)',
+    'mr': 'WHO सरासरी वापरली (ऑन-डिव्हाइस ML अनुपलब्ध)',
+  },
   'child_profile': {'en': 'Child Profile', 'mr': 'मुलाचे प्रोफाइल'},
   'label_dob': {'en': 'DOB:', 'mr': 'जन्मतारीख:'},
   'label_sex': {'en': 'Sex:', 'mr': 'लिंग:'},

@@ -118,6 +118,20 @@ class ResultScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(message),
+          if (result.mlPrediction == null) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade100,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                t('fallback_used', ref),
+                style: const TextStyle(fontSize: 11),
+              ),
+            ),
+          ],
         ],
       ),
     );
