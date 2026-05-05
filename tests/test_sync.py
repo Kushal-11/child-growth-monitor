@@ -73,3 +73,42 @@ def test_sync_missing_required_field_returns_422():
     del body["local_uuid"]
     response = client.post("/api/v1/sync", data=body, files={"image": _file()})
     assert response.status_code == 422
+
+
+def test_sync_persists_all_mobile_fields():
+    """All mobile-computed fields must round-trip into measurement_results."""
+    from app.models.database import SessionLocal
+    from app.models.measurement import MeasurementResult
+    from app.models.visit import Visit
+
+    body = _payload()
+    body["local_uuid"] = str(uuid.uuid4())
+    body["body_build"] = "slender"
+    body["side_view_used"] = "true"
+    body["chest_depth_cm"] = "8.1"
+    body["abd_depth_cm"] = "8.5"
+    response = client.post("/api/v1/sync", data=body, files={"image": _file()})
+    assert response.status_code == 200
+    visit_id = response.json()["server_visit_id"]
+
+    db = SessionLocal()
+    try:
+        m = (
+            db.query(MeasurementResult)
+            .join(Visit)
+            .filter(Visit.id == visit_id)
+            .one()
+        )
+        assert m.body_build == "slender"
+        assert m.side_view_used is True
+        assert m.chest_depth_cm == 8.1
+        assert m.abd_depth_cm == 8.5
+        assert m.ml_wasting_status == "Normal"
+        assert m.muac_cm == 14.0
+        assert m.muac_status == "Normal"
+        assert m.muac_method == "estimated_from_whz"
+        assert m.sam_probability == 0.02
+        assert m.mam_probability == 0.10
+        assert m.normal_probability == 0.85
+    finally:
+        db.close()

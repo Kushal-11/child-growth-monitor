@@ -132,6 +132,20 @@ async def sync_assessment(
         haz_status=haz_status,
         whz_status=whz_status,
         confidence_score=confidence_score,
+        body_build=body_build,
+        side_view_used=(side_view_used.lower() in ("true", "1", "yes")),
+        chest_depth_cm=chest_depth_cm,
+        abd_depth_cm=abd_depth_cm,
+        ml_estimated_weight_kg=ml_estimated_weight_kg,
+        ml_wasting_status=ml_wasting_status,
+        sam_probability=sam_probability,
+        mam_probability=mam_probability,
+        normal_probability=normal_probability,
+        risk_probability=risk_probability,
+        overweight_probability=overweight_probability,
+        muac_cm=muac_cm,
+        muac_status=muac_status,
+        muac_method=muac_method,
     )
     db.add(measurement)
     db.commit()
