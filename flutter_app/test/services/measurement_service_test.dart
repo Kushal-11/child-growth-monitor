@@ -64,8 +64,7 @@ void main() {
       poseConfidence: 0.9,
     );
     expect(m.estimationMethod, 'who_statistical');
-    expect(m.effectiveHeightCm, greaterThan(70));
-    expect(m.effectiveHeightCm, lessThan(100));
+    expect(m.effectiveHeightCm, closeTo(87.1, 1.0));
   });
 
   test('shoulder width converts to cm using height as scale', () {

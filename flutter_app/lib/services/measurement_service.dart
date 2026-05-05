@@ -26,16 +26,20 @@ class MeasurementService {
 
     final scale = _scale(segments, effectiveHeightCm);
 
-    final shoulderCm = (segments.shoulderWidthPx ??
-            _imputeShoulderPx(effectiveHeightCm, ageMonths)) *
-        scale;
-    final hipCm = (segments.hipWidthPx ?? shoulderCm * 0.88 / scale) * scale;
-    final torsoCm =
-        (segments.torsoLengthPx ?? effectiveHeightCm * 0.30 / scale) * scale;
-    final armCm =
-        (segments.upperArmLengthPx ??
-                _imputeArmPx(effectiveHeightCm, ageMonths)) *
-            scale;
+    final shoulderCm = segments.shoulderWidthPx != null
+        ? segments.shoulderWidthPx! * scale
+        : _imputeShoulderPx(effectiveHeightCm, ageMonths) * scale;
+    // Snyder ratio: hip width ≈ 0.88 × shoulder width.
+    final hipCm = segments.hipWidthPx != null
+        ? segments.hipWidthPx! * scale
+        : shoulderCm * 0.88;
+    // Snyder ratio: torso ≈ 0.30 × height.
+    final torsoCm = segments.torsoLengthPx != null
+        ? segments.torsoLengthPx! * scale
+        : effectiveHeightCm * 0.30;
+    final armCm = segments.upperArmLengthPx != null
+        ? segments.upperArmLengthPx! * scale
+        : _imputeArmPx(effectiveHeightCm, ageMonths) * scale;
 
     double? chestCm;
     double? abdCm;
