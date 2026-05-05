@@ -35,6 +35,8 @@ class SyncService {
   static const _maxRetries = 5;
 
   Future<void> runOnce() async {
+    await _recoverStuck();
+
     final entries = await (_db.select(_db.syncQueue)
           ..where((s) =>
               (s.status.equals('pending') | s.status.equals('failed')) &
@@ -45,6 +47,15 @@ class SyncService {
     for (final entry in entries) {
       await _syncOne(entry);
     }
+  }
+
+  /// Resets any entries stuck in 'syncing' state back to 'pending'.
+  /// Defends against app crashes (SIGKILL, OOM, force-stop) that left
+  /// entries mid-flight.
+  Future<void> _recoverStuck() async {
+    await (_db.update(_db.syncQueue)
+          ..where((s) => s.status.equals('syncing')))
+        .write(const SyncQueueCompanion(status: Value('pending')));
   }
 
   Future<void> _syncOne(SyncQueueData entry) async {

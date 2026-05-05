@@ -116,4 +116,32 @@ void main() {
     await svc.runOnce();
     expect(calls, 0);
   });
+
+  test('recovers entries stuck in syncing state on next runOnce', () async {
+    final queueId = await _seedVisit(db);
+    // Simulate a previous run that crashed mid-sync — entry left in 'syncing'.
+    await (db.update(db.syncQueue)..where((s) => s.id.equals(queueId))).write(
+        const SyncQueueCompanion(status: Value('syncing')));
+
+    final mockClient = MockClient((_) async {
+      return http.Response(
+          '{"server_visit_id": 11, "status": "synced"}', 200);
+    });
+    final svc = SyncService(
+      db: db,
+      visitDao: VisitDao(db),
+      childDao: ChildDao(db),
+      syncDao: SyncQueueDao(db),
+      baseUrl: 'http://example.test',
+      httpClient: mockClient,
+    );
+
+    await svc.runOnce();
+
+    final entry = await (db.select(db.syncQueue)
+          ..where((s) => s.id.equals(queueId)))
+        .getSingle();
+    expect(entry.status, 'synced');
+    expect(entry.serverVisitId, 11);
+  });
 }
