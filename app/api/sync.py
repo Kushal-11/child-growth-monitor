@@ -1,0 +1,139 @@
+"""POST /api/v1/sync — idempotent ingestion of mobile-computed assessments.
+
+Mobile clients run the full assessment on-device, then upload the result here.
+The server skips ML, dedups by local_uuid, and stores the image + measurement.
+"""
+import shutil
+import uuid as uuid_lib
+from datetime import date, datetime
+from typing import Optional
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from sqlalchemy.orm import Session
+
+from app.models.child import Child
+from app.models.database import get_db
+from app.models.measurement import MeasurementResult
+from app.models.visit import Visit
+from config import UPLOAD_DIR
+
+router = APIRouter(prefix="/api/v1", tags=["Sync"])
+
+
+def _save_upload(upload: UploadFile) -> str:
+    UPLOAD_DIR.mkdir(exist_ok=True)
+    filename = f"{uuid_lib.uuid4().hex}_{upload.filename or 'image.jpg'}"
+    path = UPLOAD_DIR / filename
+    with open(path, "wb") as fh:
+        shutil.copyfileobj(upload.file, fh)
+    return str(path)
+
+
+@router.post("/sync")
+async def sync_assessment(
+    image: UploadFile = File(...),
+    image_side: Optional[UploadFile] = File(None),
+    image_back: Optional[UploadFile] = File(None),
+    local_uuid: str = Form(...),
+    child_name: str = Form(...),
+    date_of_birth: str = Form(...),
+    sex: str = Form(...),
+    age_months: float = Form(...),
+    visit_date: str = Form(...),
+    predicted_height_cm: Optional[float] = Form(None),
+    predicted_weight_kg: Optional[float] = Form(None),
+    manual_height_cm: Optional[float] = Form(None),
+    manual_weight_kg: Optional[float] = Form(None),
+    haz_zscore: Optional[float] = Form(None),
+    whz_zscore: Optional[float] = Form(None),
+    haz_status: Optional[str] = Form(None),
+    whz_status: Optional[str] = Form(None),
+    confidence_score: Optional[float] = Form(None),
+    body_build: Optional[str] = Form(None),
+    side_view_used: str = Form("false"),
+    chest_depth_cm: Optional[float] = Form(None),
+    abd_depth_cm: Optional[float] = Form(None),
+    ml_estimated_weight_kg: Optional[float] = Form(None),
+    ml_wasting_status: Optional[str] = Form(None),
+    sam_probability: Optional[float] = Form(None),
+    mam_probability: Optional[float] = Form(None),
+    normal_probability: Optional[float] = Form(None),
+    risk_probability: Optional[float] = Form(None),
+    overweight_probability: Optional[float] = Form(None),
+    muac_cm: Optional[float] = Form(None),
+    muac_status: Optional[str] = Form(None),
+    muac_method: Optional[str] = Form(None),
+    guardian_name: Optional[str] = Form(None),
+    location: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+):
+    if sex not in ("M", "F"):
+        raise HTTPException(400, "sex must be 'M' or 'F'")
+
+    try:
+        dob = date.fromisoformat(date_of_birth)
+    except ValueError:
+        raise HTTPException(400, "date_of_birth must be ISO format (YYYY-MM-DD)")
+
+    try:
+        visit_dt = datetime.fromisoformat(visit_date)
+    except ValueError:
+        raise HTTPException(400, "visit_date must be ISO format")
+
+    # Dedup check BEFORE saving image — retried requests won't litter uploads dir
+    existing = db.query(Visit).filter(Visit.local_uuid == local_uuid).first()
+    if existing is not None:
+        return {"server_visit_id": existing.id, "status": "already_synced"}
+
+    image_path = _save_upload(image)
+    if image_side is not None:
+        _save_upload(image_side)
+    if image_back is not None:
+        _save_upload(image_back)
+
+    child = (
+        db.query(Child)
+        .filter(
+            Child.name == child_name,
+            Child.date_of_birth == dob,
+            Child.sex == sex,
+        )
+        .first()
+    )
+    if child is None:
+        child = Child(
+            name=child_name,
+            date_of_birth=dob,
+            sex=sex,
+            guardian_name=guardian_name,
+            location=location,
+        )
+        db.add(child)
+        db.flush()
+
+    visit = Visit(
+        child_id=child.id,
+        visit_date=visit_dt,
+        age_months=age_months,
+        image_path=image_path,
+        local_uuid=local_uuid,
+    )
+    db.add(visit)
+    db.flush()
+
+    measurement = MeasurementResult(
+        visit_id=visit.id,
+        predicted_height_cm=predicted_height_cm,
+        predicted_weight_kg=predicted_weight_kg,
+        manual_height_cm=manual_height_cm,
+        manual_weight_kg=manual_weight_kg,
+        haz_zscore=haz_zscore,
+        whz_zscore=whz_zscore,
+        haz_status=haz_status,
+        whz_status=whz_status,
+        confidence_score=confidence_score,
+    )
+    db.add(measurement)
+    db.commit()
+
+    return {"server_visit_id": visit.id, "status": "synced"}

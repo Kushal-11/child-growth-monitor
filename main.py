@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router as api_router
+from app.api.sync import router as sync_router
 from app.models.database import init_db
 from app.services.assessment_service import AssessmentService
 from app.services.who_data_service import WHODataService
@@ -41,6 +42,7 @@ def create_app() -> FastAPI:
 
     # Register routers
     app.include_router(api_router)
+    app.include_router(sync_router)
     app.include_router(web_router)
 
     # Wire up dependency injection via FastAPI's override mechanism
