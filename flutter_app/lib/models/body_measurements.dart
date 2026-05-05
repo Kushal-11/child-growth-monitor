@@ -56,6 +56,38 @@ class SideViewSegments {
   });
 }
 
+/// Final measurement output: cm-scaled segments + height + body build.
+/// Produced by MeasurementService from BodySegments (pixels) + WHO data.
+class BodyMeasurements {
+  final double effectiveHeightCm;
+  final double shoulderWidthCm;
+  final double hipWidthCm;
+  final double torsoLengthCm;
+  final double upperArmLengthCm;
+  final double? chestDepthCm;
+  final double? abdDepthCm;
+  final String bodyBuild; // "slender" | "average" | "stocky"
+  final int bodyBuildScore; // -1 | 0 | 1
+  final double confidence; // 0.0 - 1.0
+  final String estimationMethod; // "manual" | "who_statistical"
+  final bool sideViewUsed;
+
+  const BodyMeasurements({
+    required this.effectiveHeightCm,
+    required this.shoulderWidthCm,
+    required this.hipWidthCm,
+    required this.torsoLengthCm,
+    required this.upperArmLengthCm,
+    this.chestDepthCm,
+    this.abdDepthCm,
+    required this.bodyBuild,
+    required this.bodyBuildScore,
+    required this.confidence,
+    required this.estimationMethod,
+    required this.sideViewUsed,
+  });
+}
+
 /// Full measurement output from the processing pipeline
 class MeasurementOutput {
   final double? predictedHeightCm;
