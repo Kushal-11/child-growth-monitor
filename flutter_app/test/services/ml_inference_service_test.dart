@@ -47,6 +47,9 @@ void main() {
     expect(svc.weightWithinBounds(predictedKg: 4.0, whoMedianKg: 12.0), isFalse);
     expect(svc.weightWithinBounds(predictedKg: 25.0, whoMedianKg: 12.0), isFalse);
     expect(svc.weightWithinBounds(predictedKg: 21.6, whoMedianKg: 12.0), isTrue);
+    expect(svc.weightWithinBounds(predictedKg: 5.4, whoMedianKg: 12.0), isTrue); // 45% exact lower bound
+    expect(svc.weightWithinBounds(predictedKg: 12.0, whoMedianKg: 0), isFalse);
+    expect(svc.weightWithinBounds(predictedKg: 12.0, whoMedianKg: -1), isFalse);
     svc.dispose();
   });
 

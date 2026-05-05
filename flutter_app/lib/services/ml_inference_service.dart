@@ -25,26 +25,31 @@ class MlInferenceService {
   bool get isLoaded => _weight != null && _classifier != null && _mean != null;
 
   Future<void> load() async {
-    _weight = await Interpreter.fromAsset(_weightAsset);
-    _classifier = await Interpreter.fromAsset(_classifierAsset);
+    try {
+      _weight = await Interpreter.fromAsset(_weightAsset);
+      _classifier = await Interpreter.fromAsset(_classifierAsset);
 
-    final scalerJson = await rootBundle.loadString(_scalerAsset);
-    final data = jsonDecode(scalerJson) as Map<String, dynamic>;
-    _mean = (data['mean'] as List).map((v) => (v as num).toDouble()).toList();
-    _scale = (data['scale'] as List).map((v) => (v as num).toDouble()).toList();
-    if (_mean!.length != 14 || _scale!.length != 14) {
-      throw StateError(
-        'feature_scaler.json must contain 14-element mean and scale arrays',
-      );
-    }
+      final scalerJson = await rootBundle.loadString(_scalerAsset);
+      final data = jsonDecode(scalerJson) as Map<String, dynamic>;
+      _mean = (data['mean'] as List).map((v) => (v as num).toDouble()).toList();
+      _scale = (data['scale'] as List).map((v) => (v as num).toDouble()).toList();
+      if (_mean!.length != 14 || _scale!.length != 14) {
+        throw StateError(
+          'feature_scaler.json must contain 14-element mean and scale arrays',
+        );
+      }
 
-    final wOut = _weight!.getOutputTensor(0).shape;
-    final cOut = _classifier!.getOutputTensor(0).shape;
-    if (wOut.length != 2 || wOut[1] != 1) {
-      throw StateError('weight_estimator output shape must be [1,1], got $wOut');
-    }
-    if (cOut.length != 2 || cOut[1] != 5) {
-      throw StateError('wasting_classifier output shape must be [1,5], got $cOut');
+      final wOut = _weight!.getOutputTensor(0).shape;
+      final cOut = _classifier!.getOutputTensor(0).shape;
+      if (wOut.length != 2 || wOut[0] != 1 || wOut[1] != 1) {
+        throw StateError('weight_estimator output shape must be [1,1], got $wOut');
+      }
+      if (cOut.length != 2 || cOut[0] != 1 || cOut[1] != 5) {
+        throw StateError('wasting_classifier output shape must be [1,5], got $cOut');
+      }
+    } catch (_) {
+      dispose();
+      rethrow;
     }
   }
 
@@ -101,5 +106,7 @@ class MlInferenceService {
     _classifier?.close();
     _weight = null;
     _classifier = null;
+    _mean = null;
+    _scale = null;
   }
 }
