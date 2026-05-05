@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 
 import '../models/body_measurements.dart';
+import 'pose_source.dart';
 
 /// Wraps google_mlkit_pose_detection for on-device pose estimation and
 /// extracts body segments from 33 MediaPipe landmarks.
@@ -375,5 +376,56 @@ class PoseService {
 
   Map<PoseLandmarkType, PoseLandmark> _landmarkMap(List<PoseLandmark> landmarks) {
     return {for (final l in landmarks) l.type: l};
+  }
+}
+
+/// Adapts PoseService to the PoseSource contract used by AssessmentService.
+class PoseServiceSource implements PoseSource {
+  PoseServiceSource(this._pose);
+
+  final PoseService _pose;
+
+  @override
+  Future<BodySegments> segmentsFor(String path) async {
+    final landmarks = await _pose.detectPose(path);
+    if (landmarks.isEmpty) {
+      return const BodySegments(
+        headHeightPx: null,
+        torsoLengthPx: null,
+        legLengthPx: null,
+        shoulderWidthPx: null,
+        hipWidthPx: null,
+        upperArmLengthPx: null,
+        totalHeightPx: null,
+        headTopY: null,
+        chinY: null,
+        shoulderMidpointY: null,
+        hipMidpointY: null,
+        heelY: null,
+        headConfidence: 0,
+        torsoConfidence: 0,
+        legConfidence: 0,
+        hipConfidence: 0,
+        armConfidence: 0,
+      );
+    }
+    // Real width/height aren't known at this layer; PoseService normalizes
+    // landmark coords to 0..1, so the cm-conversion in MeasurementService
+    // works against pixel ratios. Pass dummy 1.0 to retain that contract.
+    return _pose.extractSegments(landmarks, 1.0, 1.0);
+  }
+
+  @override
+  Future<SideViewSegments?> sideSegmentsFor(String path) async {
+    final landmarks = await _pose.detectPose(path);
+    if (landmarks.isEmpty) return null;
+    return _pose.extractSideSegments(landmarks, 1.0);
+  }
+
+  @override
+  Future<double> confidenceFor(String path) async {
+    final landmarks = await _pose.detectPose(path);
+    if (landmarks.isEmpty) return 0.0;
+    return _pose.computeConfidence(landmarks);
   }
 }

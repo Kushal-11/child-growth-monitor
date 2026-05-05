@@ -12,8 +12,17 @@ import 'measurement_service.dart';
 import 'ml_inference_service.dart';
 import 'muac_service.dart';
 import 'nutrition_service.dart';
-import 'pose_service.dart';
+import 'pose_source.dart';
 import 'who_data_service.dart';
+
+/// Thrown when on-device pose detection fails to produce a usable result.
+/// Surfaces to the UI so the worker can retake the photo.
+class PoseDetectionFailedException implements Exception {
+  PoseDetectionFailedException(this.message);
+  final String message;
+  @override
+  String toString() => 'PoseDetectionFailedException: $message';
+}
 
 /// Function signature for moving an image into permanent storage.
 /// Real impl: `ImageStorageService.persist`. Tests can pass an identity fn.
@@ -25,7 +34,7 @@ class AssessmentService {
     required ChildDao childDao,
     required VisitDao visitDao,
     required SyncQueueDao syncQueueDao,
-    required dynamic pose, // PoseService at runtime; stubs in tests
+    required PoseSource pose,
     required MeasurementService measurement,
     required NutritionService nutrition,
     required WhoDataService who,
@@ -46,7 +55,7 @@ class AssessmentService {
   final ChildDao _childDao;
   final VisitDao _visitDao;
   final SyncQueueDao _syncQueueDao;
-  final dynamic _pose;
+  final PoseSource _pose;
   final MeasurementService _measurement;
   final NutritionService _nutrition;
   final WhoDataService _who;
@@ -77,8 +86,14 @@ class AssessmentService {
         backImagePath != null ? await _persistImage(backImagePath) : null;
 
     final segments = await _detectFront(frontPath);
+    if (segments.totalHeightPx == null || segments.totalHeightPx! <= 0) {
+      throw PoseDetectionFailedException(
+        'Could not detect a complete body in the photo. '
+        'Make sure the child is fully visible (head to heels) and try again.',
+      );
+    }
     final sideSegments = sidePath != null ? await _detectSide(sidePath) : null;
-    final poseConfidence = _confidenceFor(frontPath);
+    final poseConfidence = await _pose.confidenceFor(frontPath);
 
     final m = _measurement.compute(
       segments: segments,
@@ -106,8 +121,13 @@ class AssessmentService {
         abdDepthCm: m.abdDepthCm,
       );
       prediction = _ml.predict(features);
-    } catch (_) {
-      prediction = null; // fallback path
+    } catch (e, st) {
+      // ML failure → WHO median fallback. Log diagnostics so production
+      // bugs (corrupt model, bad feature vector) don't masquerade as
+      // routine fallback usage.
+      // ignore: avoid_print
+      print('AssessmentService: ML prediction failed, falling back to WHO median. $e\n$st');
+      prediction = null;
     }
 
     final whoMedianWeight = _who.getMedianWeightForHeight(
@@ -231,26 +251,8 @@ class AssessmentService {
 
   // --- Helpers ----------------------------------------------------------
 
-  Future<BodySegments> _detectFront(String path) async {
-    if (_pose is PoseService) {
-      final landmarks = await (_pose as PoseService).detectPose(path);
-      return (_pose as PoseService).extractSegments(landmarks, 1.0, 1.0);
-    }
-    return _pose.segmentsFor(path) as BodySegments;
-  }
-
-  Future<SideViewSegments?> _detectSide(String path) async {
-    if (_pose is PoseService) {
-      final landmarks = await (_pose as PoseService).detectPose(path);
-      return (_pose as PoseService).extractSideSegments(landmarks, 1.0);
-    }
-    return _pose.sideSegmentsFor(path) as SideViewSegments?;
-  }
-
-  double _confidenceFor(String path) {
-    if (_pose is PoseService) return 0.85; // pose service does its own scoring
-    return _pose.confidenceFor(path) as double;
-  }
+  Future<BodySegments> _detectFront(String path) => _pose.segmentsFor(path);
+  Future<SideViewSegments?> _detectSide(String path) => _pose.sideSegmentsFor(path);
 
   double? _resolveWeight({
     required double? manualWeightKg,
@@ -267,11 +269,6 @@ class AssessmentService {
       if (ok) return ml.estimatedWeightKg;
     }
     if (whoMedianKg == null) return null;
-    final adjustment = build == 'slender'
-        ? 0.95
-        : build == 'stocky'
-            ? 1.05
-            : 1.0;
-    return whoMedianKg * adjustment;
+    return whoMedianKg * bodyBuildWeightAdjustment(build);
   }
 }

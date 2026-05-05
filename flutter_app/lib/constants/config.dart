@@ -90,6 +90,19 @@ const List<(int, double)> muacGirls = [
 /// Wasting classifier labels (alphabetical, matching training order)
 const List<String> wastingLabels = ['MAM', 'Normal', 'Overweight', 'Risk_Overweight', 'SAM'];
 
+/// Body-build adjustment multipliers for WHO median weight.
+/// Slender children weigh ~5% less than median, stocky ~5% more.
+double bodyBuildWeightAdjustment(String build) {
+  switch (build) {
+    case 'slender':
+      return 0.95;
+    case 'stocky':
+      return 1.05;
+    default:
+      return 1.0;
+  }
+}
+
 /// 14-feature names in exact order
 const List<String> featureNames = [
   'age_months', 'sex_binary', 'height_cm', 'shoulder_width_cm',

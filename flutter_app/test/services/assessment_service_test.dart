@@ -9,14 +9,16 @@ import 'package:child_growth_monitor_app/models/body_measurements.dart';
 import 'package:child_growth_monitor_app/models/wasting_features.dart';
 import 'package:child_growth_monitor_app/services/assessment_service.dart';
 import 'package:child_growth_monitor_app/services/measurement_service.dart';
+import 'package:child_growth_monitor_app/services/pose_source.dart';
 import 'package:child_growth_monitor_app/services/ml_inference_service.dart';
 import 'package:child_growth_monitor_app/services/nutrition_service.dart';
 import 'package:child_growth_monitor_app/services/who_data_service.dart';
 
 import '../fixtures/who_test_data.dart';
 
-class _StubPose {
-  BodySegments segmentsFor(String _) => const BodySegments(
+class _StubPose implements PoseSource {
+  @override
+  Future<BodySegments> segmentsFor(String _) async => const BodySegments(
         headHeightPx: 100,
         torsoLengthPx: 240,
         legLengthPx: 380,
@@ -35,8 +37,37 @@ class _StubPose {
         hipConfidence: 1,
         armConfidence: 1,
       );
-  SideViewSegments? sideSegmentsFor(String _) => null;
-  double confidenceFor(String _) => 0.9;
+  @override
+  Future<SideViewSegments?> sideSegmentsFor(String _) async => null;
+  @override
+  Future<double> confidenceFor(String _) async => 0.9;
+}
+
+class _DegradedPose implements PoseSource {
+  @override
+  Future<BodySegments> segmentsFor(String _) async => const BodySegments(
+        headHeightPx: null,
+        torsoLengthPx: null,
+        legLengthPx: null,
+        shoulderWidthPx: null,
+        hipWidthPx: null,
+        upperArmLengthPx: null,
+        totalHeightPx: null,
+        headTopY: null,
+        chinY: null,
+        shoulderMidpointY: null,
+        hipMidpointY: null,
+        heelY: null,
+        headConfidence: 0,
+        torsoConfidence: 0,
+        legConfidence: 0,
+        hipConfidence: 0,
+        armConfidence: 0,
+      );
+  @override
+  Future<SideViewSegments?> sideSegmentsFor(String _) async => null;
+  @override
+  Future<double> confidenceFor(String _) async => 0;
 }
 
 class _StubMl extends MlInferenceService {
@@ -132,5 +163,33 @@ void main() {
     expect(stored.length, 1);
     expect(stored.first.whzStatus, isNotNull);
     expect(stored.first.wastingStatus, 'who_fallback');
+  });
+
+  test('throws PoseDetectionFailedException when totalHeightPx missing', () async {
+    final who = WhoDataService();
+    final svcDegraded = AssessmentService(
+      db: db,
+      childDao: ChildDao(db),
+      visitDao: VisitDao(db),
+      syncQueueDao: SyncQueueDao(db),
+      pose: _DegradedPose(),
+      measurement: MeasurementService(who),
+      nutrition: NutritionService(who),
+      who: who,
+      ml: ml,
+      persistImage: (path) async => path,
+    );
+
+    // The service should fail BEFORE touching the WHO/measurement services,
+    // so passing un-loaded WhoDataService instances is fine.
+    await expectLater(
+      svcDegraded.runAssessment(
+        frontImagePath: '/tmp/front.jpg',
+        childName: 'Carmen',
+        dateOfBirth: '2024-03-01',
+        sex: 'F',
+      ),
+      throwsA(isA<PoseDetectionFailedException>()),
+    );
   });
 }
