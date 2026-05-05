@@ -32,10 +32,11 @@ final childrenProvider = StreamProvider<List<ChildSummary>>((ref) {
 /// Watches a single child + their visit history.
 final childDetailProvider =
     StreamProvider.family<ChildDetail, int>((ref, childId) {
-  final childDao = ref.watch(childDaoProvider);
+  final db = ref.watch(databaseProvider);
   final visitDao = ref.watch(visitDaoProvider);
 
-  return childDao.watchById(childId).asyncMap((child) async {
+  final childQuery = db.select(db.children)..where((t) => t.id.equals(childId));
+  return childQuery.watchSingleOrNull().asyncMap((child) async {
     if (child == null) {
       throw StateError('Child $childId not found');
     }
