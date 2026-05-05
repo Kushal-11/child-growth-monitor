@@ -9,6 +9,7 @@ from datetime import date, datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.child import Child
@@ -86,10 +87,8 @@ async def sync_assessment(
         return {"server_visit_id": existing.id, "status": "already_synced"}
 
     image_path = _save_upload(image)
-    if image_side is not None:
-        _save_upload(image_side)
-    if image_back is not None:
-        _save_upload(image_back)
+    side_path = _save_upload(image_side) if image_side is not None else None
+    back_path = _save_upload(image_back) if image_back is not None else None
 
     child = (
         db.query(Child)
@@ -116,6 +115,8 @@ async def sync_assessment(
         visit_date=visit_dt,
         age_months=age_months,
         image_path=image_path,
+        side_image_path=side_path,
+        back_image_path=back_path,
         local_uuid=local_uuid,
     )
     db.add(visit)
@@ -148,6 +149,14 @@ async def sync_assessment(
         muac_method=muac_method,
     )
     db.add(measurement)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        existing = db.query(Visit).filter(Visit.local_uuid == local_uuid).first()
+        if existing is not None:
+            return {"server_visit_id": existing.id, "status": "already_synced"}
+        # Truly unexpected integrity error — propagate
+        raise
 
     return {"server_visit_id": visit.id, "status": "synced"}

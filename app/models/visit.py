@@ -15,6 +15,8 @@ class Visit(Base):
     visit_date = Column(DateTime, default=datetime.utcnow)
     age_months = Column(Float, nullable=False)
     image_path = Column(String(500), nullable=True)
+    side_image_path = Column(String(500), nullable=True)
+    back_image_path = Column(String(500), nullable=True)
     notes = Column(Text, nullable=True)
     local_uuid = Column(String(36), nullable=True)
 
