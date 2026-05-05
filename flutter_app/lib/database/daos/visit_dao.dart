@@ -1,9 +1,12 @@
 import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
 import '../database.dart';
 
 class VisitDao {
   final AppDatabase _db;
   VisitDao(this._db);
+
+  static const _uuid = Uuid();
 
   Future<int> createWithMeasurement({
     required int childId,
@@ -17,6 +20,7 @@ class VisitDao {
       final visitId = await _db.into(_db.visits).insert(
         VisitsCompanion.insert(
           childId: childId,
+          localUuid: _uuid.v4(),
           ageMonths: ageMonths,
           imagePath: imagePath,
           sideImagePath: Value(sideImagePath),

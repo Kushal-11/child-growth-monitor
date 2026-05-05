@@ -454,6 +454,16 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
       requiredDuringInsert: true,
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('REFERENCES children (id)'));
+  static const VerificationMeta _localUuidMeta =
+      const VerificationMeta('localUuid');
+  @override
+  late final GeneratedColumn<String> localUuid = GeneratedColumn<String>(
+      'local_uuid', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 36, maxTextLength: 36),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
   static const VerificationMeta _visitDateMeta =
       const VerificationMeta('visitDate');
   @override
@@ -495,6 +505,7 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
   List<GeneratedColumn> get $columns => [
         id,
         childId,
+        localUuid,
         visitDate,
         ageMonths,
         imagePath,
@@ -520,6 +531,12 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
           childId.isAcceptableOrUnknown(data['child_id']!, _childIdMeta));
     } else if (isInserting) {
       context.missing(_childIdMeta);
+    }
+    if (data.containsKey('local_uuid')) {
+      context.handle(_localUuidMeta,
+          localUuid.isAcceptableOrUnknown(data['local_uuid']!, _localUuidMeta));
+    } else if (isInserting) {
+      context.missing(_localUuidMeta);
     }
     if (data.containsKey('visit_date')) {
       context.handle(_visitDateMeta,
@@ -566,6 +583,8 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
           .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
       childId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}child_id'])!,
+      localUuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}local_uuid'])!,
       visitDate: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}visit_date'])!,
       ageMonths: attachedDatabase.typeMapping
@@ -590,6 +609,7 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
 class Visit extends DataClass implements Insertable<Visit> {
   final int id;
   final int childId;
+  final String localUuid;
   final DateTime visitDate;
   final double ageMonths;
   final String imagePath;
@@ -599,6 +619,7 @@ class Visit extends DataClass implements Insertable<Visit> {
   const Visit(
       {required this.id,
       required this.childId,
+      required this.localUuid,
       required this.visitDate,
       required this.ageMonths,
       required this.imagePath,
@@ -610,6 +631,7 @@ class Visit extends DataClass implements Insertable<Visit> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['child_id'] = Variable<int>(childId);
+    map['local_uuid'] = Variable<String>(localUuid);
     map['visit_date'] = Variable<DateTime>(visitDate);
     map['age_months'] = Variable<double>(ageMonths);
     map['image_path'] = Variable<String>(imagePath);
@@ -629,6 +651,7 @@ class Visit extends DataClass implements Insertable<Visit> {
     return VisitsCompanion(
       id: Value(id),
       childId: Value(childId),
+      localUuid: Value(localUuid),
       visitDate: Value(visitDate),
       ageMonths: Value(ageMonths),
       imagePath: Value(imagePath),
@@ -649,6 +672,7 @@ class Visit extends DataClass implements Insertable<Visit> {
     return Visit(
       id: serializer.fromJson<int>(json['id']),
       childId: serializer.fromJson<int>(json['childId']),
+      localUuid: serializer.fromJson<String>(json['localUuid']),
       visitDate: serializer.fromJson<DateTime>(json['visitDate']),
       ageMonths: serializer.fromJson<double>(json['ageMonths']),
       imagePath: serializer.fromJson<String>(json['imagePath']),
@@ -663,6 +687,7 @@ class Visit extends DataClass implements Insertable<Visit> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'childId': serializer.toJson<int>(childId),
+      'localUuid': serializer.toJson<String>(localUuid),
       'visitDate': serializer.toJson<DateTime>(visitDate),
       'ageMonths': serializer.toJson<double>(ageMonths),
       'imagePath': serializer.toJson<String>(imagePath),
@@ -675,6 +700,7 @@ class Visit extends DataClass implements Insertable<Visit> {
   Visit copyWith(
           {int? id,
           int? childId,
+          String? localUuid,
           DateTime? visitDate,
           double? ageMonths,
           String? imagePath,
@@ -684,6 +710,7 @@ class Visit extends DataClass implements Insertable<Visit> {
       Visit(
         id: id ?? this.id,
         childId: childId ?? this.childId,
+        localUuid: localUuid ?? this.localUuid,
         visitDate: visitDate ?? this.visitDate,
         ageMonths: ageMonths ?? this.ageMonths,
         imagePath: imagePath ?? this.imagePath,
@@ -697,6 +724,7 @@ class Visit extends DataClass implements Insertable<Visit> {
     return Visit(
       id: data.id.present ? data.id.value : this.id,
       childId: data.childId.present ? data.childId.value : this.childId,
+      localUuid: data.localUuid.present ? data.localUuid.value : this.localUuid,
       visitDate: data.visitDate.present ? data.visitDate.value : this.visitDate,
       ageMonths: data.ageMonths.present ? data.ageMonths.value : this.ageMonths,
       imagePath: data.imagePath.present ? data.imagePath.value : this.imagePath,
@@ -715,6 +743,7 @@ class Visit extends DataClass implements Insertable<Visit> {
     return (StringBuffer('Visit(')
           ..write('id: $id, ')
           ..write('childId: $childId, ')
+          ..write('localUuid: $localUuid, ')
           ..write('visitDate: $visitDate, ')
           ..write('ageMonths: $ageMonths, ')
           ..write('imagePath: $imagePath, ')
@@ -726,14 +755,15 @@ class Visit extends DataClass implements Insertable<Visit> {
   }
 
   @override
-  int get hashCode => Object.hash(id, childId, visitDate, ageMonths, imagePath,
-      sideImagePath, backImagePath, notes);
+  int get hashCode => Object.hash(id, childId, localUuid, visitDate, ageMonths,
+      imagePath, sideImagePath, backImagePath, notes);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Visit &&
           other.id == this.id &&
           other.childId == this.childId &&
+          other.localUuid == this.localUuid &&
           other.visitDate == this.visitDate &&
           other.ageMonths == this.ageMonths &&
           other.imagePath == this.imagePath &&
@@ -745,6 +775,7 @@ class Visit extends DataClass implements Insertable<Visit> {
 class VisitsCompanion extends UpdateCompanion<Visit> {
   final Value<int> id;
   final Value<int> childId;
+  final Value<String> localUuid;
   final Value<DateTime> visitDate;
   final Value<double> ageMonths;
   final Value<String> imagePath;
@@ -754,6 +785,7 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
   const VisitsCompanion({
     this.id = const Value.absent(),
     this.childId = const Value.absent(),
+    this.localUuid = const Value.absent(),
     this.visitDate = const Value.absent(),
     this.ageMonths = const Value.absent(),
     this.imagePath = const Value.absent(),
@@ -764,6 +796,7 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
   VisitsCompanion.insert({
     this.id = const Value.absent(),
     required int childId,
+    required String localUuid,
     this.visitDate = const Value.absent(),
     required double ageMonths,
     required String imagePath,
@@ -771,11 +804,13 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
     this.backImagePath = const Value.absent(),
     this.notes = const Value.absent(),
   })  : childId = Value(childId),
+        localUuid = Value(localUuid),
         ageMonths = Value(ageMonths),
         imagePath = Value(imagePath);
   static Insertable<Visit> custom({
     Expression<int>? id,
     Expression<int>? childId,
+    Expression<String>? localUuid,
     Expression<DateTime>? visitDate,
     Expression<double>? ageMonths,
     Expression<String>? imagePath,
@@ -786,6 +821,7 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (childId != null) 'child_id': childId,
+      if (localUuid != null) 'local_uuid': localUuid,
       if (visitDate != null) 'visit_date': visitDate,
       if (ageMonths != null) 'age_months': ageMonths,
       if (imagePath != null) 'image_path': imagePath,
@@ -798,6 +834,7 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
   VisitsCompanion copyWith(
       {Value<int>? id,
       Value<int>? childId,
+      Value<String>? localUuid,
       Value<DateTime>? visitDate,
       Value<double>? ageMonths,
       Value<String>? imagePath,
@@ -807,6 +844,7 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
     return VisitsCompanion(
       id: id ?? this.id,
       childId: childId ?? this.childId,
+      localUuid: localUuid ?? this.localUuid,
       visitDate: visitDate ?? this.visitDate,
       ageMonths: ageMonths ?? this.ageMonths,
       imagePath: imagePath ?? this.imagePath,
@@ -824,6 +862,9 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
     }
     if (childId.present) {
       map['child_id'] = Variable<int>(childId.value);
+    }
+    if (localUuid.present) {
+      map['local_uuid'] = Variable<String>(localUuid.value);
     }
     if (visitDate.present) {
       map['visit_date'] = Variable<DateTime>(visitDate.value);
@@ -851,6 +892,7 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
     return (StringBuffer('VisitsCompanion(')
           ..write('id: $id, ')
           ..write('childId: $childId, ')
+          ..write('localUuid: $localUuid, ')
           ..write('visitDate: $visitDate, ')
           ..write('ageMonths: $ageMonths, ')
           ..write('imagePath: $imagePath, ')
@@ -2875,6 +2917,7 @@ typedef $$ChildrenTableProcessedTableManager = ProcessedTableManager<
 typedef $$VisitsTableCreateCompanionBuilder = VisitsCompanion Function({
   Value<int> id,
   required int childId,
+  required String localUuid,
   Value<DateTime> visitDate,
   required double ageMonths,
   required String imagePath,
@@ -2885,6 +2928,7 @@ typedef $$VisitsTableCreateCompanionBuilder = VisitsCompanion Function({
 typedef $$VisitsTableUpdateCompanionBuilder = VisitsCompanion Function({
   Value<int> id,
   Value<int> childId,
+  Value<String> localUuid,
   Value<DateTime> visitDate,
   Value<double> ageMonths,
   Value<String> imagePath,
@@ -2952,6 +2996,9 @@ class $$VisitsTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get localUuid => $composableBuilder(
+      column: $table.localUuid, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get visitDate => $composableBuilder(
       column: $table.visitDate, builder: (column) => ColumnFilters(column));
@@ -3046,6 +3093,9 @@ class $$VisitsTableOrderingComposer
   ColumnOrderings<int> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get localUuid => $composableBuilder(
+      column: $table.localUuid, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get visitDate => $composableBuilder(
       column: $table.visitDate, builder: (column) => ColumnOrderings(column));
 
@@ -3098,6 +3148,9 @@ class $$VisitsTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get localUuid =>
+      $composableBuilder(column: $table.localUuid, builder: (column) => column);
 
   GeneratedColumn<DateTime> get visitDate =>
       $composableBuilder(column: $table.visitDate, builder: (column) => column);
@@ -3206,6 +3259,7 @@ class $$VisitsTableTableManager extends RootTableManager<
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<int> childId = const Value.absent(),
+            Value<String> localUuid = const Value.absent(),
             Value<DateTime> visitDate = const Value.absent(),
             Value<double> ageMonths = const Value.absent(),
             Value<String> imagePath = const Value.absent(),
@@ -3216,6 +3270,7 @@ class $$VisitsTableTableManager extends RootTableManager<
               VisitsCompanion(
             id: id,
             childId: childId,
+            localUuid: localUuid,
             visitDate: visitDate,
             ageMonths: ageMonths,
             imagePath: imagePath,
@@ -3226,6 +3281,7 @@ class $$VisitsTableTableManager extends RootTableManager<
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
             required int childId,
+            required String localUuid,
             Value<DateTime> visitDate = const Value.absent(),
             required double ageMonths,
             required String imagePath,
@@ -3236,6 +3292,7 @@ class $$VisitsTableTableManager extends RootTableManager<
               VisitsCompanion.insert(
             id: id,
             childId: childId,
+            localUuid: localUuid,
             visitDate: visitDate,
             ageMonths: ageMonths,
             imagePath: imagePath,
