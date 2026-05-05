@@ -16,6 +16,7 @@ class Visit(Base):
     age_months = Column(Float, nullable=False)
     image_path = Column(String(500), nullable=True)
     notes = Column(Text, nullable=True)
+    local_uuid = Column(String(36), unique=True, nullable=True, index=True)
 
     child = relationship("Child", back_populates="visits")
     measurement = relationship(
