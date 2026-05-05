@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n_provider.dart';
 import '../../providers/api_provider.dart';
+import '../../providers/sync_provider.dart';
+import '../../services/image_storage_service.dart';
 import '../shared/app_scaffold.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -19,11 +21,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _loading = false;
   bool? _healthy;
   String? _error;
+  bool _syncing = false;
+  int? _bytesUsed;
 
   @override
   void initState() {
     super.initState();
     _loadUrl();
+    _refreshStorage();
   }
 
   Future<void> _loadUrl() async {
@@ -77,6 +82,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _healthy = null;
       _error = null;
     });
+  }
+
+  Future<void> _refreshStorage() async {
+    final used = await ImageStorageService().totalUsedBytes();
+    if (!mounted) return;
+    setState(() => _bytesUsed = used);
+  }
+
+  Future<void> _syncNow() async {
+    setState(() => _syncing = true);
+    try {
+      await ref.read(syncServiceProvider).runOnce();
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
+  }
+
+  Future<void> _clearImages() async {
+    await ImageStorageService().clearAll();
+    await _refreshStorage();
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
   }
 
   @override
@@ -163,6 +194,70 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         child: Text(t('reset_default', ref)),
                       ),
                     ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(t('sync_status', ref),
+                      style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 12),
+                  Consumer(builder: (context, ref, _) {
+                    final pending =
+                        ref.watch(pendingSyncCountProvider).value ?? 0;
+                    return Text(
+                      pending == 0
+                          ? t('sync_all_synced', ref)
+                          : '${t('sync_pending', ref)}: $pending',
+                    );
+                  }),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: _syncing ? null : _syncNow,
+                    icon: _syncing
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.sync),
+                    label: Text(t('sync_now', ref)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(t('storage_title', ref),
+                      style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  Text(
+                    _bytesUsed == null
+                        ? '...'
+                        : '${t('storage_used', ref)}: ${_formatBytes(_bytesUsed!)}',
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _clearImages,
+                    icon: const Icon(Icons.delete_outline),
+                    label: Text(t('storage_clear', ref)),
                   ),
                 ],
               ),

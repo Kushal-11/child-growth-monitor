@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../l10n/l10n_provider.dart';
+import '../../providers/sync_provider.dart';
 
 class AppScaffold extends ConsumerWidget {
   const AppScaffold({
@@ -16,10 +17,41 @@ class AppScaffold extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final pending = ref.watch(pendingSyncCountProvider).value ?? 0;
     return Scaffold(
       appBar: AppBar(
         title: Text(t('app_title', ref)),
         actions: [
+          IconButton(
+            tooltip: t('sync_status', ref),
+            onPressed: () => context.go('/settings'),
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(pending == 0 ? Icons.cloud_done : Icons.cloud_upload),
+                if (pending > 0)
+                  Positioned(
+                    right: -4,
+                    top: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints:
+                          const BoxConstraints(minWidth: 16, minHeight: 16),
+                      child: Text(
+                        '$pending',
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 10),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
           TextButton(
             onPressed: () => ref.read(localeProvider.notifier).toggle(),
             child: Text(

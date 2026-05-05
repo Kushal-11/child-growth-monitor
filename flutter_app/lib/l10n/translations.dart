@@ -267,4 +267,11 @@ const Map<String, Map<String, String>> translations = {
     'en': 'Invalid URL — must be a private IP or approved host',
     'mr': 'अवैध URL — खाजगी IP किंवा मान्य होस्ट असणे आवश्यक',
   },
+  'sync_status': {'en': 'Sync status', 'mr': 'सिंक स्थिती'},
+  'sync_now': {'en': 'Sync now', 'mr': 'आता सिंक करा'},
+  'sync_pending': {'en': 'Pending', 'mr': 'प्रलंबित'},
+  'sync_all_synced': {'en': 'All synced', 'mr': 'सर्व सिंक केले'},
+  'storage_title': {'en': 'Storage', 'mr': 'स्टोरेज'},
+  'storage_used': {'en': 'Used', 'mr': 'वापरले'},
+  'storage_clear': {'en': 'Clear all images', 'mr': 'सर्व प्रतिमा हटवा'},
 };
