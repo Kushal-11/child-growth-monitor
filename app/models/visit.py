@@ -1,7 +1,7 @@
 """Visit model representing a single assessment visit."""
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.orm import relationship
 
 from app.models.database import Base
@@ -16,7 +16,16 @@ class Visit(Base):
     age_months = Column(Float, nullable=False)
     image_path = Column(String(500), nullable=True)
     notes = Column(Text, nullable=True)
-    local_uuid = Column(String(36), unique=True, nullable=True, index=True)
+    local_uuid = Column(String(36), nullable=True)
+
+    __table_args__ = (
+        Index(
+            "ix_visits_local_uuid",
+            "local_uuid",
+            unique=True,
+            sqlite_where=text("local_uuid IS NOT NULL"),
+        ),
+    )
 
     child = relationship("Child", back_populates="visits")
     measurement = relationship(
