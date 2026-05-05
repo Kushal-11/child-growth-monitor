@@ -7,7 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../l10n/l10n_provider.dart';
-import '../../providers/api_provider.dart';
+import '../../providers/assessment_service_provider.dart';
 import '../../providers/assessment_provider.dart';
 import '../../providers/children_provider.dart';
 import '../shared/app_scaffold.dart';
@@ -132,22 +132,26 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
     });
 
     try {
-      final result = await ref.read(apiProvider).submitAssessment(
-            frontImagePath: _frontImage!.path,
-            sideImagePath: _sideImage?.path,
-            backImagePath: _backImage?.path,
-            childName: _childNameController.text.trim(),
-            dateOfBirth: _resolvedDob(),
-            sex: _sex,
-            weightKg: double.tryParse(_weightController.text.trim()),
-            heightCm: heightCm,
-            muacCm: double.tryParse(_muacController.text.trim()),
-            guardianName: _guardianController.text.trim(),
-            location: _locationController.text.trim(),
-          );
+      final svc = await ref.read(assessmentServiceProvider.future);
+      final result = await svc.runAssessment(
+        frontImagePath: _frontImage!.path,
+        sideImagePath: _sideImage?.path,
+        backImagePath: _backImage?.path,
+        childName: _childNameController.text.trim(),
+        dateOfBirth: _resolvedDob(),
+        sex: _sex,
+        manualWeightKg: double.tryParse(_weightController.text.trim()),
+        manualHeightCm: heightCm,
+        manualMuacCm: double.tryParse(_muacController.text.trim()),
+        guardianName: _guardianController.text.trim().isEmpty
+            ? null
+            : _guardianController.text.trim(),
+        location: _locationController.text.trim().isEmpty
+            ? null
+            : _locationController.text.trim(),
+      );
       if (!mounted) return;
       ref.read(assessmentResultProvider.notifier).state = result;
-      // Invalidate children list so it refreshes when viewed
       ref.invalidate(childrenProvider);
       context.go('/result');
     } catch (e) {
