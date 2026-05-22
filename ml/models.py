@@ -78,3 +78,52 @@ def build_wasting_classifier():
         metrics=["accuracy"],
     )
     return model
+
+
+# ---------------------------------------------------------------------------
+# Two-stage cascade
+# ---------------------------------------------------------------------------
+# Stage 1: "wasted (SAM ∪ MAM) vs not-wasted" — tuned for high recall on the
+# wasted class. Drives the binary triage.
+# Stage 2: "SAM vs MAM" — only consulted when stage 1 says wasted. The
+# disambiguation problem is structurally separated from the easy
+# "wasted vs everything else" call.
+# Empirically this beats a single 5-way softmax when the boundary classes
+# (SAM/MAM) are dense and adjacent.
+
+CASCADE_STAGE1_CLASSES = ["not_wasted", "wasted"]   # 0 / 1
+CASCADE_STAGE2_CLASSES = ["MAM", "SAM"]             # 0 / 1 (alphabetic)
+
+
+def build_wasted_binary():
+    """Stage 1 of the cascade: small MLP, sigmoid output."""
+    import tensorflow as tf
+    inp = tf.keras.Input(shape=(N_FEATURES,), name="features")
+    x = tf.keras.layers.Dense(96, activation="relu")(inp)
+    x = tf.keras.layers.Dropout(0.2)(x)
+    x = tf.keras.layers.Dense(48, activation="relu")(x)
+    out = tf.keras.layers.Dense(1, activation="sigmoid", name="wasted_prob")(x)
+    model = tf.keras.Model(inp, out, name="wasted_binary")
+    model.compile(
+        optimizer="adam",
+        loss="binary_crossentropy",
+        metrics=["accuracy"],
+    )
+    return model
+
+
+def build_sam_vs_mam():
+    """Stage 2 of the cascade: small MLP, sigmoid output (1 = SAM, 0 = MAM)."""
+    import tensorflow as tf
+    inp = tf.keras.Input(shape=(N_FEATURES,), name="features")
+    x = tf.keras.layers.Dense(96, activation="relu")(inp)
+    x = tf.keras.layers.Dropout(0.25)(x)
+    x = tf.keras.layers.Dense(48, activation="relu")(x)
+    out = tf.keras.layers.Dense(1, activation="sigmoid", name="sam_prob")(x)
+    model = tf.keras.Model(inp, out, name="sam_vs_mam")
+    model.compile(
+        optimizer="adam",
+        loss="binary_crossentropy",
+        metrics=["accuracy"],
+    )
+    return model

@@ -20,7 +20,7 @@ class ApiService {
   ApiService({required this.baseUrl});
 
   final String baseUrl;
-  static const Duration apiTimeout = Duration(seconds: 20);
+  static const Duration apiTimeout = Duration(seconds: 60);
 
   Uri _uri(String path) {
     try {

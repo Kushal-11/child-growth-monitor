@@ -1,34 +1,68 @@
 """
 Batch assessment: run all images through the growth monitor and compare with ground truth.
 
-Workflow
---------
-1. Prepare a CSV with your manual measurements (run --template to generate a blank one).
-2. Point the script at your image folder and the CSV.
-3. Get back a detailed comparison report + a labeled dataset ready for model fine-tuning.
+Two layouts are supported:
+
+A. **Flat layout** — all photos in one directory; ground truth in a single CSV
+   keyed by filename:
+
+       /path/to/photos/
+         child1.jpg
+         child2.jpg
+         …
+       data/ground_truth.csv
+
+B. **Per-child layout** — one subfolder per child, each containing
+   front.jpeg, side.{jpeg,png}, back.jpeg (optional), and values.csv:
+
+       /path/to/photos/
+         child001/
+           front.jpeg
+           side.png
+           back.jpeg          (ignored)
+           values.csv         (ground truth for this child)
+         child002/
+           …
+
+   The values.csv inside each folder must have a single non-header row
+   (or column-form key,value pairs) with at least:
+
+       sex            : M or F
+       date_of_birth  : YYYY-MM-DD
+       actual_height_cm  (optional, in cm)
+       actual_weight_kg  (optional, in kg)
+       muac_cm           (optional, tape-measured MUAC in cm)
+       notes             (optional)
+
+   Empty values are tolerated. Layout B uses the front photo for pose and
+   the side photo for AP-depth features (when available).
 
 Usage
 -----
 # Generate a blank template to fill in:
     python scripts/batch_assess.py --template
 
-# Run batch assessment:
+# Run batch assessment (flat layout):
     python scripts/batch_assess.py \\
         --images  /path/to/photos/ \\
         --ground-truth  data/ground_truth.csv \\
         --output  data/batch_results.csv
 
+# Run batch assessment (per-child layout, auto-detected):
+    python scripts/batch_assess.py --images "/path/to/sample images/"
+
 # Images without ground truth (just run the system):
     python scripts/batch_assess.py --images /path/to/photos/
 
-Ground-truth CSV columns
-------------------------
-image_file         : filename (just the name, not full path) — must match a file in --images
+Ground-truth CSV columns (flat layout)
+--------------------------------------
+image_file         : filename (just the name) — must match a file in --images
 child_name         : child's name or ID
 date_of_birth      : YYYY-MM-DD
 sex                : M or F
 actual_height_cm   : measured height in cm  (leave blank if unknown)
 actual_weight_kg   : measured weight in kg  (leave blank if unknown)
+muac_cm            : measured MUAC in cm    (leave blank if unknown)
 notes              : free-text (optional)
 
 All other columns are ignored and preserved in the output.
@@ -52,6 +86,103 @@ child3.jpg,Child 3,2021-11-20,M,,,height and weight unknown
 """
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+
+# Per-child layout filenames (case-insensitive prefix match)
+PER_CHILD_FRONT_NAMES = ("front",)
+PER_CHILD_SIDE_NAMES  = ("side",)
+PER_CHILD_VALUES_NAME = "values.csv"
+
+
+def _read_per_child_values(path: Path) -> dict:
+    """
+    Read a per-child values.csv and return a normalised dict.
+
+    Accepts two formats:
+
+      Row format (header + one data row):
+        sex,date_of_birth,actual_height_cm,actual_weight_kg,muac_cm,notes
+        M,2023-04-12,82.5,11.4,13.2,
+
+      Key,value format (one row per attribute, no header required):
+        sex,M
+        date_of_birth,2023-04-12
+        actual_height_cm,82.5
+    """
+    if not path.exists():
+        return {}
+
+    try:
+        text = path.read_text(encoding="utf-8").strip()
+    except Exception:
+        return {}
+    if not text:
+        return {}
+
+    lines = [l for l in text.splitlines() if l.strip()]
+
+    # Try header-row format first
+    reader = csv.DictReader(lines)
+    fieldnames = reader.fieldnames or []
+    data_rows = list(reader)
+    if data_rows and any(k.lower() in {
+        "sex", "date_of_birth", "actual_height_cm", "actual_weight_kg",
+        "muac_cm", "notes",
+    } for k in fieldnames):
+        first = data_rows[0]
+        return {
+            (k or "").strip().lower(): (v or "").strip()
+            for k, v in first.items() if k
+        }
+
+    # Fall back to key,value rows
+    out: dict[str, str] = {}
+    for line in lines:
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) >= 2 and parts[0]:
+            out[parts[0].lower()] = parts[1]
+    return out
+
+
+def _looks_like_per_child_layout(images_dir: Path) -> bool:
+    """A directory uses the per-child layout if at least one immediate
+    subdirectory contains a front-* image and (optionally) a values.csv."""
+    if not images_dir.is_dir():
+        return False
+    for child in images_dir.iterdir():
+        if not child.is_dir():
+            continue
+        for f in child.iterdir():
+            if (f.suffix.lower() in IMAGE_EXTENSIONS
+                and f.stem.lower().startswith(PER_CHILD_FRONT_NAMES)):
+                return True
+    return False
+
+
+def _enumerate_per_child(images_dir: Path) -> list[tuple[str, Path, Optional[Path], dict]]:
+    """
+    For per-child layout, yield (child_id, front_path, side_path, values_dict).
+    Skips folders without a front image.
+    """
+    out = []
+    for child in sorted(images_dir.iterdir()):
+        if not child.is_dir():
+            continue
+        front = None
+        side  = None
+        for f in sorted(child.iterdir()):
+            if f.suffix.lower() not in IMAGE_EXTENSIONS:
+                continue
+            stem = f.stem.lower()
+            if stem.startswith(PER_CHILD_FRONT_NAMES) and front is None:
+                front = f
+            elif stem.startswith(PER_CHILD_SIDE_NAMES) and side is None:
+                side = f
+        if front is None:
+            print(f"  Skipping {child.name}: no front image found")
+            continue
+        values = _read_per_child_values(child / PER_CHILD_VALUES_NAME)
+        out.append((child.name, front, side, values))
+    return out
 
 
 def generate_template(out_path: Path = Path("data/ground_truth_template.csv")):
@@ -110,176 +241,293 @@ def run_batch(
     nutr_svc = NutritionService(who_data)
     ml_svc   = MLService()
 
-    # Build ground-truth lookup keyed by image filename
-    gt_lookup: dict[str, dict] = {}
-    if ground_truth_csv and ground_truth_csv.exists():
-        with open(ground_truth_csv, newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                fname = row.get("image_file", "").strip()
-                if fname:
-                    gt_lookup[fname] = row
+    use_per_child = _looks_like_per_child_layout(images_dir)
+    if use_per_child:
+        print(f"Detected per-child layout in {images_dir}")
+        per_child_entries = _enumerate_per_child(images_dir)
+        if not per_child_entries:
+            print(f"No usable child folders in {images_dir}", file=sys.stderr)
+            sys.exit(1)
+        print(f"Found {len(per_child_entries)} child folder(s).\n")
+        results = _run_per_child(
+            per_child_entries, meas_svc, ml_svc, nutr_svc, who_data, verbose,
+        )
+    else:
+        # Build ground-truth lookup keyed by image filename
+        gt_lookup: dict[str, dict] = {}
+        if ground_truth_csv and ground_truth_csv.exists():
+            with open(ground_truth_csv, newline="", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    fname = row.get("image_file", "").strip()
+                    if fname:
+                        gt_lookup[fname] = row
 
-    # Collect images
-    image_files = sorted(
-        p for p in images_dir.iterdir()
-        if p.suffix.lower() in IMAGE_EXTENSIONS
-    )
-    if not image_files:
-        print(f"No images found in {images_dir}", file=sys.stderr)
-        sys.exit(1)
+        image_files = sorted(
+            p for p in images_dir.iterdir()
+            if p.suffix.lower() in IMAGE_EXTENSIONS
+        )
+        if not image_files:
+            print(f"No images found in {images_dir}", file=sys.stderr)
+            sys.exit(1)
 
-    print(f"Found {len(image_files)} image(s). Ground truth: {len(gt_lookup)} row(s).\n")
+        print(f"Found {len(image_files)} image(s). Ground truth: {len(gt_lookup)} row(s).\n")
+        results = _run_flat(
+            image_files, gt_lookup, meas_svc, ml_svc, nutr_svc, who_data, verbose,
+        )
 
+    _write_results(output_csv, results)
+
+
+def _run_flat(
+    image_files: list,
+    gt_lookup: dict,
+    meas_svc, ml_svc, nutr_svc, who_data,
+    verbose: bool,
+):
     results = []
-
     for img_path in image_files:
         fname = img_path.name
         gt = gt_lookup.get(fname, {})
-
-        # Parse ground truth
-        child_name = gt.get("child_name", fname)
-        sex = gt.get("sex", "M").strip().upper() or "M"
-
-        dob_str = (gt.get("date_of_birth") or "").strip()
         try:
-            dob = date.fromisoformat(dob_str)
-            age_months = _compute_age_months(dob)
-        except ValueError:
-            dob = None
-            age_months = 24.0  # fallback for systems with no DOB
-
-        actual_height = _parse_float(gt.get("actual_height_cm"))
-        actual_weight = _parse_float(gt.get("actual_weight_kg"))
-
-        if verbose:
-            print(f"  Processing {fname} ...")
-
-        # --- Run pose estimation ---
-        try:
-            meas = meas_svc.process_image_with_estimation(
-                image_path=str(img_path),
-                age_months=age_months,
-                sex=sex,
+            row = _process_child_image(
+                fname=fname,
+                img_path=img_path,
+                gt=gt,
+                meas_svc=meas_svc,
+                ml_svc=ml_svc,
+                nutr_svc=nutr_svc,
                 who_data=who_data,
+                side_image_bytes=None,
+                child_id=None,
+                verbose=verbose,
             )
         except Exception as e:
-            print(f"    [ERROR] Pose estimation failed: {e}")
-            results.append(_error_row(fname, child_name, age_months, sex, actual_height, actual_weight, str(e)))
-            continue
+            print(f"    [ERROR] {fname}: {e}")
+            row = _error_row(
+                fname=fname,
+                child_name=gt.get("child_name", fname),
+                age_months=24.0,
+                sex=(gt.get("sex") or "M").strip().upper(),
+                actual_height=_parse_float(gt.get("actual_height_cm")),
+                actual_weight=_parse_float(gt.get("actual_weight_kg")),
+                error_msg=str(e),
+            )
+        results.append(row)
+    return results
 
-        pred_height = meas.predicted_height_cm
-        effective_height = pred_height if pred_height else actual_height
 
-        # --- ML prediction ---
-        ml_pred = None
-        if effective_height and meas.body_segments:
-            try:
-                ml_pred = ml_svc.predict(meas.body_segments, age_months, sex, effective_height)
-            except Exception as e:
-                print(f"    [WARN] ML prediction failed: {e}")
+def _process_child_image(
+    fname: str,
+    img_path: Path,
+    gt: dict,
+    meas_svc, ml_svc, nutr_svc, who_data,
+    side_image_bytes: Optional[bytes],
+    child_id: Optional[str],
+    verbose: bool,
+) -> dict:
+    """Run the full assessment pipeline for one image. Returns a result row."""
+    child_name = gt.get("child_name") or child_id or fname
+    sex = (gt.get("sex") or "M").strip().upper() or "M"
 
-        pred_weight_ml = ml_pred.estimated_weight_kg if ml_pred else None
-        wasting_status_ml = ml_pred.wasting_status if ml_pred else None
-        sam_prob = round(ml_pred.sam_probability, 4) if ml_pred else None
-        mam_prob = round(ml_pred.mam_probability, 4) if ml_pred else None
+    dob_str = (gt.get("date_of_birth") or "").strip()
+    try:
+        dob = date.fromisoformat(dob_str)
+        age_months = _compute_age_months(dob)
+    except ValueError:
+        dob = None
+        age_months = 24.0
 
-        # --- Z-scores from ACTUAL measurements (ground truth evaluation) ---
-        actual_haz_z    = None
-        actual_whz_z    = None
-        actual_haz_status = None
-        actual_whz_status = None
-        if actual_height and dob:
-            actual_haz_z = nutr_svc.compute_haz(sex, int(round(age_months)), actual_height)
-            if actual_haz_z:
-                actual_haz_status = _haz_status_from_z(actual_haz_z)
-                actual_haz_z = round(actual_haz_z, 3)
-        if actual_height and actual_weight and dob:
-            actual_whz_z = nutr_svc.compute_whz(sex, age_months, actual_height, actual_weight)
-            if actual_whz_z:
-                actual_whz_status = _whz_status_from_z(actual_whz_z)
-                actual_whz_z = round(actual_whz_z, 3)
+    actual_height = _parse_float(gt.get("actual_height_cm"))
+    actual_weight = _parse_float(gt.get("actual_weight_kg"))
+    manual_muac   = _parse_float(gt.get("muac_cm"))
 
-        # --- Z-scores from PREDICTED measurements ---
-        pred_haz_z    = None
-        pred_whz_z    = None
-        pred_haz_status = None
-        pred_whz_status = None
-        if pred_height and dob:
-            pred_haz_z = nutr_svc.compute_haz(sex, int(round(age_months)), pred_height)
-            if pred_haz_z:
-                pred_haz_status = _haz_status_from_z(pred_haz_z)
-                pred_haz_z = round(pred_haz_z, 3)
-        if pred_height and pred_weight_ml and dob:
-            pred_whz_z = nutr_svc.compute_whz(sex, age_months, pred_height, pred_weight_ml)
-            if pred_whz_z:
-                pred_whz_status = _whz_status_from_z(pred_whz_z)
-                pred_whz_z = round(pred_whz_z, 3)
+    if verbose:
+        tag = f"{child_id}/" if child_id else ""
+        print(f"  Processing {tag}{fname} ...")
 
-        # --- Height/weight errors ---
-        height_error = round(pred_height - actual_height, 2) if pred_height and actual_height else None
-        weight_error = round(pred_weight_ml - actual_weight, 2) if pred_weight_ml and actual_weight else None
+    # --- Pose estimation ---
+    meas = meas_svc.process_image_with_estimation(
+        image_path=str(img_path),
+        age_months=age_months,
+        sex=sex,
+        who_data=who_data,
+    )
+    pred_height = meas.predicted_height_cm
+    effective_height = pred_height if pred_height else actual_height
 
-        row = {
-            "image_file":           fname,
-            "child_name":           child_name,
-            "age_months":           round(age_months, 1),
-            "sex":                  sex,
-            # Ground truth
-            "actual_height_cm":     actual_height,
-            "actual_weight_kg":     actual_weight,
-            "actual_haz_z":         actual_haz_z,
-            "actual_whz_z":         actual_whz_z,
-            "actual_haz_status":    actual_haz_status,
-            "actual_whz_status":    actual_whz_status,
-            # Predictions
-            "pred_height_cm":       round(pred_height, 1) if pred_height else None,
-            "pred_weight_ml_kg":    round(pred_weight_ml, 2) if pred_weight_ml else None,
-            "pred_haz_z":           pred_haz_z,
-            "pred_whz_z":           pred_whz_z,
-            "pred_haz_status":      pred_haz_status,
-            "pred_whz_status":      pred_whz_status,
-            "ml_wasting_status":    wasting_status_ml,
-            "sam_probability":      sam_prob,
-            "mam_probability":      mam_prob,
-            # Errors
-            "height_error_cm":      height_error,
-            "weight_error_kg":      weight_error,
-            # Metadata
-            "pose_confidence":      round(meas.confidence_score, 3) if meas.confidence_score else None,
-            "estimation_method":    meas.estimation_method,
-            "annotated_image":      meas.annotated_image_filename,
-            "notes":                gt.get("notes", ""),
-            "error":                "",
+    # --- Side-view AP depth (per-child layout only) ---
+    side_segments = None
+    if side_image_bytes is not None and effective_height is not None:
+        side_segments = meas_svc.process_side_image(side_image_bytes, effective_height)
+
+    # --- ML prediction ---
+    ml_pred = None
+    if effective_height and meas.body_segments:
+        try:
+            ml_pred = ml_svc.predict(
+                meas.body_segments, age_months, sex, effective_height, side_segments,
+            )
+        except Exception as e:
+            print(f"    [WARN] ML prediction failed: {e}")
+
+    pred_weight_ml    = ml_pred.estimated_weight_kg if ml_pred else None
+    wasting_status_ml = ml_pred.wasting_status if ml_pred else None
+    sam_prob = round(ml_pred.sam_probability, 4) if ml_pred else None
+    mam_prob = round(ml_pred.mam_probability, 4) if ml_pred else None
+
+    # --- Z-scores from ACTUAL measurements ---
+    actual_haz_z      = None
+    actual_whz_z      = None
+    actual_haz_status = None
+    actual_whz_status = None
+    if actual_height and dob:
+        actual_haz_z = nutr_svc.compute_haz(sex, int(round(age_months)), actual_height)
+        if actual_haz_z:
+            actual_haz_status = _haz_status_from_z(actual_haz_z)
+            actual_haz_z = round(actual_haz_z, 3)
+    if actual_height and actual_weight and dob:
+        actual_whz_z = nutr_svc.compute_whz(sex, age_months, actual_height, actual_weight)
+        if actual_whz_z:
+            actual_whz_status = _whz_status_from_z(actual_whz_z)
+            actual_whz_z = round(actual_whz_z, 3)
+
+    # --- Z-scores from PREDICTED measurements ---
+    pred_haz_z      = None
+    pred_whz_z      = None
+    pred_haz_status = None
+    pred_whz_status = None
+    if pred_height and dob:
+        pred_haz_z = nutr_svc.compute_haz(sex, int(round(age_months)), pred_height)
+        if pred_haz_z:
+            pred_haz_status = _haz_status_from_z(pred_haz_z)
+            pred_haz_z = round(pred_haz_z, 3)
+    if pred_height and pred_weight_ml and dob:
+        pred_whz_z = nutr_svc.compute_whz(sex, age_months, pred_height, pred_weight_ml)
+        if pred_whz_z:
+            pred_whz_status = _whz_status_from_z(pred_whz_z)
+            pred_whz_z = round(pred_whz_z, 3)
+
+    # --- Errors ---
+    height_error = round(pred_height - actual_height, 2) if pred_height and actual_height else None
+    weight_error = round(pred_weight_ml - actual_weight, 2) if pred_weight_ml and actual_weight else None
+
+    row = {
+        "image_file":           fname,
+        "child_name":           child_name,
+        "age_months":           round(age_months, 1),
+        "sex":                  sex,
+        # Ground truth
+        "actual_height_cm":     actual_height,
+        "actual_weight_kg":     actual_weight,
+        "actual_haz_z":         actual_haz_z,
+        "actual_whz_z":         actual_whz_z,
+        "actual_haz_status":    actual_haz_status,
+        "actual_whz_status":    actual_whz_status,
+        # Predictions
+        "pred_height_cm":       round(pred_height, 1) if pred_height else None,
+        "pred_weight_ml_kg":    round(pred_weight_ml, 2) if pred_weight_ml else None,
+        "pred_haz_z":           pred_haz_z,
+        "pred_whz_z":           pred_whz_z,
+        "pred_haz_status":      pred_haz_status,
+        "pred_whz_status":      pred_whz_status,
+        "ml_wasting_status":    wasting_status_ml,
+        "sam_probability":      sam_prob,
+        "mam_probability":      mam_prob,
+        # Errors
+        "height_error_cm":      height_error,
+        "weight_error_kg":      weight_error,
+        # Metadata
+        "pose_confidence":      round(meas.confidence_score, 3) if meas.confidence_score else None,
+        "estimation_method":    meas.estimation_method,
+        "annotated_image":      meas.annotated_image_filename,
+        "notes":                gt.get("notes", ""),
+        "error":                "",
+    }
+
+    if ml_svc.is_available and meas.body_segments and effective_height:
+        features = ml_svc.extract_features(
+            meas.body_segments, age_months, sex, effective_height, side_segments,
+        )
+        if features:
+            row.update({
+                "feat_shoulder_width_cm":     round(features.shoulder_width_cm, 2),
+                "feat_hip_width_cm":          round(features.hip_width_cm, 2),
+                "feat_torso_length_cm":       round(features.torso_length_cm, 2),
+                "feat_upper_arm_length_cm":   round(features.upper_arm_length_cm, 2),
+                "feat_shoulder_height_ratio": round(features.shoulder_height_ratio, 4),
+                "feat_hip_height_ratio":      round(features.hip_height_ratio, 4),
+                "feat_body_build_score":      features.body_build_score,
+                "finetune_label":             actual_whz_status if actual_whz_z is not None else "",
+            })
+
+    if verbose:
+        ht = f"{pred_height:.1f}cm" if pred_height else "N/A"
+        wt = f"{pred_weight_ml:.1f}kg" if pred_weight_ml else "N/A"
+        err_h = f" (err={height_error:+.1f})" if height_error is not None else ""
+        err_w = f" (err={weight_error:+.1f})" if weight_error is not None else ""
+        wst = wasting_status_ml or "N/A"
+        muac_tag = f"  MUAC(manual): {manual_muac}" if manual_muac else ""
+        side_tag = "  +side" if side_image_bytes else ""
+        print(f"    Height: {ht}{err_h}  Weight(ML): {wt}{err_w}  "
+              f"Wasting: {wst}{muac_tag}{side_tag}")
+
+    return row
+
+
+def _run_per_child(
+    entries,
+    meas_svc, ml_svc, nutr_svc, who_data,
+    verbose: bool,
+):
+    """
+    Process a per-child layout: each entry is (child_id, front, side, values).
+    Side image, when present, supplies AP-depth features.
+    """
+    import numpy as np  # noqa: F401
+
+    results = []
+    for child_id, front_path, side_path, values in entries:
+        gt = {
+            "child_name":       values.get("child_name", child_id),
+            "sex":              values.get("sex", ""),
+            "date_of_birth":    values.get("date_of_birth", ""),
+            "actual_height_cm": values.get("actual_height_cm", ""),
+            "actual_weight_kg": values.get("actual_weight_kg", ""),
+            "muac_cm":          values.get("muac_cm", ""),
+            "notes":            values.get("notes", ""),
         }
-
-        # ML features for fine-tuning dataset
-        if ml_svc.is_available and meas.body_segments and effective_height:
-            features = ml_svc.extract_features(meas.body_segments, age_months, sex, effective_height)
-            if features:
-                row.update({
-                    "feat_shoulder_width_cm":   round(features.shoulder_width_cm, 2),
-                    "feat_hip_width_cm":        round(features.hip_width_cm, 2),
-                    "feat_torso_length_cm":     round(features.torso_length_cm, 2),
-                    "feat_upper_arm_length_cm": round(features.upper_arm_length_cm, 2),
-                    "feat_shoulder_height_ratio": round(features.shoulder_height_ratio, 4),
-                    "feat_hip_height_ratio":    round(features.hip_height_ratio, 4),
-                    "feat_body_build_score":    features.body_build_score,
-                    # Ground-truth label for fine-tuning (only if actual WHZ computed)
-                    "finetune_label":           actual_whz_status if actual_whz_z is not None else "",
-                })
-
+        side_bytes = side_path.read_bytes() if side_path else None
+        try:
+            row = _process_child_image(
+                fname=front_path.name,
+                img_path=front_path,
+                gt=gt,
+                meas_svc=meas_svc,
+                ml_svc=ml_svc,
+                nutr_svc=nutr_svc,
+                who_data=who_data,
+                side_image_bytes=side_bytes,
+                child_id=child_id,
+                verbose=verbose,
+            )
+        except Exception as e:
+            print(f"    [ERROR] {child_id}: {e}")
+            row = _error_row(
+                fname=front_path.name,
+                child_name=gt["child_name"],
+                age_months=24.0,
+                sex=gt["sex"] or "M",
+                actual_height=_parse_float(gt["actual_height_cm"]),
+                actual_weight=_parse_float(gt["actual_weight_kg"]),
+                error_msg=str(e),
+            )
         results.append(row)
 
-        if verbose:
-            ht = f"{pred_height:.1f}cm" if pred_height else "N/A"
-            wt = f"{pred_weight_ml:.1f}kg" if pred_weight_ml else "N/A"
-            err_h = f" (err={height_error:+.1f})" if height_error is not None else ""
-            err_w = f" (err={weight_error:+.1f})" if weight_error is not None else ""
-            wst = wasting_status_ml or "N/A"
-            print(f"    Height: {ht}{err_h}  Weight(ML): {wt}{err_w}  Wasting: {wst}")
+    return results
 
-    # --- Write output CSV ---
+
+def _write_results(output_csv: Path, results: list[dict]):
     output_csv.parent.mkdir(parents=True, exist_ok=True)
 
     fieldnames = [

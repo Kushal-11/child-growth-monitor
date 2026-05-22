@@ -8,12 +8,31 @@ VERIFIED from WHO data files in this project:
   - Weight-for-height LMS parameters (L, M, S): wfl/wfh Excel files
   - SAM/MAM thresholds: WHZ < -3 (SAM), -3 ≤ WHZ < -2 (MAM) per WHO standards
 
-NOT from WHO — physics-based approximation (Snyder RG et al. 1975,
-"Anthropometry of Infants, Children, and Youths to Age 18", NASA/SAE):
-  - Baseline shoulder width / height ratios by age
-  - Baseline hip width / height ratios (hip ≈ 0.88 × shoulder ratio)
-  - Upper arm length / height ratios by age
-  - Volumetric scaling of widths with weight: width ∝ (weight/median)^(1/3)
+NOT from WHO — physics-based approximation:
+  - Baseline shoulder/hip/arm/torso ratios per age (Snyder RG et al. 1975,
+    "Anthropometry of Infants, Children, and Youths to Age 18", NASA/SAE).
+  - Compartment-based body width/depth scaling (fat / muscle / viscera).
+    See Wells (2014), "Toward body composition reference data for infants,
+    children, and adolescents" — wasting depletes fat first, then muscle,
+    then viscera. Each compartment shrinks at a different rate; lateral
+    width and AP depth see different fractions of each.
+
+Version history
+---------------
+v2 (this revision):
+  * Compartment-based scaling (fat/muscle/viscera) replacing single-exponent
+    cube-root width and 0.5-exponent depth. Wasting now depletes compartments
+    sequentially, matching clinical reality.
+  * Ethnicity-as-latent-variable: Snyder ratios are perturbed per draw to
+    cover cross-population variation (East Asian, South Asian, Sub-Saharan
+    African, European/American baseline).
+  * Boundary-aware WHZ sampling: extra density near WHZ = -3 and -2
+    decision boundaries, to give the classifier more support there.
+  * MediaPipe-realistic landmark noise: occlusion-based dropouts and
+    foreshortening bias on top of additive Gaussian noise.
+
+v1: simple cube-root width scaling, exponent-0.5 depth scaling, single
+    Gaussian landmark noise.
 
 Run:  python ml/generate_synthetic_data.py
 """
@@ -38,9 +57,9 @@ N_SAMPLES = 60_000
 RANDOM_SEED = 42
 
 # ---------------------------------------------------------------------------
-# Non-WHO body proportion model (Snyder et al. 1975, US pediatric data)
-# These are fraction-of-stature values for typically nourished children.
-# Nodes: (age_months, ratio)
+# Non-WHO body proportion model (Snyder et al. 1975, US pediatric data).
+# Fraction-of-stature values for typically nourished children.
+# Nodes: (age_months, ratio).
 # ---------------------------------------------------------------------------
 SHOULDER_RATIO_NODES = [(0, 0.191), (6, 0.193), (12, 0.198),
                          (24, 0.207), (36, 0.211), (48, 0.214), (60, 0.218)]
@@ -49,11 +68,84 @@ ARM_RATIO_NODES      = [(0, 0.145), (12, 0.150), (24, 0.155),
 TORSO_RATIO_NODES    = [(0, 0.32), (12, 0.32), (24, 0.30), (48, 0.30), (60, 0.30)]
 
 
+# ---------------------------------------------------------------------------
+# Ethnicity-aware proportion perturbations.
+# Multiplicative offsets applied per draw to Snyder baseline ratios.
+# Values reflect *typical* magnitudes from comparative anthropometry studies
+# (e.g. WHO MGRS, Frisancho 1990, Eveleth & Tanner 1990); they are
+# illustrative, not authoritative — the goal is to break the model's
+# dependence on any single population mean.
+# ---------------------------------------------------------------------------
+ETHNICITY_PROFILES = {
+    "baseline":    {"shoulder": 1.000, "torso": 1.000, "arm": 1.000},
+    "east_asian":  {"shoulder": 0.985, "torso": 1.020, "arm": 0.975},
+    "south_asian": {"shoulder": 0.975, "torso": 1.000, "arm": 0.985},
+    "sub_saharan": {"shoulder": 1.005, "torso": 0.985, "arm": 1.030},
+    "european":    {"shoulder": 1.000, "torso": 1.000, "arm": 1.000},
+    "andean":      {"shoulder": 1.010, "torso": 1.020, "arm": 0.965},
+}
+ETHNICITY_KEYS = list(ETHNICITY_PROFILES.keys())
+
+
+# ---------------------------------------------------------------------------
+# Compartment composition by body level.
+# Wasting depletes compartments at very different rates: subcutaneous fat
+# falls fastest, then muscle, then viscera. Each anatomical level (shoulder,
+# hip, arm, chest-AP, abdomen-AP) is composed of these three compartments
+# in different proportions, and lateral vs AP measurements see them
+# differently. The numbers below are a defensible engineering approximation
+# (Wells 2014, Forbes 1987) — not WHO standards.
+# ---------------------------------------------------------------------------
+# Fractions sum to ~1 per row; what matters is the relative weighting.
+COMPARTMENTS = {
+    # level         fat   muscle  viscera
+    "shoulder":   (0.30, 0.65, 0.05),   # mostly muscle (deltoid, trapezius)
+    "hip":        (0.30, 0.55, 0.15),   # muscle + visceral hint
+    "arm":        (0.40, 0.55, 0.05),   # MUAC-equivalent — fat + muscle
+    "chest_ap":   (0.45, 0.30, 0.25),   # AP depth has more visceral component
+    "abdomen_ap": (0.55, 0.15, 0.30),   # AP abdomen dominated by fat + viscera
+}
+
+# Compartment shrinkage exponents under wasting (weight / median_weight)^exp.
+#   fat:     small exponent → drops fast as weight falls
+#   muscle:  medium exponent → drops more slowly
+#   viscera: large exponent → relatively preserved
+# Empirically, fat mass scales roughly as W^0.6, muscle as W^0.85, viscera as W^1.0
+# in cross-sectional pediatric body composition data.
+EXP_FAT     = 0.60
+EXP_MUSCLE  = 0.85
+EXP_VISCERA = 1.00
+
+
 def _interp_ratio(nodes, age_months):
     """Linear interpolation through (age, ratio) nodes."""
     ages  = [n[0] for n in nodes]
     vals  = [n[1] for n in nodes]
     return float(np.interp(age_months, ages, vals))
+
+
+def _compartment_scale(weight_kg: float, median_weight: float, level: str) -> float:
+    """
+    Combined volumetric scale factor for a body level under the given weight.
+
+    Each compartment scales independently with weight; the level's overall
+    "size" is the fat-, muscle-, and viscera-weighted geometric mean. We
+    return a linear-dimension scale (so callers multiply this into the
+    expected width or depth in the *same* dimension as the reference).
+    """
+    fat_frac, muscle_frac, viscera_frac = COMPARTMENTS[level]
+    ratio = max(weight_kg / max(median_weight, 1e-3), 0.4)
+
+    # Volume factor per compartment (then convert to linear dimension via cube root)
+    vol_fat     = ratio ** EXP_FAT
+    vol_muscle  = ratio ** EXP_MUSCLE
+    vol_viscera = ratio ** EXP_VISCERA
+
+    weighted_vol = (fat_frac * vol_fat
+                    + muscle_frac * vol_muscle
+                    + viscera_frac * vol_viscera)
+
+    return max(weighted_vol ** (1.0 / 3.0), 0.45)
 
 
 # ---------------------------------------------------------------------------
@@ -78,17 +170,13 @@ def _load_lms() -> dict:
             df = df.rename(columns={idx_col: "index_value"})
             for col in ["L", "M", "S"]:
                 df[col] = pd.to_numeric(
-                    df[col].astype(str).str.replace("\u2212", "-"), errors="coerce"
+                    df[col].astype(str).str.replace("−", "-"), errors="coerce"
                 )
             result[(sex, key)] = df.sort_values("index_value").reset_index(drop=True)
     return result
 
 
 def _haz_to_height(haz_df: pd.DataFrame, sex: str, age_months: int, haz: float) -> float:
-    """
-    Convert a HAZ value to height in cm using linear interpolation of
-    WHO HAZ boundaries. Source: who_haz_0_59m.csv (verified).
-    """
     measure = "length" if age_months < 24 else "height"
     rows = haz_df[(haz_df["sex"] == sex) &
                   (haz_df["measure"] == measure) &
@@ -104,10 +192,6 @@ def _haz_to_height(haz_df: pd.DataFrame, sex: str, age_months: int, haz: float) 
 
 
 def _get_lms(lms_tables: dict, sex: str, height_cm: float, age_months: float):
-    """
-    Retrieve (L, M, S) for a height via linear interpolation.
-    Selects WFL (<24 months) or WFH (≥24 months). Source: Excel files (verified).
-    """
     key = "wfl" if age_months < 24 else "wfh"
     df = lms_tables[(sex, key)]
     vals = df["index_value"].values
@@ -131,65 +215,104 @@ def _get_lms(lms_tables: dict, sex: str, height_cm: float, age_months: float):
 
 
 def _whz_to_weight(L: float, M: float, S: float, whz: float) -> float:
-    """
-    Inverse LMS: compute weight that corresponds to a given WHZ.
-    Formula: weight = M * (1 + L * S * Z)^(1/L)   (L != 0)
-             weight = M * exp(S * Z)                (L ≈ 0)
-    Derived from the standard LMS Z-score formula; uses WHO Excel LMS data.
-    """
     if abs(L) < 1e-6:
         return M * math.exp(S * whz)
     val = 1.0 + L * S * whz
     if val <= 0:
-        # Extreme negative Z — clamp to near-zero weight
         return M * 0.5
     return M * (val ** (1.0 / L))
 
 
 # ---------------------------------------------------------------------------
-# Body proportion model (NON-WHO — Snyder et al. 1975 + volumetric scaling)
+# Noise model — MediaPipe-realistic
+# ---------------------------------------------------------------------------
+
+def _mediapipe_noise(
+    rng: np.random.Generator,
+    base_value: float,
+    base_sigma: float,
+    occlusion_prob: float = 0.05,
+    foreshortening_bias: float = 0.0,
+) -> float:
+    """
+    Apply MediaPipe-realistic noise to a measurement.
+
+    - Occlusion: with small probability the measurement is degraded by an
+      additional bias (the landmark is partially occluded).
+    - Foreshortening: when the child is angled away from the camera,
+      lateral measurements are biased *down*.
+    - Gaussian jitter: standard landmark detection noise.
+    """
+    val = base_value * rng.normal(1.0, base_sigma)
+    if rng.random() < occlusion_prob:
+        val *= rng.uniform(0.85, 0.95)  # missing landmark = under-measured
+    if foreshortening_bias > 0:
+        val *= (1.0 - rng.uniform(0.0, foreshortening_bias))
+    return val
+
+
+# ---------------------------------------------------------------------------
+# Body proportion model (NON-WHO)
 # ---------------------------------------------------------------------------
 
 def _body_widths(height_cm: float, age_months: float,
                  weight_kg: float, median_weight: float,
+                 ethnicity: str,
                  rng: np.random.Generator) -> dict:
     """
-    Compute simulated body width measurements as a camera would detect.
+    Compute simulated body width and depth measurements as a camera would
+    detect, using compartment-aware scaling and ethnicity perturbations.
 
-    The baseline ratios (Snyder 1975) represent normally nourished children.
-    Width scaling with weight uses the volumetric cube-root assumption:
-        width_actual = width_expected × (weight / median_weight)^(1/3)
-
-    This is NOT from WHO standards. It is a physical approximation.
-    Noise (σ=3%) simulates MediaPipe landmark detection variability.
+    All measurements are noisy, in cm.
     """
-    width_scale = max((weight_kg / median_weight) ** (1 / 3), 0.7)
+    eth = ETHNICITY_PROFILES[ethnicity]
 
-    shoulder_ratio   = _interp_ratio(SHOULDER_RATIO_NODES, age_months)
+    # Compartment-aware scaling factors (linear dimension)
+    s_shoulder   = _compartment_scale(weight_kg, median_weight, "shoulder")
+    s_hip        = _compartment_scale(weight_kg, median_weight, "hip")
+    s_arm        = _compartment_scale(weight_kg, median_weight, "arm")
+    s_chest_ap   = _compartment_scale(weight_kg, median_weight, "chest_ap")
+    s_abdomen_ap = _compartment_scale(weight_kg, median_weight, "abdomen_ap")
+
+    # Random foreshortening — small fraction of samples have the child at an angle
+    fore = rng.uniform(0.0, 0.05) if rng.random() < 0.10 else 0.0
+
+    shoulder_ratio   = _interp_ratio(SHOULDER_RATIO_NODES, age_months) * eth["shoulder"]
     shoulder_expected = height_cm * shoulder_ratio
-    shoulder_actual   = shoulder_expected * width_scale
-    shoulder_actual  *= rng.normal(1.0, 0.03)
+    shoulder_actual   = _mediapipe_noise(
+        rng, shoulder_expected * s_shoulder,
+        base_sigma=0.03, foreshortening_bias=fore,
+    )
 
     hip_expected = shoulder_expected * 0.88   # hip ≈ 88% of shoulder (Snyder 1975)
-    hip_actual   = hip_expected * width_scale
-    hip_actual  *= rng.normal(1.0, 0.03)
+    hip_actual   = _mediapipe_noise(
+        rng, hip_expected * s_hip,
+        base_sigma=0.035, foreshortening_bias=fore,
+    )
 
-    arm_ratio    = _interp_ratio(ARM_RATIO_NODES, age_months)
-    arm_actual   = height_cm * arm_ratio * rng.normal(1.0, 0.04)
+    arm_ratio    = _interp_ratio(ARM_RATIO_NODES, age_months) * eth["arm"]
+    arm_actual   = _mediapipe_noise(
+        rng, height_cm * arm_ratio * s_arm,
+        base_sigma=0.04, occlusion_prob=0.07,
+    )
 
-    torso_ratio  = _interp_ratio(TORSO_RATIO_NODES, age_months)
-    torso_actual = height_cm * torso_ratio * rng.normal(1.0, 0.03)
+    torso_ratio  = _interp_ratio(TORSO_RATIO_NODES, age_months) * eth["torso"]
+    torso_actual = _mediapipe_noise(
+        rng, height_cm * torso_ratio,
+        base_sigma=0.03,
+    )
 
-    # AP (anterior-posterior) depth features — side-view measurements.
-    # Depth collapses faster than lateral width in wasting: a malnourished
-    # child's chest depth reduces more visibly in profile than from the front.
-    # Baseline AP/lateral ratios from Snyder 1975:
-    #   chest AP ≈ 0.45 × shoulder lateral width (normally nourished)
-    #   abdomen AP ≈ 0.50 × hip lateral width (normally nourished)
-    # depth_scale uses exponent 0.5 (vs 1/3 for lateral) so depth drops faster.
-    depth_scale = max((weight_kg / median_weight) ** 0.5, 0.45)
-    chest_depth_actual = shoulder_actual * 0.45 * depth_scale * rng.normal(1.0, 0.04)
-    abd_depth_actual   = hip_actual * 0.50 * depth_scale * rng.normal(1.0, 0.04)
+    # AP depth — chest depth ≈ 0.45 × shoulder lateral width (well nourished),
+    # abdomen depth ≈ 0.50 × hip lateral width. Compartment scaling drops the
+    # AP much faster than lateral because the AP composition is fat-heavy.
+    chest_depth_actual = _mediapipe_noise(
+        rng, shoulder_actual * 0.45 * s_chest_ap,
+        base_sigma=0.04, occlusion_prob=0.10, foreshortening_bias=fore,
+    )
+    abd_depth_actual = _mediapipe_noise(
+        rng, hip_actual * 0.50 * s_abdomen_ap,
+        base_sigma=0.04, occlusion_prob=0.10, foreshortening_bias=fore,
+    )
 
     return {
         "shoulder_width_cm":    max(shoulder_actual,     5.0),
@@ -198,16 +321,11 @@ def _body_widths(height_cm: float, age_months: float,
         "torso_length_cm":      max(torso_actual,        8.0),
         "chest_depth_cm":       max(chest_depth_actual,  2.0),
         "abd_depth_cm":         max(abd_depth_actual,    2.0),
-        "width_scale":          width_scale,
     }
 
 
 def _body_build_score(shoulder_width_cm: float, height_cm: float,
                       age_months: float) -> int:
-    """
-    Classify body build: -1=slender, 0=average, 1=stocky.
-    Based on deviation from expected shoulder/height ratio.
-    """
     expected = _interp_ratio(SHOULDER_RATIO_NODES, age_months)
     actual   = shoulder_width_cm / height_cm
     if actual < expected - 0.02:
@@ -225,6 +343,37 @@ def _label(whz: float) -> str:
     return "Overweight"
 
 
+def _sample_whz(rng: np.random.Generator) -> float:
+    """
+    Boundary-aware WHZ sampler.
+
+    The hard task is separating WHZ values on either side of -3 and -2.
+    To give the classifier more support there, we sample with extra density
+    in the bands [-3.5, -2.5] (SAM/MAM boundary) and [-2.5, -1.5] (MAM/Normal
+    boundary) on top of the existing realistic distribution.
+    """
+    r = rng.random()
+    if r < 0.50:
+        # Bulk Normal-ish distribution
+        whz = float(rng.normal(0.0, 1.0))
+    elif r < 0.62:
+        # Boundary band 1: SAM/MAM cliff
+        whz = float(rng.uniform(-3.5, -2.5))
+    elif r < 0.74:
+        # Boundary band 2: MAM/Normal cliff
+        whz = float(rng.uniform(-2.5, -1.5))
+    elif r < 0.85:
+        # Deep SAM tail (we still need extreme cases)
+        whz = float(rng.normal(-3.5, 0.4))
+    elif r < 0.95:
+        # Borderline mild wasting
+        whz = float(rng.normal(-1.5, 0.4))
+    else:
+        # Overweight tail
+        whz = float(rng.normal(2.0, 0.6))
+    return float(np.clip(whz, -4.0, 3.5))
+
+
 # ---------------------------------------------------------------------------
 # Main generation
 # ---------------------------------------------------------------------------
@@ -235,18 +384,15 @@ def generate(n: int = N_SAMPLES, seed: int = RANDOM_SEED) -> pd.DataFrame:
     haz_df     = _load_haz()
     lms_tables = _load_lms()
 
-    # Pre-compute valid age/sex pairs so we can sample uniformly
     sexes = ["M", "F"]
-    ages  = list(range(0, 60))   # 0–59 months
 
     records = []
     for _ in range(n):
         sex       = rng.choice(sexes)
         age_mo    = int(rng.integers(0, 60))
+        ethnicity = str(rng.choice(ETHNICITY_KEYS))
 
         # Sample HAZ from a realistic global distribution
-        # WHO global HAZ is approximately N(-0.6, 1.1) in low-income settings
-        # Use N(0, 1) for a balanced training set (ensures enough normal samples)
         haz = float(rng.normal(0.0, 1.0))
         haz = float(np.clip(haz, -4.0, 4.0))
 
@@ -254,17 +400,7 @@ def generate(n: int = N_SAMPLES, seed: int = RANDOM_SEED) -> pd.DataFrame:
         if math.isnan(height_cm) or height_cm <= 0:
             continue
 
-        # Sample WHZ — slight left skew to create realistic class imbalance
-        # Global prevalence: ~5% SAM, ~10% MAM, ~85% Normal (WHO 2022)
-        # We use a mix: 70% from N(0,1), 15% from N(-2.5,0.5), 15% from N(-1.5,0.4)
-        r = rng.random()
-        if r < 0.70:
-            whz = float(rng.normal(0.0, 1.0))
-        elif r < 0.85:
-            whz = float(rng.normal(-2.5, 0.5))   # MAM/SAM region
-        else:
-            whz = float(rng.normal(-1.5, 0.4))   # borderline
-        whz = float(np.clip(whz, -4.0, 3.5))
+        whz = _sample_whz(rng)
 
         try:
             L, M, S = _get_lms(lms_tables, sex, height_cm, float(age_mo))
@@ -277,7 +413,9 @@ def generate(n: int = N_SAMPLES, seed: int = RANDOM_SEED) -> pd.DataFrame:
         if weight_kg <= 0 or median_weight <= 0:
             continue
 
-        widths = _body_widths(height_cm, age_mo, weight_kg, median_weight, rng)
+        widths = _body_widths(
+            height_cm, age_mo, weight_kg, median_weight, ethnicity, rng,
+        )
 
         shoulder_height_ratio = widths["shoulder_width_cm"] / height_cm
         hip_height_ratio      = widths["hip_width_cm"]      / height_cm
@@ -308,6 +446,7 @@ def generate(n: int = N_SAMPLES, seed: int = RANDOM_SEED) -> pd.DataFrame:
             "label":                _label(whz),
             # Metadata
             "sex":                  sex,
+            "ethnicity":            ethnicity,
             "median_weight_kg":     round(median_weight, 3),
         })
 
@@ -315,6 +454,8 @@ def generate(n: int = N_SAMPLES, seed: int = RANDOM_SEED) -> pd.DataFrame:
     print(f"Generated {len(df)} samples")
     print("Label distribution:\n" + df["label"].value_counts(normalize=True)
           .rename("fraction").to_string())
+    print("\nEthnicity distribution:")
+    print(df["ethnicity"].value_counts(normalize=True).rename("fraction").to_string())
     return df
 
 

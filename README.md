@@ -280,6 +280,132 @@ ngrok http 8000
 
 ---
 
+## Flutter App Local Development
+
+The repository now includes a Flutter client in `flutter_app/`. It talks to the FastAPI backend, so local development means running the backend first, then starting Flutter against that backend.
+
+### Prerequisites
+
+- Flutter SDK 3.3 or newer on your `PATH`
+- Android Studio with Android SDK + an emulator, or a physical Android phone with USB debugging enabled
+- Java 17 (recommended for current Android tooling)
+
+Check your toolchain:
+
+```bash
+flutter --version
+flutter doctor -v
+```
+
+### First-time Flutter setup
+
+```bash
+cd flutter_app
+
+# Install Dart packages
+flutter pub get
+
+# Generate the Android project if this repo was cloned before platform files were committed
+flutter create --platforms=android --project-name child_growth_monitor_app .
+```
+
+### Start the backend for mobile development
+
+From the repo root in a separate terminal:
+
+```bash
+source .venv/bin/activate
+PYTHONPATH=. .venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+Use one of these base URLs in Flutter:
+
+- Android emulator: `http://10.0.2.2:8000`
+- Physical phone on the same WiFi: `http://<your-computer-lan-ip>:8000`
+
+The debug app accepts localhost, the Android emulator alias, and private LAN IPs such as `192.168.x.x`, `172.16.x.x`-`172.31.x.x`, and `10.x.x.x`.
+
+### Run the Flutter app
+
+```bash
+cd flutter_app
+
+# Emulator
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
+
+# Physical Android device on the same WiFi
+flutter run --dart-define=API_BASE_URL=http://<your-computer-lan-ip>:8000
+```
+
+Inside the app, use **Check Health** first to verify the mobile client can reach the backend.
+
+### Wireless ADB pairing (Android 11+)
+
+If you want to connect a physical device over WiFi without a USB cable:
+
+**On the phone:**
+1. Go to **Settings → Developer options → Wireless debugging** and enable it
+2. Tap **Pair device with pairing code** — note the IP, port, and 6-digit code shown
+
+**On your computer:**
+```bash
+# Pair once (use the IP:port and code shown on the phone)
+adb pair <phone-ip>:<pairing-port>
+# Enter the 6-digit code when prompted
+
+# Then connect (use the main IP:port shown on the Wireless debugging screen, not the pairing port)
+adb connect <phone-ip>:<port>
+
+# Verify the device shows up
+adb devices
+flutter devices
+```
+
+After a disconnect, only the `adb connect` step is needed (pairing persists):
+```bash
+adb connect <phone-ip>:<port>
+```
+
+**Then run the app:**
+```bash
+cd flutter_app
+flutter run -d <phone-ip>:<port>
+```
+
+### Common issues
+
+- `flutter: command not found`
+  Install Flutter and add `flutter/bin` to your `PATH`.
+- Android project missing
+  Run `flutter create --platforms=android --project-name child_growth_monitor_app .` inside `flutter_app/`.
+- Phone cannot reach backend
+  Make sure the backend was started with `--host 0.0.0.0`, both devices are on the same network, and the machine firewall allows port `8000`.
+- Emulator works but phone does not
+  Use your computer's LAN IP, not `localhost` or `10.0.2.2`.
+- `INSTALL_FAILED_UPDATE_INCOMPATIBLE` on first run
+  The app was previously installed with a different signing key. Uninstall it first:
+  ```bash
+  adb uninstall com.example.child_growth_monitor_app
+  ```
+  Then re-run `flutter run`.
+
+### Optional validation
+
+```bash
+cd flutter_app
+flutter analyze
+flutter test
+```
+
+The release build helper script also handles the missing Android project case:
+
+```bash
+cd flutter_app
+API_BASE_URL=http://10.0.2.2:8000 ./scripts/build_android_release.sh
+```
+
+---
+
 ## Usage
 
 ### Web Interface

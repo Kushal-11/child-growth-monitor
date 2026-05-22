@@ -145,12 +145,38 @@ class AssessmentService:
                 whz_status = self.nutrition_svc.classify_whz(whz_z)
                 whz_z = round(whz_z, 2)
 
-        # 5b. Estimate MUAC from WHZ (or use manual tape measurement)
+        # 5b. Estimate MUAC — pathway priority: manual > landmark > WHZ-derived
+        # Pull arm length & shoulder width from measurement service (in cm).
+        # ml_service.extract_features applies the same pixel→cm scaling using
+        # effective_height; do the same here for the landmark MUAC pathway.
+        muac_arm_cm = None
+        muac_shoulder_cm = None
+        if (
+            meas.body_segments is not None
+            and effective_height is not None
+            and meas.body_segments.total_height_px
+            and meas.body_segments.total_height_px > 0
+        ):
+            scale = effective_height / meas.body_segments.total_height_px
+            if meas.body_segments.upper_arm_length_px:
+                muac_arm_cm = float(meas.body_segments.upper_arm_length_px * scale)
+            if meas.body_segments.shoulder_width_px:
+                muac_shoulder_cm = float(meas.body_segments.shoulder_width_px * scale)
+
         muac_result = MUACService.estimate(
             age_months=age_months,
             sex=sex,
             whz=whz_z,
             manual_muac_cm=muac_cm,
+            upper_arm_length_cm=muac_arm_cm,
+            shoulder_width_cm=muac_shoulder_cm,
+            height_cm=effective_height,
+        )
+
+        # 5c. Combine MUAC + WHZ via WHO OR-rule for the final clinical call
+        combined_status = MUACService.combine_with_whz_status(
+            muac_status=muac_result.muac_status,
+            whz_status=whz_status,
         )
 
         # 6. Persist to database

@@ -25,7 +25,14 @@
       "Bash(PYTHONPATH=. .venv/bin/python -c \":*)",
       "Bash(PYTHONPATH=. .venv/bin/python scripts/extract_best_frame.py --help)",
       "Skill(update-config)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(PYTHONPATH=. .venv/bin/python *)",
+      "Bash(git *)",
+      "WebFetch(domain:www.ennonline.net)",
+      "WebFetch(domain:link.springer.com)",
+      "WebFetch(domain:assets.amazon.science)",
+      "WebFetch(domain:www.mdpi.com)",
+      "Bash(.venv/bin/python -c ' *)"
     ]
   },
   "hooks": {
