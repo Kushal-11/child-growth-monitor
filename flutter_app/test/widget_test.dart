@@ -49,5 +49,41 @@ void main() {
     testWidgets('unknown status is grey', (tester) async {
       expect(await _badgeColor(tester, 'something-else'), Colors.grey);
     });
+
+    // Regression guard: the WHZ/HAZ classifiers emit FULL human-readable
+    // strings, not the short 'SAM'/'MAM' tokens. Exact-match colouring silently
+    // rendered these as grey (looked identical to 'Unknown') on the result
+    // weight card and visit-history rows. These assertions feed the literal
+    // classifyWhz/classifyHaz outputs to lock the danger colours in place.
+    testWidgets('full SAM string is red', (tester) async {
+      expect(
+        await _badgeColor(tester, 'Severe Acute Malnutrition (SAM)'),
+        Colors.red,
+      );
+    });
+
+    testWidgets('full MAM string is orange', (tester) async {
+      expect(
+        await _badgeColor(tester, 'Moderate Acute Malnutrition (MAM)'),
+        Colors.orange,
+      );
+    });
+
+    testWidgets('Severely Stunted is orange (not amber/grey)', (tester) async {
+      expect(await _badgeColor(tester, 'Severely Stunted'), Colors.orange);
+    });
+
+    testWidgets('Stunted is amber', (tester) async {
+      expect(await _badgeColor(tester, 'Stunted'), Colors.amber.shade700);
+    });
+
+    // 'Possible Risk of Overweight' contains 'overweight' and must NOT be
+    // mistaken for a wasting alert — it maps to the over-nutrition colour.
+    testWidgets('Possible Risk of Overweight is purple', (tester) async {
+      expect(
+        await _badgeColor(tester, 'Possible Risk of Overweight'),
+        Colors.purple,
+      );
+    });
   });
 }
