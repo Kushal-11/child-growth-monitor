@@ -107,6 +107,8 @@ def list_children(
     current: User = Depends(get_current_user),
 ):
     """List the authenticated worker's non-archived children."""
+    # Owner-scoped: legacy rows with user_id=NULL (pre-auth data) are intentionally
+    # excluded here — they are unowned and only reachable by an admin.
     children = (
         db.query(Child)
         .filter(Child.user_id == current.id, Child.is_archived == False)  # noqa: E712

@@ -77,6 +77,9 @@ async def sync_assessment(
     if sex not in ("M", "F"):
         raise HTTPException(400, "sex must be 'M' or 'F'")
 
+    if entry_method not in ("assessment", "manual"):
+        raise HTTPException(400, "entry_method must be 'assessment' or 'manual'")
+
     try:
         dob = date.fromisoformat(date_of_birth)
     except ValueError:
@@ -106,6 +109,7 @@ async def sync_assessment(
         )
         .first()
     )
+    archived = is_archived.lower() in ("true", "1", "yes")
     photo_path = _save_upload(photo) if photo is not None else None
     if child is None:
         child = Child(
@@ -116,11 +120,14 @@ async def sync_assessment(
             location=location,
             user_id=current.id,
             photo_path=photo_path,
+            is_archived=archived,
         )
         db.add(child)
         db.flush()
-    elif photo_path is not None:
-        child.photo_path = photo_path
+    else:
+        child.is_archived = archived
+        if photo_path is not None:
+            child.photo_path = photo_path
 
     visit = Visit(
         child_id=child.id,

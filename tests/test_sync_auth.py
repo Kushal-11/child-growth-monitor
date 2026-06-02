@@ -87,3 +87,28 @@ def test_sync_idempotent(ctx):
     assert r1.json()["status"] == "synced"
     assert r2.json()["status"] == "already_synced"
     assert r1.json()["server_visit_id"] == r2.json()["server_visit_id"]
+
+
+def test_sync_rejects_invalid_entry_method(ctx):
+    client, token, _ = ctx
+    payload = _payload()
+    payload["entry_method"] = "bogus"
+    payload["local_uuid"] = "22222222-2222-2222-2222-222222222222"
+    r = client.post("/api/v1/sync", data=payload, files=_files(),
+                    headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 400
+
+
+def test_sync_applies_is_archived(ctx):
+    from app.models.child import Child
+    client, token, Session = ctx
+    payload = _payload()
+    payload["is_archived"] = "true"
+    payload["local_uuid"] = "33333333-3333-3333-3333-333333333333"
+    r = client.post("/api/v1/sync", data=payload, files=_files(),
+                    headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    db = Session()
+    child = db.query(Child).first()
+    assert child.is_archived is True
+    db.close()
