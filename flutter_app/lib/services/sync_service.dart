@@ -18,11 +18,15 @@ class SyncService {
     required SyncQueueDao syncDao,
     required String baseUrl,
     http.Client? httpClient,
+    String? authToken,
+    void Function()? onUnauthorized,
   })  : _db = db,
         _visitDao = visitDao,
         _childDao = childDao,
         _syncDao = syncDao,
         _baseUrl = baseUrl,
+        _authToken = authToken,
+        _onUnauthorized = onUnauthorized,
         _client = httpClient ?? http.Client();
 
   final AppDatabase _db;
@@ -31,6 +35,8 @@ class SyncService {
   final SyncQueueDao _syncDao;
   final String _baseUrl;
   final http.Client _client;
+  final String? _authToken;
+  final void Function()? _onUnauthorized;
 
   static const _maxRetries = 5;
 
@@ -75,6 +81,9 @@ class SyncService {
 
       final uri = Uri.parse('$_baseUrl/api/v1/sync');
       final req = http.MultipartRequest('POST', uri);
+      if (_authToken != null) {
+        req.headers['Authorization'] = 'Bearer $_authToken';
+      }
       req.fields.addAll({
         'local_uuid': pair.visit.localUuid,
         'child_name': child.name,
@@ -146,6 +155,10 @@ class SyncService {
         final body = jsonDecode(response.body) as Map<String, dynamic>;
         await _syncDao.markSynced(entry.id,
             serverVisitId: body['server_visit_id'] as int?);
+      } else if (response.statusCode == 401) {
+        _onUnauthorized?.call();
+        await _syncDao.markFailed(
+            entry.id, 'Unauthorized (401) — re-login required');
       } else {
         await _syncDao.markFailed(
             entry.id, 'HTTP ${response.statusCode}: ${response.body}');

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
+import 'auth_provider.dart';
 
 const _developmentBaseUrl = 'http://10.0.2.2:8000';
 const _productionBaseUrl = 'https://api.child-growth-monitor.org';
@@ -68,5 +69,6 @@ final baseUrlProvider = StateProvider<String>(
 /// Provider that creates an ApiService from the current base URL.
 final apiProvider = Provider<ApiService>((ref) {
   final url = ref.watch(baseUrlProvider);
-  return ApiService(baseUrl: effectiveBaseUrl(url));
+  final token = ref.watch(authProvider).token;
+  return ApiService(baseUrl: effectiveBaseUrl(url), authToken: token);
 });
