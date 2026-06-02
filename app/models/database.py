@@ -31,13 +31,20 @@ def init_db():
     Base.metadata.create_all(bind=engine)
 
 
-# Columns added after the original schema. (table, column, DDL type with default)
+# Columns added after the original schema.
+# (table, column, DDL fragment: type + optional constraints/default)
 _MIGRATIONS = [
     ("children", "user_id", "INTEGER"),
     ("children", "photo_path", "VARCHAR(500)"),
     ("children", "is_archived", "BOOLEAN NOT NULL DEFAULT 0"),
     ("visits", "user_id", "INTEGER"),
     ("visits", "entry_method", "VARCHAR(20) NOT NULL DEFAULT 'assessment'"),
+]
+
+# Indexes mirroring the index=True model columns, for the migration path.
+_INDEXES = [
+    ("ix_children_user_id", "children", "user_id"),
+    ("ix_visits_user_id", "visits", "user_id"),
 ]
 
 
@@ -54,3 +61,9 @@ def run_migrations(target_engine=None):
             if column in cols:
                 continue
             conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}"))
+        for index_name, table, column in _INDEXES:
+            if table not in existing_tables:
+                continue
+            conn.execute(text(
+                f"CREATE INDEX IF NOT EXISTS {index_name} ON {table} ({column})"
+            ))

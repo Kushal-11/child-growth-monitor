@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router as api_router
 from app.api.sync import router as sync_router
-from app.models.database import init_db
+from app.models.database import init_db, run_migrations
 from app.services.assessment_service import AssessmentService
 from app.services.who_data_service import WHODataService
 from app.web.views import router as web_router
@@ -32,7 +32,6 @@ def create_app() -> FastAPI:
 
     # Initialize database tables, then apply additive migrations to existing DBs
     init_db()
-    from app.models.database import run_migrations
     run_migrations()
 
     # Load WHO reference data at startup
