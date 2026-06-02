@@ -35,11 +35,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Loads any cached token/user. Offline-tolerant: presence of a token = authenticated.
   Future<void> restore() async {
-    final token = await _service.readToken();
-    final user = await _service.readUser();
-    if (token != null && user != null) {
-      state = AuthState(status: AuthStatus.authenticated, user: user, token: token);
-    } else {
+    try {
+      final token = await _service.readToken();
+      final user = await _service.readUser();
+      if (token != null && user != null) {
+        state = AuthState(status: AuthStatus.authenticated, user: user, token: token);
+      } else {
+        state = AuthState.unauthenticated;
+      }
+    } catch (_) {
+      // Corrupt/unavailable secure storage must not strand the app on a
+      // protected screen — fall back to requiring login.
       state = AuthState.unauthenticated;
     }
   }

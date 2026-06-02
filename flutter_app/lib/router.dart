@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -18,15 +18,26 @@ GoRouter buildRouter(Ref ref) {
     refreshListenable: _AuthListenable(ref),
     redirect: (context, state) {
       final status = ref.read(authProvider).status;
-      final loggingIn = state.matchedLocation == '/login';
-      if (status == AuthStatus.unknown) return null; // wait for restore()
+      final loc = state.matchedLocation;
+      if (status == AuthStatus.unknown) {
+        return loc == '/splash' ? null : '/splash';
+      }
+      // status resolved: never stay on splash
+      final loggingIn = loc == '/login';
       if (status == AuthStatus.unauthenticated) {
         return loggingIn ? null : '/login';
       }
-      if (loggingIn) return '/';
+      // authenticated
+      if (loggingIn || loc == '/splash') return '/';
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (c, s) => const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      ),
       GoRoute(path: '/login', builder: (c, s) => const LoginScreen()),
       GoRoute(path: '/', builder: (c, s) => const AssessmentScreen()),
       GoRoute(path: '/result', builder: (c, s) => const ResultScreen()),

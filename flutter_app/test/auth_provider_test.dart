@@ -63,4 +63,26 @@ void main() {
     );
     expect(container.read(authProvider).status, AuthStatus.unauthenticated);
   });
+
+  test('restore tolerates storage errors and lands unauthenticated', () async {
+    final container = ProviderContainer(overrides: [
+      authServiceProvider.overrideWithValue(_ThrowingAuthService()),
+    ]);
+    addTearDown(container.dispose);
+    await container.read(authProvider.notifier).restore();
+    expect(container.read(authProvider).status, AuthStatus.unauthenticated);
+  });
+}
+
+class _ThrowingAuthService implements AuthService {
+  @override
+  String get baseUrl => 'http://test';
+  @override
+  Future<AuthLoginResult> login(String u, String p) async => throw AuthException('x');
+  @override
+  Future<String?> readToken() async => throw Exception('keystore boom');
+  @override
+  Future<AuthUser?> readUser() async => null;
+  @override
+  Future<void> logout() async {}
 }
