@@ -49,6 +49,28 @@ class $ChildrenTable extends Children
   late final GeneratedColumn<String> location = GeneratedColumn<String>(
       'location', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _ownerUserIdMeta =
+      const VerificationMeta('ownerUserId');
+  @override
+  late final GeneratedColumn<int> ownerUserId = GeneratedColumn<int>(
+      'owner_user_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _photoPathMeta =
+      const VerificationMeta('photoPath');
+  @override
+  late final GeneratedColumn<String> photoPath = GeneratedColumn<String>(
+      'photo_path', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _isArchivedMeta =
+      const VerificationMeta('isArchived');
+  @override
+  late final GeneratedColumn<bool> isArchived = GeneratedColumn<bool>(
+      'is_archived', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_archived" IN (0, 1))'),
+      defaultValue: const Constant(false));
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -73,6 +95,9 @@ class $ChildrenTable extends Children
         sex,
         guardianName,
         location,
+        ownerUserId,
+        photoPath,
+        isArchived,
         createdAt,
         updatedAt
       ];
@@ -119,6 +144,22 @@ class $ChildrenTable extends Children
       context.handle(_locationMeta,
           location.isAcceptableOrUnknown(data['location']!, _locationMeta));
     }
+    if (data.containsKey('owner_user_id')) {
+      context.handle(
+          _ownerUserIdMeta,
+          ownerUserId.isAcceptableOrUnknown(
+              data['owner_user_id']!, _ownerUserIdMeta));
+    }
+    if (data.containsKey('photo_path')) {
+      context.handle(_photoPathMeta,
+          photoPath.isAcceptableOrUnknown(data['photo_path']!, _photoPathMeta));
+    }
+    if (data.containsKey('is_archived')) {
+      context.handle(
+          _isArchivedMeta,
+          isArchived.isAcceptableOrUnknown(
+              data['is_archived']!, _isArchivedMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -148,6 +189,12 @@ class $ChildrenTable extends Children
           .read(DriftSqlType.string, data['${effectivePrefix}guardian_name']),
       location: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}location']),
+      ownerUserId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}owner_user_id']),
+      photoPath: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}photo_path']),
+      isArchived: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_archived'])!,
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -168,6 +215,9 @@ class ChildrenData extends DataClass implements Insertable<ChildrenData> {
   final String sex;
   final String? guardianName;
   final String? location;
+  final int? ownerUserId;
+  final String? photoPath;
+  final bool isArchived;
   final DateTime createdAt;
   final DateTime updatedAt;
   const ChildrenData(
@@ -177,6 +227,9 @@ class ChildrenData extends DataClass implements Insertable<ChildrenData> {
       required this.sex,
       this.guardianName,
       this.location,
+      this.ownerUserId,
+      this.photoPath,
+      required this.isArchived,
       required this.createdAt,
       required this.updatedAt});
   @override
@@ -192,6 +245,13 @@ class ChildrenData extends DataClass implements Insertable<ChildrenData> {
     if (!nullToAbsent || location != null) {
       map['location'] = Variable<String>(location);
     }
+    if (!nullToAbsent || ownerUserId != null) {
+      map['owner_user_id'] = Variable<int>(ownerUserId);
+    }
+    if (!nullToAbsent || photoPath != null) {
+      map['photo_path'] = Variable<String>(photoPath);
+    }
+    map['is_archived'] = Variable<bool>(isArchived);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -209,6 +269,13 @@ class ChildrenData extends DataClass implements Insertable<ChildrenData> {
       location: location == null && nullToAbsent
           ? const Value.absent()
           : Value(location),
+      ownerUserId: ownerUserId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerUserId),
+      photoPath: photoPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(photoPath),
+      isArchived: Value(isArchived),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -224,6 +291,9 @@ class ChildrenData extends DataClass implements Insertable<ChildrenData> {
       sex: serializer.fromJson<String>(json['sex']),
       guardianName: serializer.fromJson<String?>(json['guardianName']),
       location: serializer.fromJson<String?>(json['location']),
+      ownerUserId: serializer.fromJson<int?>(json['ownerUserId']),
+      photoPath: serializer.fromJson<String?>(json['photoPath']),
+      isArchived: serializer.fromJson<bool>(json['isArchived']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -238,6 +308,9 @@ class ChildrenData extends DataClass implements Insertable<ChildrenData> {
       'sex': serializer.toJson<String>(sex),
       'guardianName': serializer.toJson<String?>(guardianName),
       'location': serializer.toJson<String?>(location),
+      'ownerUserId': serializer.toJson<int?>(ownerUserId),
+      'photoPath': serializer.toJson<String?>(photoPath),
+      'isArchived': serializer.toJson<bool>(isArchived),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -250,6 +323,9 @@ class ChildrenData extends DataClass implements Insertable<ChildrenData> {
           String? sex,
           Value<String?> guardianName = const Value.absent(),
           Value<String?> location = const Value.absent(),
+          Value<int?> ownerUserId = const Value.absent(),
+          Value<String?> photoPath = const Value.absent(),
+          bool? isArchived,
           DateTime? createdAt,
           DateTime? updatedAt}) =>
       ChildrenData(
@@ -260,6 +336,9 @@ class ChildrenData extends DataClass implements Insertable<ChildrenData> {
         guardianName:
             guardianName.present ? guardianName.value : this.guardianName,
         location: location.present ? location.value : this.location,
+        ownerUserId: ownerUserId.present ? ownerUserId.value : this.ownerUserId,
+        photoPath: photoPath.present ? photoPath.value : this.photoPath,
+        isArchived: isArchived ?? this.isArchived,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -274,6 +353,11 @@ class ChildrenData extends DataClass implements Insertable<ChildrenData> {
           ? data.guardianName.value
           : this.guardianName,
       location: data.location.present ? data.location.value : this.location,
+      ownerUserId:
+          data.ownerUserId.present ? data.ownerUserId.value : this.ownerUserId,
+      photoPath: data.photoPath.present ? data.photoPath.value : this.photoPath,
+      isArchived:
+          data.isArchived.present ? data.isArchived.value : this.isArchived,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -288,6 +372,9 @@ class ChildrenData extends DataClass implements Insertable<ChildrenData> {
           ..write('sex: $sex, ')
           ..write('guardianName: $guardianName, ')
           ..write('location: $location, ')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('photoPath: $photoPath, ')
+          ..write('isArchived: $isArchived, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -295,8 +382,8 @@ class ChildrenData extends DataClass implements Insertable<ChildrenData> {
   }
 
   @override
-  int get hashCode => Object.hash(
-      id, name, dateOfBirth, sex, guardianName, location, createdAt, updatedAt);
+  int get hashCode => Object.hash(id, name, dateOfBirth, sex, guardianName,
+      location, ownerUserId, photoPath, isArchived, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -307,6 +394,9 @@ class ChildrenData extends DataClass implements Insertable<ChildrenData> {
           other.sex == this.sex &&
           other.guardianName == this.guardianName &&
           other.location == this.location &&
+          other.ownerUserId == this.ownerUserId &&
+          other.photoPath == this.photoPath &&
+          other.isArchived == this.isArchived &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -318,6 +408,9 @@ class ChildrenCompanion extends UpdateCompanion<ChildrenData> {
   final Value<String> sex;
   final Value<String?> guardianName;
   final Value<String?> location;
+  final Value<int?> ownerUserId;
+  final Value<String?> photoPath;
+  final Value<bool> isArchived;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   const ChildrenCompanion({
@@ -327,6 +420,9 @@ class ChildrenCompanion extends UpdateCompanion<ChildrenData> {
     this.sex = const Value.absent(),
     this.guardianName = const Value.absent(),
     this.location = const Value.absent(),
+    this.ownerUserId = const Value.absent(),
+    this.photoPath = const Value.absent(),
+    this.isArchived = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -337,6 +433,9 @@ class ChildrenCompanion extends UpdateCompanion<ChildrenData> {
     required String sex,
     this.guardianName = const Value.absent(),
     this.location = const Value.absent(),
+    this.ownerUserId = const Value.absent(),
+    this.photoPath = const Value.absent(),
+    this.isArchived = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   })  : name = Value(name),
@@ -349,6 +448,9 @@ class ChildrenCompanion extends UpdateCompanion<ChildrenData> {
     Expression<String>? sex,
     Expression<String>? guardianName,
     Expression<String>? location,
+    Expression<int>? ownerUserId,
+    Expression<String>? photoPath,
+    Expression<bool>? isArchived,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
@@ -359,6 +461,9 @@ class ChildrenCompanion extends UpdateCompanion<ChildrenData> {
       if (sex != null) 'sex': sex,
       if (guardianName != null) 'guardian_name': guardianName,
       if (location != null) 'location': location,
+      if (ownerUserId != null) 'owner_user_id': ownerUserId,
+      if (photoPath != null) 'photo_path': photoPath,
+      if (isArchived != null) 'is_archived': isArchived,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -371,6 +476,9 @@ class ChildrenCompanion extends UpdateCompanion<ChildrenData> {
       Value<String>? sex,
       Value<String?>? guardianName,
       Value<String?>? location,
+      Value<int?>? ownerUserId,
+      Value<String?>? photoPath,
+      Value<bool>? isArchived,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt}) {
     return ChildrenCompanion(
@@ -380,6 +488,9 @@ class ChildrenCompanion extends UpdateCompanion<ChildrenData> {
       sex: sex ?? this.sex,
       guardianName: guardianName ?? this.guardianName,
       location: location ?? this.location,
+      ownerUserId: ownerUserId ?? this.ownerUserId,
+      photoPath: photoPath ?? this.photoPath,
+      isArchived: isArchived ?? this.isArchived,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -406,6 +517,15 @@ class ChildrenCompanion extends UpdateCompanion<ChildrenData> {
     if (location.present) {
       map['location'] = Variable<String>(location.value);
     }
+    if (ownerUserId.present) {
+      map['owner_user_id'] = Variable<int>(ownerUserId.value);
+    }
+    if (photoPath.present) {
+      map['photo_path'] = Variable<String>(photoPath.value);
+    }
+    if (isArchived.present) {
+      map['is_archived'] = Variable<bool>(isArchived.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -424,6 +544,9 @@ class ChildrenCompanion extends UpdateCompanion<ChildrenData> {
           ..write('sex: $sex, ')
           ..write('guardianName: $guardianName, ')
           ..write('location: $location, ')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('photoPath: $photoPath, ')
+          ..write('isArchived: $isArchived, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -482,8 +605,8 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
       const VerificationMeta('imagePath');
   @override
   late final GeneratedColumn<String> imagePath = GeneratedColumn<String>(
-      'image_path', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+      'image_path', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _sideImagePathMeta =
       const VerificationMeta('sideImagePath');
   @override
@@ -501,6 +624,20 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
   late final GeneratedColumn<String> notes = GeneratedColumn<String>(
       'notes', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _ownerUserIdMeta =
+      const VerificationMeta('ownerUserId');
+  @override
+  late final GeneratedColumn<int> ownerUserId = GeneratedColumn<int>(
+      'owner_user_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _entryMethodMeta =
+      const VerificationMeta('entryMethod');
+  @override
+  late final GeneratedColumn<String> entryMethod = GeneratedColumn<String>(
+      'entry_method', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('assessment'));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -511,7 +648,9 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
         imagePath,
         sideImagePath,
         backImagePath,
-        notes
+        notes,
+        ownerUserId,
+        entryMethod
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -551,8 +690,6 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
     if (data.containsKey('image_path')) {
       context.handle(_imagePathMeta,
           imagePath.isAcceptableOrUnknown(data['image_path']!, _imagePathMeta));
-    } else if (isInserting) {
-      context.missing(_imagePathMeta);
     }
     if (data.containsKey('side_image_path')) {
       context.handle(
@@ -569,6 +706,18 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
     if (data.containsKey('notes')) {
       context.handle(
           _notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
+    }
+    if (data.containsKey('owner_user_id')) {
+      context.handle(
+          _ownerUserIdMeta,
+          ownerUserId.isAcceptableOrUnknown(
+              data['owner_user_id']!, _ownerUserIdMeta));
+    }
+    if (data.containsKey('entry_method')) {
+      context.handle(
+          _entryMethodMeta,
+          entryMethod.isAcceptableOrUnknown(
+              data['entry_method']!, _entryMethodMeta));
     }
     return context;
   }
@@ -590,13 +739,17 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
       ageMonths: attachedDatabase.typeMapping
           .read(DriftSqlType.double, data['${effectivePrefix}age_months'])!,
       imagePath: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}image_path'])!,
+          .read(DriftSqlType.string, data['${effectivePrefix}image_path']),
       sideImagePath: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}side_image_path']),
       backImagePath: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}back_image_path']),
       notes: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}notes']),
+      ownerUserId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}owner_user_id']),
+      entryMethod: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}entry_method'])!,
     );
   }
 
@@ -612,20 +765,24 @@ class Visit extends DataClass implements Insertable<Visit> {
   final String localUuid;
   final DateTime visitDate;
   final double ageMonths;
-  final String imagePath;
+  final String? imagePath;
   final String? sideImagePath;
   final String? backImagePath;
   final String? notes;
+  final int? ownerUserId;
+  final String entryMethod;
   const Visit(
       {required this.id,
       required this.childId,
       required this.localUuid,
       required this.visitDate,
       required this.ageMonths,
-      required this.imagePath,
+      this.imagePath,
       this.sideImagePath,
       this.backImagePath,
-      this.notes});
+      this.notes,
+      this.ownerUserId,
+      required this.entryMethod});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -634,7 +791,9 @@ class Visit extends DataClass implements Insertable<Visit> {
     map['local_uuid'] = Variable<String>(localUuid);
     map['visit_date'] = Variable<DateTime>(visitDate);
     map['age_months'] = Variable<double>(ageMonths);
-    map['image_path'] = Variable<String>(imagePath);
+    if (!nullToAbsent || imagePath != null) {
+      map['image_path'] = Variable<String>(imagePath);
+    }
     if (!nullToAbsent || sideImagePath != null) {
       map['side_image_path'] = Variable<String>(sideImagePath);
     }
@@ -644,6 +803,10 @@ class Visit extends DataClass implements Insertable<Visit> {
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
     }
+    if (!nullToAbsent || ownerUserId != null) {
+      map['owner_user_id'] = Variable<int>(ownerUserId);
+    }
+    map['entry_method'] = Variable<String>(entryMethod);
     return map;
   }
 
@@ -654,7 +817,9 @@ class Visit extends DataClass implements Insertable<Visit> {
       localUuid: Value(localUuid),
       visitDate: Value(visitDate),
       ageMonths: Value(ageMonths),
-      imagePath: Value(imagePath),
+      imagePath: imagePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imagePath),
       sideImagePath: sideImagePath == null && nullToAbsent
           ? const Value.absent()
           : Value(sideImagePath),
@@ -663,6 +828,10 @@ class Visit extends DataClass implements Insertable<Visit> {
           : Value(backImagePath),
       notes:
           notes == null && nullToAbsent ? const Value.absent() : Value(notes),
+      ownerUserId: ownerUserId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerUserId),
+      entryMethod: Value(entryMethod),
     );
   }
 
@@ -675,10 +844,12 @@ class Visit extends DataClass implements Insertable<Visit> {
       localUuid: serializer.fromJson<String>(json['localUuid']),
       visitDate: serializer.fromJson<DateTime>(json['visitDate']),
       ageMonths: serializer.fromJson<double>(json['ageMonths']),
-      imagePath: serializer.fromJson<String>(json['imagePath']),
+      imagePath: serializer.fromJson<String?>(json['imagePath']),
       sideImagePath: serializer.fromJson<String?>(json['sideImagePath']),
       backImagePath: serializer.fromJson<String?>(json['backImagePath']),
       notes: serializer.fromJson<String?>(json['notes']),
+      ownerUserId: serializer.fromJson<int?>(json['ownerUserId']),
+      entryMethod: serializer.fromJson<String>(json['entryMethod']),
     );
   }
   @override
@@ -690,10 +861,12 @@ class Visit extends DataClass implements Insertable<Visit> {
       'localUuid': serializer.toJson<String>(localUuid),
       'visitDate': serializer.toJson<DateTime>(visitDate),
       'ageMonths': serializer.toJson<double>(ageMonths),
-      'imagePath': serializer.toJson<String>(imagePath),
+      'imagePath': serializer.toJson<String?>(imagePath),
       'sideImagePath': serializer.toJson<String?>(sideImagePath),
       'backImagePath': serializer.toJson<String?>(backImagePath),
       'notes': serializer.toJson<String?>(notes),
+      'ownerUserId': serializer.toJson<int?>(ownerUserId),
+      'entryMethod': serializer.toJson<String>(entryMethod),
     };
   }
 
@@ -703,22 +876,26 @@ class Visit extends DataClass implements Insertable<Visit> {
           String? localUuid,
           DateTime? visitDate,
           double? ageMonths,
-          String? imagePath,
+          Value<String?> imagePath = const Value.absent(),
           Value<String?> sideImagePath = const Value.absent(),
           Value<String?> backImagePath = const Value.absent(),
-          Value<String?> notes = const Value.absent()}) =>
+          Value<String?> notes = const Value.absent(),
+          Value<int?> ownerUserId = const Value.absent(),
+          String? entryMethod}) =>
       Visit(
         id: id ?? this.id,
         childId: childId ?? this.childId,
         localUuid: localUuid ?? this.localUuid,
         visitDate: visitDate ?? this.visitDate,
         ageMonths: ageMonths ?? this.ageMonths,
-        imagePath: imagePath ?? this.imagePath,
+        imagePath: imagePath.present ? imagePath.value : this.imagePath,
         sideImagePath:
             sideImagePath.present ? sideImagePath.value : this.sideImagePath,
         backImagePath:
             backImagePath.present ? backImagePath.value : this.backImagePath,
         notes: notes.present ? notes.value : this.notes,
+        ownerUserId: ownerUserId.present ? ownerUserId.value : this.ownerUserId,
+        entryMethod: entryMethod ?? this.entryMethod,
       );
   Visit copyWithCompanion(VisitsCompanion data) {
     return Visit(
@@ -735,6 +912,10 @@ class Visit extends DataClass implements Insertable<Visit> {
           ? data.backImagePath.value
           : this.backImagePath,
       notes: data.notes.present ? data.notes.value : this.notes,
+      ownerUserId:
+          data.ownerUserId.present ? data.ownerUserId.value : this.ownerUserId,
+      entryMethod:
+          data.entryMethod.present ? data.entryMethod.value : this.entryMethod,
     );
   }
 
@@ -749,14 +930,16 @@ class Visit extends DataClass implements Insertable<Visit> {
           ..write('imagePath: $imagePath, ')
           ..write('sideImagePath: $sideImagePath, ')
           ..write('backImagePath: $backImagePath, ')
-          ..write('notes: $notes')
+          ..write('notes: $notes, ')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('entryMethod: $entryMethod')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode => Object.hash(id, childId, localUuid, visitDate, ageMonths,
-      imagePath, sideImagePath, backImagePath, notes);
+      imagePath, sideImagePath, backImagePath, notes, ownerUserId, entryMethod);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -769,7 +952,9 @@ class Visit extends DataClass implements Insertable<Visit> {
           other.imagePath == this.imagePath &&
           other.sideImagePath == this.sideImagePath &&
           other.backImagePath == this.backImagePath &&
-          other.notes == this.notes);
+          other.notes == this.notes &&
+          other.ownerUserId == this.ownerUserId &&
+          other.entryMethod == this.entryMethod);
 }
 
 class VisitsCompanion extends UpdateCompanion<Visit> {
@@ -778,10 +963,12 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
   final Value<String> localUuid;
   final Value<DateTime> visitDate;
   final Value<double> ageMonths;
-  final Value<String> imagePath;
+  final Value<String?> imagePath;
   final Value<String?> sideImagePath;
   final Value<String?> backImagePath;
   final Value<String?> notes;
+  final Value<int?> ownerUserId;
+  final Value<String> entryMethod;
   const VisitsCompanion({
     this.id = const Value.absent(),
     this.childId = const Value.absent(),
@@ -792,6 +979,8 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
     this.sideImagePath = const Value.absent(),
     this.backImagePath = const Value.absent(),
     this.notes = const Value.absent(),
+    this.ownerUserId = const Value.absent(),
+    this.entryMethod = const Value.absent(),
   });
   VisitsCompanion.insert({
     this.id = const Value.absent(),
@@ -799,14 +988,15 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
     required String localUuid,
     this.visitDate = const Value.absent(),
     required double ageMonths,
-    required String imagePath,
+    this.imagePath = const Value.absent(),
     this.sideImagePath = const Value.absent(),
     this.backImagePath = const Value.absent(),
     this.notes = const Value.absent(),
+    this.ownerUserId = const Value.absent(),
+    this.entryMethod = const Value.absent(),
   })  : childId = Value(childId),
         localUuid = Value(localUuid),
-        ageMonths = Value(ageMonths),
-        imagePath = Value(imagePath);
+        ageMonths = Value(ageMonths);
   static Insertable<Visit> custom({
     Expression<int>? id,
     Expression<int>? childId,
@@ -817,6 +1007,8 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
     Expression<String>? sideImagePath,
     Expression<String>? backImagePath,
     Expression<String>? notes,
+    Expression<int>? ownerUserId,
+    Expression<String>? entryMethod,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -828,6 +1020,8 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
       if (sideImagePath != null) 'side_image_path': sideImagePath,
       if (backImagePath != null) 'back_image_path': backImagePath,
       if (notes != null) 'notes': notes,
+      if (ownerUserId != null) 'owner_user_id': ownerUserId,
+      if (entryMethod != null) 'entry_method': entryMethod,
     });
   }
 
@@ -837,10 +1031,12 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
       Value<String>? localUuid,
       Value<DateTime>? visitDate,
       Value<double>? ageMonths,
-      Value<String>? imagePath,
+      Value<String?>? imagePath,
       Value<String?>? sideImagePath,
       Value<String?>? backImagePath,
-      Value<String?>? notes}) {
+      Value<String?>? notes,
+      Value<int?>? ownerUserId,
+      Value<String>? entryMethod}) {
     return VisitsCompanion(
       id: id ?? this.id,
       childId: childId ?? this.childId,
@@ -851,6 +1047,8 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
       sideImagePath: sideImagePath ?? this.sideImagePath,
       backImagePath: backImagePath ?? this.backImagePath,
       notes: notes ?? this.notes,
+      ownerUserId: ownerUserId ?? this.ownerUserId,
+      entryMethod: entryMethod ?? this.entryMethod,
     );
   }
 
@@ -884,6 +1082,12 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (ownerUserId.present) {
+      map['owner_user_id'] = Variable<int>(ownerUserId.value);
+    }
+    if (entryMethod.present) {
+      map['entry_method'] = Variable<String>(entryMethod.value);
+    }
     return map;
   }
 
@@ -898,7 +1102,9 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
           ..write('imagePath: $imagePath, ')
           ..write('sideImagePath: $sideImagePath, ')
           ..write('backImagePath: $backImagePath, ')
-          ..write('notes: $notes')
+          ..write('notes: $notes, ')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('entryMethod: $entryMethod')
           ..write(')'))
         .toString();
   }
@@ -2632,6 +2838,9 @@ typedef $$ChildrenTableCreateCompanionBuilder = ChildrenCompanion Function({
   required String sex,
   Value<String?> guardianName,
   Value<String?> location,
+  Value<int?> ownerUserId,
+  Value<String?> photoPath,
+  Value<bool> isArchived,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
 });
@@ -2642,6 +2851,9 @@ typedef $$ChildrenTableUpdateCompanionBuilder = ChildrenCompanion Function({
   Value<String> sex,
   Value<String?> guardianName,
   Value<String?> location,
+  Value<int?> ownerUserId,
+  Value<String?> photoPath,
+  Value<bool> isArchived,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
 });
@@ -2691,6 +2903,15 @@ class $$ChildrenTableFilterComposer
 
   ColumnFilters<String> get location => $composableBuilder(
       column: $table.location, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get ownerUserId => $composableBuilder(
+      column: $table.ownerUserId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get photoPath => $composableBuilder(
+      column: $table.photoPath, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isArchived => $composableBuilder(
+      column: $table.isArchived, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -2748,6 +2969,15 @@ class $$ChildrenTableOrderingComposer
   ColumnOrderings<String> get location => $composableBuilder(
       column: $table.location, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get ownerUserId => $composableBuilder(
+      column: $table.ownerUserId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get photoPath => $composableBuilder(
+      column: $table.photoPath, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isArchived => $composableBuilder(
+      column: $table.isArchived, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
@@ -2781,6 +3011,15 @@ class $$ChildrenTableAnnotationComposer
 
   GeneratedColumn<String> get location =>
       $composableBuilder(column: $table.location, builder: (column) => column);
+
+  GeneratedColumn<int> get ownerUserId => $composableBuilder(
+      column: $table.ownerUserId, builder: (column) => column);
+
+  GeneratedColumn<String> get photoPath =>
+      $composableBuilder(column: $table.photoPath, builder: (column) => column);
+
+  GeneratedColumn<bool> get isArchived => $composableBuilder(
+      column: $table.isArchived, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -2839,6 +3078,9 @@ class $$ChildrenTableTableManager extends RootTableManager<
             Value<String> sex = const Value.absent(),
             Value<String?> guardianName = const Value.absent(),
             Value<String?> location = const Value.absent(),
+            Value<int?> ownerUserId = const Value.absent(),
+            Value<String?> photoPath = const Value.absent(),
+            Value<bool> isArchived = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
           }) =>
@@ -2849,6 +3091,9 @@ class $$ChildrenTableTableManager extends RootTableManager<
             sex: sex,
             guardianName: guardianName,
             location: location,
+            ownerUserId: ownerUserId,
+            photoPath: photoPath,
+            isArchived: isArchived,
             createdAt: createdAt,
             updatedAt: updatedAt,
           ),
@@ -2859,6 +3104,9 @@ class $$ChildrenTableTableManager extends RootTableManager<
             required String sex,
             Value<String?> guardianName = const Value.absent(),
             Value<String?> location = const Value.absent(),
+            Value<int?> ownerUserId = const Value.absent(),
+            Value<String?> photoPath = const Value.absent(),
+            Value<bool> isArchived = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
           }) =>
@@ -2869,6 +3117,9 @@ class $$ChildrenTableTableManager extends RootTableManager<
             sex: sex,
             guardianName: guardianName,
             location: location,
+            ownerUserId: ownerUserId,
+            photoPath: photoPath,
+            isArchived: isArchived,
             createdAt: createdAt,
             updatedAt: updatedAt,
           ),
@@ -2920,10 +3171,12 @@ typedef $$VisitsTableCreateCompanionBuilder = VisitsCompanion Function({
   required String localUuid,
   Value<DateTime> visitDate,
   required double ageMonths,
-  required String imagePath,
+  Value<String?> imagePath,
   Value<String?> sideImagePath,
   Value<String?> backImagePath,
   Value<String?> notes,
+  Value<int?> ownerUserId,
+  Value<String> entryMethod,
 });
 typedef $$VisitsTableUpdateCompanionBuilder = VisitsCompanion Function({
   Value<int> id,
@@ -2931,10 +3184,12 @@ typedef $$VisitsTableUpdateCompanionBuilder = VisitsCompanion Function({
   Value<String> localUuid,
   Value<DateTime> visitDate,
   Value<double> ageMonths,
-  Value<String> imagePath,
+  Value<String?> imagePath,
   Value<String?> sideImagePath,
   Value<String?> backImagePath,
   Value<String?> notes,
+  Value<int?> ownerUserId,
+  Value<String> entryMethod,
 });
 
 final class $$VisitsTableReferences
@@ -3017,6 +3272,12 @@ class $$VisitsTableFilterComposer
 
   ColumnFilters<String> get notes => $composableBuilder(
       column: $table.notes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get ownerUserId => $composableBuilder(
+      column: $table.ownerUserId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get entryMethod => $composableBuilder(
+      column: $table.entryMethod, builder: (column) => ColumnFilters(column));
 
   $$ChildrenTableFilterComposer get childId {
     final $$ChildrenTableFilterComposer composer = $composerBuilder(
@@ -3116,6 +3377,12 @@ class $$VisitsTableOrderingComposer
   ColumnOrderings<String> get notes => $composableBuilder(
       column: $table.notes, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get ownerUserId => $composableBuilder(
+      column: $table.ownerUserId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get entryMethod => $composableBuilder(
+      column: $table.entryMethod, builder: (column) => ColumnOrderings(column));
+
   $$ChildrenTableOrderingComposer get childId {
     final $$ChildrenTableOrderingComposer composer = $composerBuilder(
         composer: this,
@@ -3169,6 +3436,12 @@ class $$VisitsTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<int> get ownerUserId => $composableBuilder(
+      column: $table.ownerUserId, builder: (column) => column);
+
+  GeneratedColumn<String> get entryMethod => $composableBuilder(
+      column: $table.entryMethod, builder: (column) => column);
 
   $$ChildrenTableAnnotationComposer get childId {
     final $$ChildrenTableAnnotationComposer composer = $composerBuilder(
@@ -3262,10 +3535,12 @@ class $$VisitsTableTableManager extends RootTableManager<
             Value<String> localUuid = const Value.absent(),
             Value<DateTime> visitDate = const Value.absent(),
             Value<double> ageMonths = const Value.absent(),
-            Value<String> imagePath = const Value.absent(),
+            Value<String?> imagePath = const Value.absent(),
             Value<String?> sideImagePath = const Value.absent(),
             Value<String?> backImagePath = const Value.absent(),
             Value<String?> notes = const Value.absent(),
+            Value<int?> ownerUserId = const Value.absent(),
+            Value<String> entryMethod = const Value.absent(),
           }) =>
               VisitsCompanion(
             id: id,
@@ -3277,6 +3552,8 @@ class $$VisitsTableTableManager extends RootTableManager<
             sideImagePath: sideImagePath,
             backImagePath: backImagePath,
             notes: notes,
+            ownerUserId: ownerUserId,
+            entryMethod: entryMethod,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -3284,10 +3561,12 @@ class $$VisitsTableTableManager extends RootTableManager<
             required String localUuid,
             Value<DateTime> visitDate = const Value.absent(),
             required double ageMonths,
-            required String imagePath,
+            Value<String?> imagePath = const Value.absent(),
             Value<String?> sideImagePath = const Value.absent(),
             Value<String?> backImagePath = const Value.absent(),
             Value<String?> notes = const Value.absent(),
+            Value<int?> ownerUserId = const Value.absent(),
+            Value<String> entryMethod = const Value.absent(),
           }) =>
               VisitsCompanion.insert(
             id: id,
@@ -3299,6 +3578,8 @@ class $$VisitsTableTableManager extends RootTableManager<
             sideImagePath: sideImagePath,
             backImagePath: backImagePath,
             notes: notes,
+            ownerUserId: ownerUserId,
+            entryMethod: entryMethod,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) =>

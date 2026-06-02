@@ -132,9 +132,10 @@ class SyncService {
         if (child.location != null) 'location': child.location!,
       });
 
-      if (await File(pair.visit.imagePath).exists()) {
+      final imagePath = pair.visit.imagePath;
+      if (imagePath != null && await File(imagePath).exists()) {
         req.files.add(
-            await http.MultipartFile.fromPath('image', pair.visit.imagePath));
+            await http.MultipartFile.fromPath('image', imagePath));
       }
       if (pair.visit.sideImagePath != null &&
           await File(pair.visit.sideImagePath!).exists()) {

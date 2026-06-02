@@ -19,7 +19,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -34,6 +34,13 @@ class AppDatabase extends _$AppDatabase {
             await migrator.createTable(visits);
             await migrator.createTable(measurements);
             await migrator.createTable(syncQueue);
+          }
+          if (from < 3) {
+            await migrator.addColumn(children, children.ownerUserId);
+            await migrator.addColumn(children, children.photoPath);
+            await migrator.addColumn(children, children.isArchived);
+            await migrator.addColumn(visits, visits.ownerUserId);
+            await migrator.addColumn(visits, visits.entryMethod);
           }
         },
       );

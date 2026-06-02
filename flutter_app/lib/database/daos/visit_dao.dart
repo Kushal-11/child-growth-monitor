@@ -22,7 +22,7 @@ class VisitDao {
           childId: childId,
           localUuid: _uuid.v4(),
           ageMonths: ageMonths,
-          imagePath: imagePath,
+          imagePath: Value(imagePath),
           sideImagePath: Value(sideImagePath),
           backImagePath: Value(backImagePath),
         ),
