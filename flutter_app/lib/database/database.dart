@@ -19,7 +19,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -34,6 +34,20 @@ class AppDatabase extends _$AppDatabase {
             await migrator.createTable(visits);
             await migrator.createTable(measurements);
             await migrator.createTable(syncQueue);
+          }
+          if (from < 3) {
+            // children is never recreated above, so it always needs the new
+            // columns.
+            await migrator.addColumn(children, children.ownerUserId);
+            await migrator.addColumn(children, children.photoPath);
+            await migrator.addColumn(children, children.isArchived);
+            // visits: when from < 2 it was just recreated with the current
+            // schema (which already includes these columns), so only add them
+            // for a v2 -> v3 upgrade to avoid a duplicate-column collision.
+            if (from == 2) {
+              await migrator.addColumn(visits, visits.ownerUserId);
+              await migrator.addColumn(visits, visits.entryMethod);
+            }
           }
         },
       );

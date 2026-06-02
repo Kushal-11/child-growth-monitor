@@ -19,6 +19,8 @@ class Visit(Base):
     back_image_path = Column(String(500), nullable=True)
     notes = Column(Text, nullable=True)
     local_uuid = Column(String(36), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    entry_method = Column(String(20), default="assessment", nullable=False)  # "assessment" | "manual"
 
     __table_args__ = (
         Index(

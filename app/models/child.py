@@ -1,7 +1,7 @@
 """Child model representing a registered child."""
 from datetime import datetime
 
-from sqlalchemy import Column, Date, DateTime, Integer, String
+from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.models.database import Base
@@ -18,5 +18,9 @@ class Child(Base):
     location = Column(String(200), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    photo_path = Column(String(500), nullable=True)
+    is_archived = Column(Boolean, default=False, nullable=False)
 
     visits = relationship("Visit", back_populates="child", cascade="all, delete-orphan")
+    owner = relationship("User", back_populates="children")

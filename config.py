@@ -1,4 +1,5 @@
 """Centralized configuration for the Child Growth Monitor application."""
+import os
 from pathlib import Path
 
 # Paths
@@ -7,6 +8,11 @@ DATA_DIR = BASE_DIR / "data"
 UPLOAD_DIR = BASE_DIR / "uploads"
 DB_PATH = BASE_DIR / "growth_monitor.db"
 DATABASE_URL = f"sqlite:///{DB_PATH}"
+
+# Authentication / JWT
+JWT_SECRET = os.environ.get("CGM_JWT_SECRET", "dev-insecure-secret-change-in-production")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRE_DAYS = 30
 
 # Reference object dimensions (centimeters) - optional fallback for scale calibration
 # Standard yellow packet dimensions (e.g., biscuit packet)

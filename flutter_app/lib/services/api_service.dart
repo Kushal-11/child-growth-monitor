@@ -17,10 +17,14 @@ class ApiException implements Exception {
 }
 
 class ApiService {
-  ApiService({required this.baseUrl});
+  ApiService({required this.baseUrl, this.authToken});
 
   final String baseUrl;
+  final String? authToken;
   static const Duration apiTimeout = Duration(seconds: 60);
+
+  Map<String, String> get authHeaders =>
+      authToken == null ? const {} : {'Authorization': 'Bearer $authToken'};
 
   Uri _uri(String path) {
     try {
@@ -54,8 +58,9 @@ class ApiService {
 
   Future<List<ChildSummary>> getChildren() async {
     try {
-      final response =
-          await http.get(_uri('/api/v1/children')).timeout(apiTimeout);
+      final response = await http
+          .get(_uri('/api/v1/children'), headers: authHeaders)
+          .timeout(apiTimeout);
       if (response.statusCode != 200) {
         throw _apiError(response, fallback: 'Failed to load children');
       }
@@ -75,8 +80,9 @@ class ApiService {
 
   Future<ChildDetail> getChildDetail(int childId) async {
     try {
-      final response =
-          await http.get(_uri('/api/v1/children/$childId')).timeout(apiTimeout);
+      final response = await http
+          .get(_uri('/api/v1/children/$childId'), headers: authHeaders)
+          .timeout(apiTimeout);
       if (response.statusCode != 200) {
         throw _apiError(response, fallback: 'Failed to load child detail');
       }
@@ -113,6 +119,8 @@ class ApiService {
     } on ArgumentError catch (error) {
       throw ApiException('Invalid API URL while preparing assessment: $error');
     }
+
+    request.headers.addAll(authHeaders);
 
     request.files.add(
       await http.MultipartFile.fromPath('image', frontImagePath),

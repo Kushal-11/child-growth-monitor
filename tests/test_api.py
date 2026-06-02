@@ -15,6 +15,36 @@ def client():
     return TestClient(app)
 
 
+@pytest.fixture(scope="module")
+def auth_headers():
+    """Create a real user in the app DB and mint a bearer token for it.
+
+    The children endpoints are auth-protected and owner-scoped; tests that hit
+    them must authenticate as a real, active user resolvable by get_current_user.
+    """
+    from app.models.database import SessionLocal
+    from app.models.user import User
+    from app.services import auth_service
+
+    db = SessionLocal()
+    try:
+        username = "test_api_worker"
+        user = db.query(User).filter(User.username == username).first()
+        if user is None:
+            user = User(
+                username=username,
+                full_name="Test API Worker",
+                hashed_password=auth_service.hash_password("pw"),
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        token = auth_service.create_access_token(user_id=user.id, username=user.username)
+    finally:
+        db.close()
+    return {"Authorization": f"Bearer {token}"}
+
+
 class TestHealthEndpoint:
     def test_health(self, client):
         response = client.get("/api/v1/health")
@@ -24,13 +54,17 @@ class TestHealthEndpoint:
 
 
 class TestChildrenEndpoints:
-    def test_list_children_empty(self, client):
+    def test_list_children_requires_auth(self, client):
         response = client.get("/api/v1/children")
+        assert response.status_code == 401
+
+    def test_list_children_returns_list(self, client, auth_headers):
+        response = client.get("/api/v1/children", headers=auth_headers)
         assert response.status_code == 200
         assert isinstance(response.json(), list)
 
-    def test_child_not_found(self, client):
-        response = client.get("/api/v1/children/99999")
+    def test_child_not_found(self, client, auth_headers):
+        response = client.get("/api/v1/children/99999", headers=auth_headers)
         assert response.status_code == 404
 
 

@@ -16,6 +16,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.models.child import Child
+from app.models.user import User
+from app.services.auth_service import get_current_user
 from app.models.database import get_db
 from app.schemas.assessment import AssessmentResponse
 from app.services.assessment_service import AssessmentService
@@ -100,15 +102,26 @@ async def assess_child(
 
 
 @router.get("/children")
-def list_children(db: Session = Depends(get_db)):
-    """List all registered children."""
-    children = db.query(Child).order_by(Child.name).all()
+def list_children(
+    db: Session = Depends(get_db),
+    current: User = Depends(get_current_user),
+):
+    """List the authenticated worker's non-archived children."""
+    # Owner-scoped: legacy rows with user_id=NULL (pre-auth data) are intentionally
+    # excluded here — they are unowned and only reachable by an admin.
+    children = (
+        db.query(Child)
+        .filter(Child.user_id == current.id, Child.is_archived == False)  # noqa: E712
+        .order_by(Child.name)
+        .all()
+    )
     return [
         {
             "id": c.id,
             "name": c.name,
             "date_of_birth": c.date_of_birth.isoformat(),
             "sex": c.sex,
+            "photo_path": c.photo_path,
             "visit_count": len(c.visits),
         }
         for c in children
@@ -116,9 +129,17 @@ def list_children(db: Session = Depends(get_db)):
 
 
 @router.get("/children/{child_id}")
-def get_child(child_id: int, db: Session = Depends(get_db)):
-    """Get child detail with full visit history."""
-    child = db.query(Child).filter(Child.id == child_id).first()
+def get_child(
+    child_id: int,
+    db: Session = Depends(get_db),
+    current: User = Depends(get_current_user),
+):
+    """Get child detail with full visit history (owner-scoped)."""
+    child = (
+        db.query(Child)
+        .filter(Child.id == child_id, Child.user_id == current.id)
+        .first()
+    )
     if not child:
         raise HTTPException(404, "Child not found")
 

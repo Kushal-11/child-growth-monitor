@@ -53,8 +53,10 @@ final childDetailProvider =
         measurement: m == null
             ? null
             : ChildVisitMeasurement(
-                predictedHeightCm: m.predictedHeightCm,
-                predictedWeightKg: m.predictedWeightKg,
+                // Fall back to manual values when predicted are null so manual
+                // visits surface in the detail row and growth chart.
+                predictedHeightCm: m.predictedHeightCm ?? m.manualHeightCm,
+                predictedWeightKg: m.predictedWeightKg ?? m.manualWeightKg,
                 hazZscore: m.hazZscore,
                 whzZscore: m.whzZscore,
                 hazStatus: m.hazStatus,

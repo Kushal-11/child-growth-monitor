@@ -13,14 +13,17 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.routes import router as api_router
 from app.api.sync import router as sync_router
-from app.models.database import init_db
+from app.api.auth import router as auth_router
+from app.models.database import init_db, run_migrations
 from app.services.assessment_service import AssessmentService
 from app.services.who_data_service import WHODataService
+from app.web.admin import router as admin_router
 from app.web.views import router as web_router
-from config import UPLOAD_DIR
+from config import JWT_SECRET, UPLOAD_DIR
 
 
 def create_app() -> FastAPI:
@@ -30,8 +33,12 @@ def create_app() -> FastAPI:
         version="1.0.0",
     )
 
-    # Initialize database tables
+    # Session cookie support for the admin web UI (separate from mobile JWT flow)
+    app.add_middleware(SessionMiddleware, secret_key=JWT_SECRET)
+
+    # Initialize database tables, then apply additive migrations to existing DBs
     init_db()
+    run_migrations()
 
     # Load WHO reference data at startup
     who_data = WHODataService()
@@ -43,7 +50,9 @@ def create_app() -> FastAPI:
     # Register routers
     app.include_router(api_router)
     app.include_router(sync_router)
+    app.include_router(auth_router)
     app.include_router(web_router)
+    app.include_router(admin_router)
 
     # Wire up dependency injection via FastAPI's override mechanism
     from app.api.routes import get_assessment_service as api_dep

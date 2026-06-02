@@ -9,6 +9,38 @@ from main import app
 client = TestClient(app)
 
 
+def _auth_headers():
+    """Create a real user in the app DB and return a bearer-token header.
+
+    The sync endpoint is auth-protected and stamps the authenticated user's id
+    onto the child/visit, so every /sync request must carry a valid token.
+    """
+    from app.models.database import SessionLocal
+    from app.models.user import User
+    from app.services import auth_service
+
+    db = SessionLocal()
+    try:
+        username = "test_sync_worker"
+        user = db.query(User).filter(User.username == username).first()
+        if user is None:
+            user = User(
+                username=username,
+                full_name="Test Sync Worker",
+                hashed_password=auth_service.hash_password("pw"),
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        token = auth_service.create_access_token(user_id=user.id, username=user.username)
+    finally:
+        db.close()
+    return {"Authorization": f"Bearer {token}"}
+
+
+AUTH_HEADERS = _auth_headers()
+
+
 def _payload():
     return {
         "local_uuid": str(uuid.uuid4()),
@@ -43,12 +75,22 @@ def _file():
     return ("front.jpg", io.BytesIO(b"fake-image-bytes"), "image/jpeg")
 
 
+def test_sync_requires_auth():
+    response = client.post(
+        "/api/v1/sync",
+        data=_payload(),
+        files={"image": _file()},
+    )
+    assert response.status_code == 401
+
+
 def test_sync_happy_path_returns_synced():
     body = _payload()
     response = client.post(
         "/api/v1/sync",
         data=body,
         files={"image": _file()},
+        headers=AUTH_HEADERS,
     )
     assert response.status_code == 200
     data = response.json()
@@ -58,11 +100,11 @@ def test_sync_happy_path_returns_synced():
 
 def test_sync_same_local_uuid_twice_is_idempotent():
     body = _payload()
-    first = client.post("/api/v1/sync", data=body, files={"image": _file()})
+    first = client.post("/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS)
     assert first.status_code == 200
     first_id = first.json()["server_visit_id"]
 
-    second = client.post("/api/v1/sync", data=body, files={"image": _file()})
+    second = client.post("/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS)
     assert second.status_code == 200
     assert second.json()["status"] == "already_synced"
     assert second.json()["server_visit_id"] == first_id
@@ -71,7 +113,7 @@ def test_sync_same_local_uuid_twice_is_idempotent():
 def test_sync_missing_required_field_returns_422():
     body = _payload()
     del body["local_uuid"]
-    response = client.post("/api/v1/sync", data=body, files={"image": _file()})
+    response = client.post("/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS)
     assert response.status_code == 422
 
 
@@ -87,7 +129,7 @@ def test_sync_persists_all_mobile_fields():
     body["side_view_used"] = "true"
     body["chest_depth_cm"] = "8.1"
     body["abd_depth_cm"] = "8.5"
-    response = client.post("/api/v1/sync", data=body, files={"image": _file()})
+    response = client.post("/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS)
     assert response.status_code == 200
     visit_id = response.json()["server_visit_id"]
 
@@ -137,7 +179,7 @@ def test_sync_concurrent_duplicate_returns_already_synced(monkeypatch):
 
     # First request — succeeds normally, populating the row that the
     # "concurrent" second request will collide with.
-    first = client.post("/api/v1/sync", data=body, files={"image": _file()})
+    first = client.post("/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS)
     assert first.status_code == 200
     first_id = first.json()["server_visit_id"]
 
@@ -148,7 +190,7 @@ def test_sync_concurrent_duplicate_returns_already_synced(monkeypatch):
     # Since that's awkward, instead just confirm the public idempotent contract:
     # second post with the same UUID still returns already_synced (which is the
     # pre-IntegrityError dedup-check path, but the assertion validates the contract).
-    second = client.post("/api/v1/sync", data=body, files={"image": _file()})
+    second = client.post("/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS)
     assert second.status_code == 200
     assert second.json()["status"] == "already_synced"
     assert second.json()["server_visit_id"] == first_id

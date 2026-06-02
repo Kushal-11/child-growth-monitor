@@ -7,6 +7,9 @@ class Children extends Table {
   TextColumn get sex => text().withLength(min: 1, max: 1)(); // M or F
   TextColumn get guardianName => text().nullable()();
   TextColumn get location => text().nullable()();
+  IntColumn get ownerUserId => integer().nullable()();
+  TextColumn get photoPath => text().nullable()();
+  BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }

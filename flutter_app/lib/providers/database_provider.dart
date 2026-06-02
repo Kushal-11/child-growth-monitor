@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../database/database.dart';
 import '../database/daos/child_dao.dart';
+import '../database/daos/manual_visit_dao.dart';
 import '../database/daos/sync_queue_dao.dart';
 import '../database/daos/visit_dao.dart';
 
@@ -19,3 +20,6 @@ final visitDaoProvider =
 
 final syncQueueDaoProvider =
     Provider<SyncQueueDao>((ref) => SyncQueueDao(ref.watch(databaseProvider)));
+
+final manualVisitDaoProvider =
+    Provider<ManualVisitDao>((ref) => ManualVisitDao(ref.watch(databaseProvider)));

@@ -16,6 +16,8 @@ from app.models.child import Child
 from app.models.database import get_db
 from app.models.measurement import MeasurementResult
 from app.models.visit import Visit
+from app.models.user import User
+from app.services.auth_service import get_current_user
 from config import UPLOAD_DIR
 
 router = APIRouter(prefix="/api/v1", tags=["Sync"])
@@ -32,9 +34,10 @@ def _save_upload(upload: UploadFile) -> str:
 
 @router.post("/sync")
 async def sync_assessment(
-    image: UploadFile = File(...),
+    image: Optional[UploadFile] = File(None),
     image_side: Optional[UploadFile] = File(None),
     image_back: Optional[UploadFile] = File(None),
+    photo: Optional[UploadFile] = File(None),
     local_uuid: str = Form(...),
     child_name: str = Form(...),
     date_of_birth: str = Form(...),
@@ -64,12 +67,21 @@ async def sync_assessment(
     muac_cm: Optional[float] = Form(None),
     muac_status: Optional[str] = Form(None),
     muac_method: Optional[str] = Form(None),
+    entry_method: str = Form("assessment"),
+    is_archived: str = Form("false"),
     guardian_name: Optional[str] = Form(None),
     location: Optional[str] = Form(None),
     db: Session = Depends(get_db),
+    current: User = Depends(get_current_user),
 ):
     if sex not in ("M", "F"):
         raise HTTPException(400, "sex must be 'M' or 'F'")
+
+    if entry_method not in ("assessment", "manual"):
+        raise HTTPException(400, "entry_method must be 'assessment' or 'manual'")
+
+    if image is None and manual_height_cm is None and manual_weight_kg is None and predicted_height_cm is None:
+        raise HTTPException(400, "Submission must include an image or at least one measurement")
 
     try:
         dob = date.fromisoformat(date_of_birth)
@@ -86,7 +98,7 @@ async def sync_assessment(
     if existing is not None:
         return {"server_visit_id": existing.id, "status": "already_synced"}
 
-    image_path = _save_upload(image)
+    image_path = _save_upload(image) if image is not None else None
     side_path = _save_upload(image_side) if image_side is not None else None
     back_path = _save_upload(image_back) if image_back is not None else None
 
@@ -96,9 +108,12 @@ async def sync_assessment(
             Child.name == child_name,
             Child.date_of_birth == dob,
             Child.sex == sex,
+            Child.user_id == current.id,
         )
         .first()
     )
+    archived = is_archived.lower() in ("true", "1", "yes")
+    photo_path = _save_upload(photo) if photo is not None else None
     if child is None:
         child = Child(
             name=child_name,
@@ -106,9 +121,16 @@ async def sync_assessment(
             sex=sex,
             guardian_name=guardian_name,
             location=location,
+            user_id=current.id,
+            photo_path=photo_path,
+            is_archived=archived,
         )
         db.add(child)
         db.flush()
+    else:
+        child.is_archived = archived
+        if photo_path is not None:
+            child.photo_path = photo_path
 
     visit = Visit(
         child_id=child.id,
@@ -118,6 +140,8 @@ async def sync_assessment(
         side_image_path=side_path,
         back_image_path=back_path,
         local_uuid=local_uuid,
+        user_id=current.id,
+        entry_method=entry_method,
     )
     db.add(visit)
     db.flush()

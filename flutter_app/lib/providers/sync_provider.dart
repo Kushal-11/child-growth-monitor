@@ -5,16 +5,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/sync_service.dart';
 import 'api_provider.dart';
+import 'auth_provider.dart';
 import 'database_provider.dart';
 
 final syncServiceProvider = Provider<SyncService>((ref) {
   final baseUrl = ref.watch(baseUrlProvider);
+  final token = ref.watch(authProvider).token;
   return SyncService(
     db: ref.watch(databaseProvider),
     visitDao: ref.watch(visitDaoProvider),
     childDao: ref.watch(childDaoProvider),
     syncDao: ref.watch(syncQueueDaoProvider),
     baseUrl: effectiveBaseUrl(baseUrl),
+    authToken: token,
+    onUnauthorized: () => ref.read(authProvider.notifier).onTokenRejected(),
   );
 });
 
