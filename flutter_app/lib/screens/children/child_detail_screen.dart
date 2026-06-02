@@ -47,6 +47,26 @@ class ChildDetailScreen extends ConsumerWidget {
             children: [
               _profileCard(context, ref, child),
               const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.go('/children/$childId/edit'),
+                      icon: const Icon(Icons.edit),
+                      label: Text(t('edit_profile', ref)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () => context.go('/children/$childId/measure'),
+                      icon: const Icon(Icons.add_chart),
+                      label: Text(t('add_measurement', ref)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
               if (_hasChartData(child)) ...[
                 _growthChart(context, ref, child),
                 const SizedBox(height: 16),

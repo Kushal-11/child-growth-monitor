@@ -77,7 +77,7 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
       firstDate: DateTime(now.year - 6),
       lastDate: now,
     );
-    if (picked != null) setState(() => _dob = picked);
+    if (picked != null && mounted) setState(() => _dob = picked);
   }
 
   Future<void> _save() async {

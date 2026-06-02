@@ -91,6 +91,8 @@ class SyncService {
         'sex': child.sex,
         'age_months': pair.visit.ageMonths.toString(),
         'visit_date': pair.visit.visitDate.toIso8601String(),
+        'entry_method': pair.visit.entryMethod,
+        'is_archived': child.isArchived.toString(),
         if (m?.predictedHeightCm != null)
           'predicted_height_cm': m!.predictedHeightCm.toString(),
         if (m?.predictedWeightKg != null)
@@ -146,6 +148,9 @@ class SyncService {
           await File(pair.visit.backImagePath!).exists()) {
         req.files.add(await http.MultipartFile.fromPath(
             'image_back', pair.visit.backImagePath!));
+      }
+      if (child.photoPath != null && await File(child.photoPath!).exists()) {
+        req.files.add(await http.MultipartFile.fromPath('photo', child.photoPath!));
       }
 
       final streamed =

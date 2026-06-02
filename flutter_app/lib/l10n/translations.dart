@@ -98,6 +98,18 @@ const Map<String, Map<String, String>> translations = {
     'mr': 'कृपया मुलाचे वय (महिन्यांत) किंवा जन्मतारीख प्रविष्ट करा.',
   },
   'registered_children': {'en': 'Registered Children', 'mr': 'नोंदणीकृत मुले'},
+  'new_child': {'en': 'New child', 'mr': 'नवीन मूल'},
+  'archive_child_title': {'en': 'Archive child', 'mr': 'मूल संग्रहित करा'},
+  'archive_child_confirm': {
+    'en': 'Archive this child? They will be hidden from the list.',
+    'mr': 'हे मूल संग्रहित करायचे? ते यादीतून लपवले जाईल.',
+  },
+  'archive_action': {'en': 'Archive', 'mr': 'संग्रहित करा'},
+  'cancel': {'en': 'Cancel', 'mr': 'रद्द करा'},
+  'not_signed_in': {
+    'en': 'Not signed in. Please log in to view your children.',
+    'mr': 'साइन इन केलेले नाही. कृपया तुमची मुले पाहण्यासाठी लॉग इन करा.',
+  },
   'search_children_placeholder': {
     'en': 'Search by name…',
     'mr': 'नावाने शोधा…',
@@ -145,6 +157,8 @@ const Map<String, Map<String, String>> translations = {
     'mr': 'अद्याप कोणतीही भेट नोंदवलेली नाही.',
   },
   'back_to_children': {'en': 'Back to Children', 'mr': 'मुलांकडे परत'},
+  'edit_profile': {'en': 'Edit profile', 'mr': 'प्रोफाइल संपादित करा'},
+  'add_measurement': {'en': 'Add measurement', 'mr': 'मोजमाप जोडा'},
   'child_not_found': {'en': 'Child not found.', 'mr': 'मूल सापडले नाही.'},
   'growth_chart_title': {'en': 'Growth over visits', 'mr': 'भेटींनुसार वाढ'},
   'chart_height_cm': {'en': 'Height (cm)', 'mr': 'उंची (सेमी)'},
