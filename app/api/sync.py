@@ -16,6 +16,8 @@ from app.models.child import Child
 from app.models.database import get_db
 from app.models.measurement import MeasurementResult
 from app.models.visit import Visit
+from app.models.user import User
+from app.services.auth_service import get_current_user
 from config import UPLOAD_DIR
 
 router = APIRouter(prefix="/api/v1", tags=["Sync"])
@@ -35,6 +37,7 @@ async def sync_assessment(
     image: UploadFile = File(...),
     image_side: Optional[UploadFile] = File(None),
     image_back: Optional[UploadFile] = File(None),
+    photo: Optional[UploadFile] = File(None),
     local_uuid: str = Form(...),
     child_name: str = Form(...),
     date_of_birth: str = Form(...),
@@ -64,9 +67,12 @@ async def sync_assessment(
     muac_cm: Optional[float] = Form(None),
     muac_status: Optional[str] = Form(None),
     muac_method: Optional[str] = Form(None),
+    entry_method: str = Form("assessment"),
+    is_archived: str = Form("false"),
     guardian_name: Optional[str] = Form(None),
     location: Optional[str] = Form(None),
     db: Session = Depends(get_db),
+    current: User = Depends(get_current_user),
 ):
     if sex not in ("M", "F"):
         raise HTTPException(400, "sex must be 'M' or 'F'")
@@ -96,9 +102,11 @@ async def sync_assessment(
             Child.name == child_name,
             Child.date_of_birth == dob,
             Child.sex == sex,
+            Child.user_id == current.id,
         )
         .first()
     )
+    photo_path = _save_upload(photo) if photo is not None else None
     if child is None:
         child = Child(
             name=child_name,
@@ -106,9 +114,13 @@ async def sync_assessment(
             sex=sex,
             guardian_name=guardian_name,
             location=location,
+            user_id=current.id,
+            photo_path=photo_path,
         )
         db.add(child)
         db.flush()
+    elif photo_path is not None:
+        child.photo_path = photo_path
 
     visit = Visit(
         child_id=child.id,
@@ -118,6 +130,8 @@ async def sync_assessment(
         side_image_path=side_path,
         back_image_path=back_path,
         local_uuid=local_uuid,
+        user_id=current.id,
+        entry_method=entry_method,
     )
     db.add(visit)
     db.flush()
