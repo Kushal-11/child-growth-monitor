@@ -51,7 +51,11 @@ def get_current_user(
     except AuthError:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired token")
     user_id = payload.get("sub")
-    user = db.query(User).filter(User.id == int(user_id)).first() if user_id else None
+    try:
+        parsed_id = int(user_id) if user_id is not None else None
+    except (TypeError, ValueError):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token subject")
+    user = db.query(User).filter(User.id == parsed_id).first() if parsed_id is not None else None
     if user is None or not user.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found or inactive")
     return user
