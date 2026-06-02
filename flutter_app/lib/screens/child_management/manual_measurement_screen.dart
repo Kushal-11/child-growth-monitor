@@ -97,8 +97,7 @@ class _ManualMeasurementScreenState
       );
 
       final ownerId = ref.read(authProvider).user?.id;
-      final visitId =
-          await ref.read(manualVisitDaoProvider).createManualVisit(
+      await ref.read(manualVisitDaoProvider).createManualVisit(
                 childId: widget.childId,
                 ownerUserId: ownerId,
                 ageMonths: ageMonths,
@@ -115,10 +114,23 @@ class _ManualMeasurementScreenState
               );
       // Opportunistic sync (fire-and-forget).
       ref.read(syncServiceProvider).runOnce();
+      // SAFETY: surface (without blocking) when classification could not run
+      // because the age/height fell outside the WHO reference range.
+      final zScoresMissing = haz == null || whz == null;
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Measurement saved (visit $visitId)')),
-        );
+        final messenger = ScaffoldMessenger.of(context);
+        if (zScoresMissing) {
+          messenger.showSnackBar(const SnackBar(
+            content: Text(
+              'Saved, but z-scores could not be computed for this age/height '
+              '(outside WHO reference range). Classification is unavailable.',
+            ),
+            duration: Duration(seconds: 6),
+            backgroundColor: Colors.orange,
+          ));
+        } else {
+          messenger.showSnackBar(const SnackBar(content: Text('Measurement saved')));
+        }
         context.pop();
       }
     } catch (e) {
