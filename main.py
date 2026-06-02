@@ -30,8 +30,10 @@ def create_app() -> FastAPI:
         version="1.0.0",
     )
 
-    # Initialize database tables
+    # Initialize database tables, then apply additive migrations to existing DBs
     init_db()
+    from app.models.database import run_migrations
+    run_migrations()
 
     # Load WHO reference data at startup
     who_data = WHODataService()
