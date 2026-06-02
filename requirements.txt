@@ -19,6 +19,10 @@ mediapipe>=0.10.7
 # Validation
 pydantic>=2.5.0
 
+# Authentication
+passlib[bcrypt]>=1.7.4
+python-jose[cryptography]>=3.3.0
+
 # Utilities
 python-dateutil>=2.8.0
 
