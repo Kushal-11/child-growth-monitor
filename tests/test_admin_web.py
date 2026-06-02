@@ -67,3 +67,33 @@ def test_create_user_via_admin(client):
     }, follow_redirects=True)
     assert r.status_code == 200
     assert "newworker" in r.text
+
+
+def test_admin_self_row_has_no_toggle(client):
+    """The logged-in admin's own row must not expose a deactivate button
+    (prevents self-lockout). With seeded users boss(admin)+worker, only the
+    worker row should render a toggle form."""
+    client.post("/admin/login", data={"username": "boss", "password": "pw"})
+    page = client.get("/admin/users")
+    assert page.status_code == 200
+    assert "boss" in page.text
+    assert "worker" in page.text
+    # Exactly one toggle form (the worker's); boss's own row is gated out.
+    assert page.text.count("/toggle") == 1
+
+
+def test_protected_posts_require_admin_session(client):
+    """Without an admin session, user-management POSTs must redirect to login
+    and must NOT mutate data."""
+    client.get("/admin/logout")
+    r = client.post(
+        "/admin/users/create",
+        data={"username": "sneaky", "full_name": "S", "password": "x", "role": "admin"},
+        follow_redirects=False,
+    )
+    assert r.status_code in (302, 303)
+    assert "/admin/login" in r.headers["location"]
+    # Confirm nothing was created: log in as admin and check the list.
+    client.post("/admin/login", data={"username": "boss", "password": "pw"})
+    page = client.get("/admin/users")
+    assert "sneaky" not in page.text
