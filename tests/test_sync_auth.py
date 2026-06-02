@@ -112,3 +112,31 @@ def test_sync_applies_is_archived(ctx):
     child = db.query(Child).first()
     assert child.is_archived is True
     db.close()
+
+
+def test_sync_manual_entry_without_image(ctx):
+    from app.models.visit import Visit
+    client, token, Session = ctx
+    payload = _payload()
+    payload["local_uuid"] = "44444444-4444-4444-4444-444444444444"
+    # No files= at all → no image part.
+    r = client.post("/api/v1/sync", data=payload,
+                    headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200, r.text
+    db = Session()
+    v = db.query(Visit).filter(Visit.local_uuid == payload["local_uuid"]).one()
+    assert v.image_path is None
+    assert v.entry_method == "manual"
+    db.close()
+
+
+def test_sync_rejects_empty_submission(ctx):
+    client, token, _ = ctx
+    # No image AND no measurements → 400.
+    r = client.post("/api/v1/sync", data={
+        "local_uuid": "55555555-5555-5555-5555-555555555555",
+        "child_name": "X", "date_of_birth": "2024-01-01", "sex": "M",
+        "age_months": "12.0", "visit_date": "2026-06-01T00:00:00",
+        "entry_method": "manual",
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 400

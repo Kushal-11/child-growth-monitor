@@ -34,7 +34,7 @@ def _save_upload(upload: UploadFile) -> str:
 
 @router.post("/sync")
 async def sync_assessment(
-    image: UploadFile = File(...),
+    image: Optional[UploadFile] = File(None),
     image_side: Optional[UploadFile] = File(None),
     image_back: Optional[UploadFile] = File(None),
     photo: Optional[UploadFile] = File(None),
@@ -80,6 +80,9 @@ async def sync_assessment(
     if entry_method not in ("assessment", "manual"):
         raise HTTPException(400, "entry_method must be 'assessment' or 'manual'")
 
+    if image is None and manual_height_cm is None and manual_weight_kg is None and predicted_height_cm is None:
+        raise HTTPException(400, "Submission must include an image or at least one measurement")
+
     try:
         dob = date.fromisoformat(date_of_birth)
     except ValueError:
@@ -95,7 +98,7 @@ async def sync_assessment(
     if existing is not None:
         return {"server_visit_id": existing.id, "status": "already_synced"}
 
-    image_path = _save_upload(image)
+    image_path = _save_upload(image) if image is not None else None
     side_path = _save_upload(image_side) if image_side is not None else None
     back_path = _save_upload(image_back) if image_back is not None else None
 
