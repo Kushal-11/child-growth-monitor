@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'providers/api_provider.dart';
+import 'providers/auth_provider.dart';
 import 'providers/sync_provider.dart';
 import 'router.dart';
 
@@ -29,19 +30,22 @@ class _ChildGrowthAppState extends ConsumerState<ChildGrowthApp> {
   @override
   void initState() {
     super.initState();
+    // Restore any cached auth session so the router gate resolves immediately.
+    ref.read(authProvider.notifier).restore();
     // Start the connectivity-triggered sync listener.
     ref.read(syncTriggerProvider);
   }
 
   @override
   Widget build(BuildContext context) {
+    final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'SNEH Growth Monitor',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
       ),
-      routerConfig: appRouter,
+      routerConfig: router,
     );
   }
 }
