@@ -11,7 +11,7 @@ void main() {
       () async {
     final svc = MlInferenceService();
     await svc.load();
-    final features = const WastingFeatures(
+    const features = WastingFeatures(
       ageMonths: 24,
       sexBinary: 1,
       heightCm: 87.1,

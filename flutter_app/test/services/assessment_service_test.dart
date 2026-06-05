@@ -111,7 +111,6 @@ void main() {
     await loadWhoForTests(who);
     ml = _StubMl();
     svc = AssessmentService(
-      db: db,
       childDao: ChildDao(db),
       visitDao: VisitDao(db),
       syncQueueDao: SyncQueueDao(db),
@@ -168,7 +167,6 @@ void main() {
   test('throws PoseDetectionFailedException when totalHeightPx missing', () async {
     final who = WhoDataService();
     final svcDegraded = AssessmentService(
-      db: db,
       childDao: ChildDao(db),
       visitDao: VisitDao(db),
       syncQueueDao: SyncQueueDao(db),

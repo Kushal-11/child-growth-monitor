@@ -30,7 +30,6 @@ typedef ImagePersister = Future<String> Function(String tempPath);
 
 class AssessmentService {
   AssessmentService({
-    required AppDatabase db,
     required ChildDao childDao,
     required VisitDao visitDao,
     required SyncQueueDao syncQueueDao,
@@ -40,8 +39,7 @@ class AssessmentService {
     required WhoDataService who,
     required MlInferenceService ml,
     required ImagePersister persistImage,
-  })  : _db = db,
-        _childDao = childDao,
+  })  : _childDao = childDao,
         _visitDao = visitDao,
         _syncQueueDao = syncQueueDao,
         _pose = pose,
@@ -51,7 +49,6 @@ class AssessmentService {
         _ml = ml,
         _persistImage = persistImage;
 
-  final AppDatabase _db;
   final ChildDao _childDao;
   final VisitDao _visitDao;
   final SyncQueueDao _syncQueueDao;

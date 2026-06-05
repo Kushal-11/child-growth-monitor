@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart' hide isNotNull; // conflicts with flutter_test matcher
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 

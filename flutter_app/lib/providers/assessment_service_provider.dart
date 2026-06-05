@@ -43,7 +43,6 @@ final assessmentServiceProvider =
   final storage = ref.watch(imageStorageProvider);
 
   return AssessmentService(
-    db: ref.watch(databaseProvider),
     childDao: ref.watch(childDaoProvider),
     visitDao: ref.watch(visitDaoProvider),
     syncQueueDao: ref.watch(syncQueueDaoProvider),

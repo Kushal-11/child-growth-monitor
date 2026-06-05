@@ -110,7 +110,7 @@ void main() {
   test('side-view depths populated when SideViewSegments provided', () {
     final m = measurement.compute(
       segments: segs(),
-      sideSegments: SideViewSegments(
+      sideSegments: const SideViewSegments(
         chestDepthPx: 60,
         abdDepthPx: 70,
         totalHeightPx: 800,

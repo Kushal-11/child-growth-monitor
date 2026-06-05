@@ -3,7 +3,7 @@ import 'package:child_growth_monitor_app/models/wasting_features.dart';
 
 void main() {
   test('toArray returns 14-element vector in correct order', () {
-    final f = WastingFeatures(
+    const f = WastingFeatures(
       ageMonths: 24.0,
       sexBinary: 1,
       heightCm: 85.0,
@@ -27,7 +27,7 @@ void main() {
   });
 
   test('toArray imputes AP depth when not provided', () {
-    final f = WastingFeatures(
+    const f = WastingFeatures(
       ageMonths: 24.0,
       sexBinary: 0,
       heightCm: 85.0,
