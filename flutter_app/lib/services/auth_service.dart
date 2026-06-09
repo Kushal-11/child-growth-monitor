@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
+import 'local_auth.dart';
+
 class AuthUser {
   AuthUser({required this.id, required this.username, required this.fullName, required this.role});
 
@@ -60,6 +62,14 @@ class AuthService {
   static const Duration _timeout = Duration(seconds: 30);
 
   Future<AuthLoginResult> login(String username, String password) async {
+    // Offline-first: a hardcoded field-test credential resolves locally with
+    // no network call. Any other credential falls through to the backend.
+    final local = LocalAuth.tryLogin(username, password);
+    if (local != null) {
+      await _persist(local);
+      return local;
+    }
+
     final uri = Uri.parse('$baseUrl/api/v1/auth/login');
     late final http.Response resp;
     try {
