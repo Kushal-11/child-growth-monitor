@@ -190,4 +190,20 @@ void main() {
       throwsA(isA<PoseDetectionFailedException>()),
     );
   });
+
+  test('runAssessment tags created child with ownerUserId', () async {
+    final result = await svc.runAssessment(
+      frontImagePath: '/tmp/front.jpg',
+      childName: 'Owned Assessment Child',
+      dateOfBirth: '2022-06-01',
+      sex: 'M',
+      ownerUserId: 9001,
+    );
+    expect(result.childName, 'Owned Assessment Child');
+
+    final children = await db.select(db.children).get();
+    final created =
+        children.firstWhere((c) => c.name == 'Owned Assessment Child');
+    expect(created.ownerUserId, 9001);
+  });
 }

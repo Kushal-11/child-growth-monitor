@@ -71,6 +71,7 @@ class AssessmentService {
     double? manualMuacCm,
     String? guardianName,
     String? location,
+    int? ownerUserId,
   }) async {
     final dob = DateTime.parse(dateOfBirth);
     final ageMonths =
@@ -162,6 +163,7 @@ class AssessmentService {
       sex: sex,
       guardianName: guardianName,
       location: location,
+      ownerUserId: ownerUserId,
     );
 
     final visitId = await _visitDao.createWithMeasurement(

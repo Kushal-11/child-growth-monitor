@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../l10n/l10n_provider.dart';
 import '../../providers/assessment_service_provider.dart';
 import '../../providers/assessment_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/children_provider.dart';
 import '../shared/app_scaffold.dart';
 
@@ -132,6 +133,7 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
     });
 
     try {
+      final ownerUserId = ref.read(authProvider).user?.id;
       final svc = await ref.read(assessmentServiceProvider.future);
       final result = await svc.runAssessment(
         frontImagePath: _frontImage!.path,
@@ -149,6 +151,7 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
         location: _locationController.text.trim().isEmpty
             ? null
             : _locationController.text.trim(),
+        ownerUserId: ownerUserId,
       );
       if (!mounted) return;
       ref.read(assessmentResultProvider.notifier).state = result;
