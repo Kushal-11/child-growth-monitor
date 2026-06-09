@@ -48,4 +48,17 @@ void main() {
     final forOne = await dao.watchForOwner(1).first;
     expect(forOne.map((c) => c.name), ['A']);
   });
+
+  test('findOrCreate persists ownerUserId on new child', () async {
+    final child = await dao.findOrCreate(
+      name: 'Owned Child',
+      dateOfBirth: '2022-01-01',
+      sex: 'F',
+      ownerUserId: 9001,
+    );
+    expect(child.ownerUserId, 9001);
+
+    final fetched = await dao.getById(child.id);
+    expect(fetched!.ownerUserId, 9001);
+  });
 }

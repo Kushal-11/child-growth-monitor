@@ -11,6 +11,7 @@ class ChildDao {
     required String sex,
     String? guardianName,
     String? location,
+    int? ownerUserId,
   }) async {
     final existing = await (_db.select(_db.children)
           ..where((c) =>
@@ -27,6 +28,7 @@ class ChildDao {
         sex: sex,
         guardianName: Value(guardianName),
         location: Value(location),
+        ownerUserId: Value(ownerUserId),
       ),
     );
     return (_db.select(_db.children)..where((c) => c.id.equals(id))).getSingle();
