@@ -10,12 +10,13 @@ class LocalAuth {
 
   static const String _username = 'cgmtester@test.com';
   static const String _password = 'cgmtester';
+  static const int _userId = 9001;
 
-  /// Fixed identity for the offline field tester. The stable [id] (9001) is
-  /// used to owner-scope locally created data so it can be reconciled with a
+  /// Fixed identity for the offline field tester. The stable [_userId] (9001)
+  /// is used to owner-scope locally created data so it can be reconciled with a
   /// real account once online sync is enabled.
   static final AuthUser _fixedUser = AuthUser(
-    id: 9001,
+    id: _userId,
     username: _username,
     fullName: 'CGM Field Tester',
     role: 'field_worker',
@@ -23,7 +24,7 @@ class LocalAuth {
 
   /// Synthetic, clearly-non-server token. A real backend will reject this with
   /// a 401, which the sync layer already handles gracefully.
-  static const String _localToken = 'local-9001';
+  static const String _localToken = 'local-$_userId';
 
   /// Returns a login result for the hardcoded tester, or null if the
   /// credential does not match. Username is trimmed and compared

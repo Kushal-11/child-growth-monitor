@@ -10,7 +10,7 @@ void main() {
       expect(result.user.username, 'cgmtester@test.com');
       expect(result.user.fullName, 'CGM Field Tester');
       expect(result.user.role, 'field_worker');
-      expect(result.token, isNotEmpty);
+      expect(result.token, 'local-9001');
     });
 
     test('username is matched case-insensitively and trimmed', () {
