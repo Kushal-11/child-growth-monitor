@@ -34,6 +34,7 @@ void main() {
   const channel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
   final store = <String, String>{};
   setUp(() {
+    store.clear(); // isolate each test from prior writes
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
       switch (call.method) {
