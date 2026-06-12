@@ -202,7 +202,14 @@ class AssessmentService {
     );
     await _syncQueueDao.enqueue(visitId);
 
-    final summaryStatus = whzStatus ?? hazStatus ?? 'Unknown';
+    // WHO CMAM OR-rule: the headline verdict must escalate to SAM/MAM if WHZ,
+    // MUAC, OR the ML wasting classifier flags it — using WHZ alone hid tape-
+    // measured and ML-detected wasting behind a "Normal" summary.
+    final summaryStatus = combineNutritionStatus(
+      whzStatus: whzStatus,
+      muacStatus: muacResult.muacStatus,
+      mlStatus: prediction?.wastingStatus,
+    );
 
     return ar.AssessmentResult(
       childName: childName,

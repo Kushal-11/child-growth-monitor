@@ -75,6 +75,99 @@ String? classifyMuac(double muacCm, bool ageInRange) {
   return 'Normal';
 }
 
+/// Combine WHZ, MUAC, and the ML wasting classifier into a single nutrition
+/// verdict via the WHO 2009/2013 CMAM **OR-rule**: a child is SAM/MAM if ANY
+/// available signal says so — the most-severe signal wins.
+///
+/// Ported from the backend `MUACService.combine_with_whz_status`, extended to
+/// also weigh the ML prediction (matching the reference web result banner).
+/// Returns one of: 'SAM' | 'MAM' | 'Overweight' | 'Risk_Overweight' |
+/// 'Normal' | 'Unknown' ('Unknown' only when no signal is available).
+///
+/// SAFETY-CRITICAL: never collapse a SAM/MAM signal to 'Normal'. A tape-
+/// measured SAM child (MUAC < 11.5) with a borderline-normal WHZ must still
+/// read SAM. Inputs may be null when a measurement could not be computed.
+String combineNutritionStatus({
+  required String? whzStatus,
+  required String? muacStatus,
+  String? mlStatus,
+}) {
+  final best = [
+    _nutritionStatusRank(_canonicalWhz(whzStatus)),
+    _nutritionStatusRank(_canonicalMuac(muacStatus)),
+    _nutritionStatusRank(_canonicalMl(mlStatus)),
+  ].reduce((a, b) => a > b ? a : b);
+  return _rankToNutritionStatus(best);
+}
+
+/// Severity ranks: higher = more clinically urgent. 0 = no signal.
+int _nutritionStatusRank(String? canonical) {
+  switch (canonical) {
+    case 'SAM':
+      return 5;
+    case 'MAM':
+      return 4;
+    case 'Overweight':
+      return 3;
+    case 'Risk_Overweight':
+      return 2;
+    case 'Normal':
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+String _rankToNutritionStatus(int rank) {
+  switch (rank) {
+    case 5:
+      return 'SAM';
+    case 4:
+      return 'MAM';
+    case 3:
+      return 'Overweight';
+    case 2:
+      return 'Risk_Overweight';
+    case 1:
+      return 'Normal';
+    default:
+      return 'Unknown';
+  }
+}
+
+/// WHZ arrives as the long [classifyWhz] label; normalise to a canonical code.
+String? _canonicalWhz(String? s) {
+  if (s == null) return null;
+  if (s.contains('SAM')) return 'SAM';
+  if (s.contains('MAM')) return 'MAM';
+  if (s.contains('Risk')) return 'Risk_Overweight';
+  if (s == 'Overweight' || s == 'Obese') return 'Overweight';
+  return 'Normal';
+}
+
+/// MUAC arrives as [classifyMuac] codes: 'SAM' | 'At Risk (MAM)' | 'Normal'.
+String? _canonicalMuac(String? s) {
+  if (s == null) return null;
+  if (s == 'SAM') return 'SAM';
+  if (s.contains('MAM')) return 'MAM';
+  return 'Normal';
+}
+
+/// ML wasting status uses the training labels (see [wastingLabels]). Anything
+/// else (e.g. the 'who_fallback' sentinel) carries no nutrition signal.
+String? _canonicalMl(String? s) {
+  switch (s) {
+    case 'SAM':
+    case 'MAM':
+    case 'Overweight':
+    case 'Risk_Overweight':
+    case 'Normal':
+      return s;
+    default:
+      return null;
+  }
+}
+
 // --- MUAC WHO medians (age_months, median_cm) ---
 
 const List<(int, double)> muacBoys = [

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../constants/config.dart';
 import '../../l10n/l10n_provider.dart';
 import '../../models/assessment_result.dart';
 import '../../providers/assessment_provider.dart';
@@ -64,18 +65,26 @@ class ResultScreen extends ConsumerWidget {
 
   Widget _statusBanner(
       BuildContext context, WidgetRef ref, AssessmentResult result) {
-    final whz = result.nutrition.whzStatus;
     final haz = result.nutrition.hazStatus;
+
+    // WHO CMAM OR-rule: banner severity reflects WHZ, MUAC, AND the ML wasting
+    // classifier together — not WHZ alone — so a tape-measured or ML-detected
+    // SAM/MAM child is never shown the green "Normal" banner.
+    final combined = combineNutritionStatus(
+      whzStatus: result.nutrition.whzStatus,
+      muacStatus: result.muac?.muacStatus,
+      mlStatus: result.mlPrediction?.wastingStatus,
+    );
 
     String title;
     String message;
     Color color;
 
-    if (whz != null && whz.toUpperCase().contains('SAM')) {
+    if (combined == 'SAM') {
       title = t('banner_sam_title', ref);
       message = t('banner_sam_msg', ref);
       color = Colors.red;
-    } else if (whz != null && whz.toUpperCase().contains('MAM')) {
+    } else if (combined == 'MAM') {
       title = t('banner_mam_title', ref);
       message = t('banner_mam_msg', ref);
       color = Colors.orange;
@@ -83,7 +92,7 @@ class ResultScreen extends ConsumerWidget {
       title = haz;
       message = t('banner_stunted_msg', ref);
       color = Colors.amber.shade700;
-    } else if (whz != null && whz.toLowerCase() == 'normal') {
+    } else if (combined == 'Normal') {
       title = t('banner_normal_title', ref);
       message = t('banner_normal_msg', ref);
       color = Colors.green;

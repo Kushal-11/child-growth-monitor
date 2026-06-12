@@ -191,6 +191,51 @@ void main() {
     );
   });
 
+  test('MUAC in SAM range escalates the summary to SAM even when WHZ is Normal',
+      () async {
+    // Tape-measured SAM (MUAC < 11.5) with an otherwise-normal weight: the
+    // WHO OR-rule must surface SAM, not the green "Normal" the WHZ alone gives.
+    final result = await svc.runAssessment(
+      frontImagePath: '/tmp/front.jpg',
+      childName: 'Fatima',
+      dateOfBirth: '2024-01-01',
+      sex: 'F',
+      manualMuacCm: 10.0,
+    );
+
+    expect(result.muac!.muacStatus, 'SAM');
+    final whz = result.nutrition.whzStatus;
+    expect(whz == null || !whz.contains('SAM'), isTrue,
+        reason: 'precondition: WHZ itself is not SAM in this scenario');
+    expect(result.summary, 'SAM');
+  });
+
+  test('ML wasting SAM escalates the summary to SAM even when WHZ is Normal',
+      () async {
+    ml.canned = const WastingPrediction(
+      estimatedWeightKg: 11.0,
+      samProbability: 0.85,
+      mamProbability: 0.08,
+      normalProbability: 0.04,
+      riskProbability: 0.02,
+      overweightProbability: 0.01,
+      wastingStatus: 'SAM',
+    );
+
+    final result = await svc.runAssessment(
+      frontImagePath: '/tmp/front.jpg',
+      childName: 'Gita',
+      dateOfBirth: '2024-01-01',
+      sex: 'F',
+    );
+
+    expect(result.mlPrediction!.wastingStatus, 'SAM');
+    final whz = result.nutrition.whzStatus;
+    expect(whz == null || !whz.contains('SAM'), isTrue,
+        reason: 'precondition: WHZ itself is not SAM in this scenario');
+    expect(result.summary, 'SAM');
+  });
+
   test('runAssessment tags created child with ownerUserId', () async {
     final result = await svc.runAssessment(
       frontImagePath: '/tmp/front.jpg',
