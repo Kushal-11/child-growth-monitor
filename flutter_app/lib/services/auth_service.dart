@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
@@ -50,12 +51,19 @@ class AuthService {
     required this.baseUrl,
     FlutterSecureStorage? storage,
     http.Client? httpClient,
+    Duration storageTimeout = const Duration(seconds: 5),
   })  : _storage = storage ?? const FlutterSecureStorage(),
-        _client = httpClient ?? http.Client();
+        _client = httpClient ?? http.Client(),
+        _storageTimeout = storageTimeout;
 
   final String baseUrl;
   final FlutterSecureStorage _storage;
   final http.Client _client;
+
+  /// Upper bound on any single secure-storage operation. A platform keyring
+  /// (e.g. the Android keystore) can block indefinitely; bounding every call
+  /// guarantees login and session-restore can never hang the UI.
+  final Duration _storageTimeout;
 
   static const _kToken = 'auth_token';
   static const _kUser = 'auth_user';
@@ -95,14 +103,41 @@ class AuthService {
   }
 
   Future<void> _persist(AuthLoginResult result) async {
-    await _storage.write(key: _kToken, value: result.token);
-    await _storage.write(key: _kUser, value: jsonEncode(result.user.toJson()));
+    // Persistence must never hang or fail the login. Secure storage can block
+    // indefinitely on a misbehaving platform keyring, so each write is bounded.
+    // On failure the session remains valid in memory for this app run; it is
+    // simply not restored after a restart. This is surfaced (not silent) via a
+    // logged warning rather than blocking the user on the login screen.
+    try {
+      await _storage
+          .write(key: _kToken, value: result.token)
+          .timeout(_storageTimeout);
+      await _storage
+          .write(key: _kUser, value: jsonEncode(result.user.toJson()))
+          .timeout(_storageTimeout);
+    } catch (e) {
+      debugPrint('AuthService: secure-storage persist failed ($e); '
+          'continuing with in-memory session only.');
+    }
   }
 
-  Future<String?> readToken() => _storage.read(key: _kToken);
+  /// Reads a value from secure storage, bounded by [_storageTimeout]. Returns
+  /// null on timeout or any storage error so a blocked keyring can never strand
+  /// the app on the splash gate during restore.
+  Future<String?> _readBounded(String key) async {
+    try {
+      return await _storage.read(key: key).timeout(_storageTimeout);
+    } catch (e) {
+      debugPrint('AuthService: secure-storage read failed ($e); '
+          'treating as no cached session.');
+      return null;
+    }
+  }
+
+  Future<String?> readToken() => _readBounded(_kToken);
 
   Future<AuthUser?> readUser() async {
-    final raw = await _storage.read(key: _kUser);
+    final raw = await _readBounded(_kUser);
     if (raw == null) return null;
     return AuthUser.fromJson(jsonDecode(raw) as Map<String, dynamic>);
   }

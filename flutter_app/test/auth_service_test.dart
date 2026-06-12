@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:child_growth_monitor_app/services/auth_service.dart';
 import 'package:flutter/services.dart';
@@ -96,6 +98,62 @@ void main() {
       final result = await service.login('cgmtester@test.com', 'cgmtester');
       expect(result.user.id, 9001);
       expect(result.user.role, 'field_worker');
+    });
+
+    test('login does not hang when secure storage write blocks', () async {
+      // Reproduces the field bug: on Android the keystore-backed write() could
+      // block forever, leaving the login spinner stuck. Persistence must never
+      // be able to hang the login.
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+        if (call.method == 'read') return null;
+        if (call.method == 'write') {
+          await Completer<void>().future; // never completes
+        }
+        return null;
+      });
+
+      final service = AuthService(
+        baseUrl: 'http://unused',
+        storage: const FlutterSecureStorage(),
+        httpClient: _ThrowingClient(),
+        storageTimeout: const Duration(milliseconds: 200),
+      );
+
+      final result = await service
+          .login('cgmtester@test.com', 'cgmtester')
+          .timeout(const Duration(seconds: 3));
+
+      expect(result.user.id, 9001);
+    });
+
+    test('session restore reads do not hang when storage blocks', () async {
+      // If the keystore read() blocks, restore() must still resolve so the app
+      // never gets stranded on the splash gate.
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+        if (call.method == 'read') {
+          await Completer<void>().future; // never completes
+        }
+        return null;
+      });
+
+      final service = AuthService(
+        baseUrl: 'http://unused',
+        storage: const FlutterSecureStorage(),
+        httpClient: _ThrowingClient(),
+        storageTimeout: const Duration(milliseconds: 200),
+      );
+
+      final token = await service
+          .readToken()
+          .timeout(const Duration(seconds: 3));
+      final user = await service
+          .readUser()
+          .timeout(const Duration(seconds: 3));
+
+      expect(token, isNull);
+      expect(user, isNull);
     });
 
     test('non-local credential falls through to HTTP', () async {
