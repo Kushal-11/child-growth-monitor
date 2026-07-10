@@ -14,6 +14,21 @@ class LocalAuth {
   static const String _password = 'cgmtester';
   static const int _userId = 9001;
 
+  /// Compile-time opt-in for offline login in a non-debug build. Build a
+  /// release/profile field APK with `--dart-define=FIELD_OFFLINE_AUTH=true` to
+  /// keep the offline tester login available without shipping a slow, insecure
+  /// debug build. Defaults to `false`, so an ordinary release build still
+  /// contains no usable backdoor.
+  static const bool _fieldOfflineAuth =
+      bool.fromEnvironment('FIELD_OFFLINE_AUTH');
+
+  /// The default gate for [tryLogin]: offline login is available when the build
+  /// is a debug build OR was explicitly opted in via the field flag. Pure and
+  /// side-effect-free so the release-build truth table is unit-testable (in a
+  /// test run [kDebugMode] is always true, which would otherwise mask the flag).
+  static bool computeOfflineAuthEnabled(bool debugMode, bool fieldFlag) =>
+      debugMode || fieldFlag;
+
   /// Fixed identity for the offline field tester. The stable [_userId] (9001)
   /// is used to owner-scope locally created data so it can be reconciled with a
   /// real account once online sync is enabled.
@@ -32,16 +47,20 @@ class LocalAuth {
   /// credential does not match. Username is trimmed and compared
   /// case-insensitively; password is exact. Pure function, no I/O.
   ///
-  /// The backdoor is gated by [enabled], which defaults to [kDebugMode]: in a
-  /// release/profile build the compiled-in credential authenticates no one.
-  /// Pass `enabled: true` explicitly (e.g. from a field-test build flag) to
-  /// keep offline login available in a non-debug build.
+  /// The backdoor is gated by [enabled]. When omitted it resolves to
+  /// [computeOfflineAuthEnabled] of [kDebugMode] and the `FIELD_OFFLINE_AUTH`
+  /// compile flag: available in debug builds, and in release/profile builds
+  /// only when explicitly built with `--dart-define=FIELD_OFFLINE_AUTH=true`.
+  /// A plain release build authenticates no one. Pass [enabled] explicitly to
+  /// override (e.g. `false` in tests).
   static AuthLoginResult? tryLogin(
     String username,
     String password, {
-    bool enabled = kDebugMode,
+    bool? enabled,
   }) {
-    if (!enabled) return null;
+    final gate =
+        enabled ?? computeOfflineAuthEnabled(kDebugMode, _fieldOfflineAuth);
+    if (!gate) return null;
     final normalized = username.trim().toLowerCase();
     if (normalized == _username && password == _password) {
       return AuthLoginResult(token: _localToken, user: _fixedUser);

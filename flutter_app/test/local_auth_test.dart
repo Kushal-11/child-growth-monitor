@@ -48,4 +48,21 @@ void main() {
       expect(result!.user.id, 9001);
     });
   });
+
+  group('LocalAuth.computeOfflineAuthEnabled (default gate rule)', () {
+    test('OFF in a plain release build: no debug, no field flag', () {
+      // The security posture: an ordinary release APK must contain no usable
+      // offline backdoor.
+      expect(LocalAuth.computeOfflineAuthEnabled(false, false), isFalse);
+    });
+
+    test('ON in a release build explicitly built with the field flag', () {
+      // --dart-define=FIELD_OFFLINE_AUTH=true opts a release/profile build in.
+      expect(LocalAuth.computeOfflineAuthEnabled(false, true), isTrue);
+    });
+
+    test('ON in a debug build even without the field flag', () {
+      expect(LocalAuth.computeOfflineAuthEnabled(true, false), isTrue);
+    });
+  });
 }
