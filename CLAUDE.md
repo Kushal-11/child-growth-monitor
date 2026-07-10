@@ -63,3 +63,11 @@ Safety-critical: false negatives for SAM/MAM can endanger lives.
 - Commit messages: imperative mood, concise
 - Don't commit: .env, credentials, SQLite databases, uploaded images, __pycache__
 - Large model files (pose_landmarker_heavy.task): tracked via .gitignore, not in repo
+
+## Pushing Commits
+- Author all commits as: `Kushal-11 <kushaltherokar1010@gmail.com>` (GitHub: Kushal-11)
+- NEVER add `Co-Authored-By: Claude` or any AI/Claude co-author trailer
+- NEVER add "Generated with Claude Code", "🤖 Generated", or any AI-attribution line to commit messages or PR bodies
+- Commit messages must contain only the human-authored description — no tool/assistant attribution of any kind
+- Ensure author identity before pushing (matches `git config user.name`/`user.email` above); if unset, configure with:
+  `git config user.name "Kushal-11"` and `git config user.email "kushaltherokar1010@gmail.com"`
