@@ -25,7 +25,10 @@ GoRouter buildRouter(Ref ref) {
       // status resolved: never stay on splash
       final loggingIn = loc == '/login';
       if (status == AuthStatus.unauthenticated) {
-        return loggingIn ? null : '/login';
+        // Settings must be reachable pre-login so the server URL can be
+        // configured before the first successful authentication.
+        if (loggingIn || loc == '/settings') return null;
+        return '/login';
       }
       // authenticated
       if (loggingIn || loc == '/splash') return '/';
