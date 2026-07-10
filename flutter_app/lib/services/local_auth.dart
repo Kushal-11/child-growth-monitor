@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'auth_service.dart';
 
 /// Offline, hardcoded credential source for field-test builds.
@@ -29,7 +31,17 @@ class LocalAuth {
   /// Returns a login result for the hardcoded tester, or null if the
   /// credential does not match. Username is trimmed and compared
   /// case-insensitively; password is exact. Pure function, no I/O.
-  static AuthLoginResult? tryLogin(String username, String password) {
+  ///
+  /// The backdoor is gated by [enabled], which defaults to [kDebugMode]: in a
+  /// release/profile build the compiled-in credential authenticates no one.
+  /// Pass `enabled: true` explicitly (e.g. from a field-test build flag) to
+  /// keep offline login available in a non-debug build.
+  static AuthLoginResult? tryLogin(
+    String username,
+    String password, {
+    bool enabled = kDebugMode,
+  }) {
+    if (!enabled) return null;
     final normalized = username.trim().toLowerCase();
     if (normalized == _username && password == _password) {
       return AuthLoginResult(token: _localToken, user: _fixedUser);
