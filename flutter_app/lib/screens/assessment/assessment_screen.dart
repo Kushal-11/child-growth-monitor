@@ -6,12 +6,14 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../../constants/feature_flags.dart';
 import '../../l10n/l10n_provider.dart';
 import '../../providers/assessment_service_provider.dart';
 import '../../providers/assessment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/children_provider.dart';
 import '../shared/app_scaffold.dart';
+import 'capture_screen.dart';
 
 class AssessmentScreen extends ConsumerStatefulWidget {
   const AssessmentScreen({super.key});
@@ -65,7 +67,18 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
   }
 
   Future<void> _pickImage(ImageSource source, String role) async {
-    final file = await _picker.pickImage(source: source, imageQuality: 90);
+    XFile? file;
+    if (source == ImageSource.camera && FeatureFlags.liveCaptureEnabled) {
+      // In-app live capture with pose guidance; falls back to the system
+      // camera when the capture screen reports the camera is unusable.
+      final result = await context.push<CaptureResult>('/capture/$role');
+      if (result == null) return; // cancelled
+      file = result.useSystemCamera
+          ? await _picker.pickImage(source: source, imageQuality: 90)
+          : XFile(result.imagePath!);
+    } else {
+      file = await _picker.pickImage(source: source, imageQuality: 90);
+    }
     if (!mounted || file == null) return;
     setState(() {
       switch (role) {

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'providers/auth_provider.dart';
 import 'screens/assessment/assessment_screen.dart';
+import 'screens/assessment/capture_screen.dart';
 import 'screens/assessment/result_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/children/child_detail_screen.dart';
@@ -43,6 +44,10 @@ GoRouter buildRouter(Ref ref) {
       ),
       GoRoute(path: '/login', builder: (c, s) => const LoginScreen()),
       GoRoute(path: '/', builder: (c, s) => const AssessmentScreen()),
+      GoRoute(
+        path: '/capture/:role',
+        builder: (c, s) => CaptureScreen(role: s.pathParameters['role']!),
+      ),
       GoRoute(path: '/result', builder: (c, s) => const ResultScreen()),
       GoRoute(path: '/children', builder: (c, s) => const ChildrenListScreen()),
       GoRoute(path: '/children/new', builder: (c, s) => const ChildFormScreen()),

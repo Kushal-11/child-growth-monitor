@@ -3,6 +3,11 @@
          ALL build types. Previously declared only in the debug/profile source
          sets, which left release/CI APKs with no network access. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Required by the in-app live capture screen (camera plugin). Declared in
+         main (not debug/profile) so release field builds keep camera access.
+         image_picker's ImageSource.camera does not need this, but the CameraX
+         preview used for live pose guidance does. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
     <application
         android:label="Child Growth Monitor"
         android:name="${applicationName}"

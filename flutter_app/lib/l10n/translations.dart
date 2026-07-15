@@ -263,6 +263,47 @@ const Map<String, Map<String, String>> translations = {
   'capture': {'en': 'Capture', 'mr': 'कॅप्चर'},
   'gallery': {'en': 'Gallery', 'mr': 'गॅलरी'},
   'not_selected': {'en': 'Not selected', 'mr': 'निवडलेले नाही'},
+  'cap_no_pose': {
+    'en': 'Position the child in the frame',
+    'mr': 'मुलाला फ्रेममध्ये उभे करा',
+  },
+  'cap_cut_top': {
+    'en': 'Move back — head is cut off',
+    'mr': 'मागे जा — डोके फ्रेमबाहेर आहे',
+  },
+  'cap_cut_bottom': {
+    'en': 'Move back — feet are not visible',
+    'mr': 'मागे जा — पाय दिसत नाहीत',
+  },
+  'cap_low_visibility': {
+    'en': 'Make sure the whole body is clearly visible',
+    'mr': 'संपूर्ण शरीर स्पष्ट दिसेल याची खात्री करा',
+  },
+  'cap_too_far': {
+    'en': 'Move closer — the child is too small in the frame',
+    'mr': 'जवळ जा — मूल फ्रेममध्ये खूप लहान आहे',
+  },
+  'cap_center': {
+    'en': 'Center the child in the frame',
+    'mr': 'मुलाला फ्रेमच्या मध्यभागी आणा',
+  },
+  'cap_ready': {
+    'en': 'Good position — hold still',
+    'mr': 'योग्य स्थिती — स्थिर धरा',
+  },
+  'cap_auto': {'en': 'Auto-capture', 'mr': 'स्वयं-कॅप्चर'},
+  'cap_use_photo': {'en': 'Use photo', 'mr': 'फोटो वापरा'},
+  'cap_retake': {'en': 'Retake', 'mr': 'पुन्हा घ्या'},
+  'cap_camera_error': {'en': 'Camera unavailable', 'mr': 'कॅमेरा उपलब्ध नाही'},
+  'cap_retry': {'en': 'Try again', 'mr': 'पुन्हा प्रयत्न करा'},
+  'cap_open_system_camera': {
+    'en': 'Use system camera',
+    'mr': 'सिस्टम कॅमेरा वापरा',
+  },
+  'cap_capture_failed': {
+    'en': 'Could not take photo — try again',
+    'mr': 'फोटो घेता आला नाही — पुन्हा प्रयत्न करा',
+  },
   'backend_healthy': {'en': 'Backend is healthy', 'mr': 'बॅकएंड चालू आहे'},
   'backend_unhealthy': {
     'en': 'Backend health check failed',
