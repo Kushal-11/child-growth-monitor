@@ -28,14 +28,32 @@ MANIFEST_COLS = [
 ]
 
 
+def _padding_variant(cid: str, gt_ids: set[str]) -> str | None:
+    """Return a gt id that's a zero-padding variant of cid, if any.
+
+    Both sides must be all-digits and equal as integers (e.g. folder "007"
+    vs ground-truth row "7"). Exact matches are not variants of themselves.
+    """
+    if not cid.isdigit():
+        return None
+    for g in sorted(gt_ids):
+        if g != cid and g.isdigit() and int(g) == int(cid):
+            return g
+    return None
+
+
 def check_child(child_dir: Path, gt_ids: set[str]) -> dict:
     """Inspect one child folder. Never modifies anything."""
     cid = child_dir.name
     photos: list[Path] = []
     videos: list[Path] = []
+    subdirs: list[str] = []
     issues: list[str] = []
 
     for f in sorted(child_dir.iterdir()):
+        if f.is_dir():
+            subdirs.append(f.name)
+            continue
         if not f.is_file():
             continue
         ext = f.suffix.lower()
@@ -53,10 +71,26 @@ def check_child(child_dir: Path, gt_ids: set[str]) -> dict:
     )
 
     if not photos and not videos:
-        issues.append("no photos or videos")
+        if subdirs:
+            issues.append(
+                "no photos or videos at top level; found subfolder(s): "
+                f"{', '.join(subdirs)} - move files up one level"
+            )
+        else:
+            issues.append("no photos or videos")
+    elif not photos:
+        issues.append("no photos (video only - will rely on frame extraction)")
+
     gt_row = cid in gt_ids
     if not gt_row:
-        issues.append("no ground-truth row")
+        variant = _padding_variant(cid, gt_ids)
+        if variant is not None:
+            issues.append(
+                f"no exact ground-truth row; id '{variant}' looks like a "
+                "padding variant - make them match exactly"
+            )
+        else:
+            issues.append("no ground-truth row")
 
     return {
         "child_id": cid,
@@ -91,9 +125,16 @@ def run_intake(raw_dir: Path, gt_csv: Path, manifest_out: Path) -> list[dict]:
         writer.writeheader()
         writer.writerows(rows)
 
-    # Ground-truth rows that have no folder yet
+    # Ground-truth rows that have no folder yet (excluding ones already
+    # reported as a padding-variant mismatch against an existing folder,
+    # so a child isn't reported as two unrelated problems).
     folder_ids = {r["child_id"] for r in rows}
-    orphan_gt = sorted(gt_ids - folder_ids)
+    padding_matched_gt: set[str] = set()
+    for fid in folder_ids - gt_ids:
+        variant = _padding_variant(fid, gt_ids)
+        if variant is not None:
+            padding_matched_gt.add(variant)
+    orphan_gt = sorted(gt_ids - folder_ids - padding_matched_gt)
 
     complete = sum(
         1 for r in rows
