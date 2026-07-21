@@ -251,13 +251,21 @@ def test_clean_child_video_fallback_success(tmp_path, monkeypatch):
         lambda *a, **k: _score(usable=False, reason="image too blurry"),
     )
 
+    calls = []
+
     def fake_extract(video_path, output_path, verbose=False):
+        calls.append((video_path, output_path))
         Path(output_path).write_bytes(b"fake-jpg-bytes")
         return Path(output_path)
 
-    monkeypatch.setattr("scripts.clean_media.extract_best_frame", fake_extract)
+    # extract_best_frame is imported lazily (function-local, not module-level)
+    # so that importing scripts.clean_media never pulls in mediapipe/tensorflow.
+    # A function-level import re-resolves the name from its source module on
+    # every call, so the source must be patched rather than the destination.
+    monkeypatch.setattr("scripts.extract_best_frame.extract_best_frame", fake_extract)
 
     row = clean_child(raw, tmp_path / "cleaned", landmarker=None, force=False)
+    assert calls, "fake_extract was never called — fallback path not exercised"
     assert row["verdict"] == "usable_no_side"
     prov = json.loads((tmp_path / "cleaned" / "004" / "provenance.json").read_text())
     assert prov["front"]["via"] == "video_fallback"
@@ -269,11 +277,17 @@ def test_clean_child_video_fallback_raises_reports_failed(tmp_path, monkeypatch)
     raw.mkdir(parents=True)
     (raw / "clip.mp4").write_bytes(b"not a real video")
 
+    calls = []
+
     def fake_extract(video_path, output_path, verbose=False):
+        calls.append((video_path, output_path))
         raise RuntimeError("no pose found in any sampled frame")
 
-    monkeypatch.setattr("scripts.clean_media.extract_best_frame", fake_extract)
+    # See test_clean_child_video_fallback_success for why the source module
+    # (not scripts.clean_media) is patched here.
+    monkeypatch.setattr("scripts.extract_best_frame.extract_best_frame", fake_extract)
 
     row = clean_child(raw, tmp_path / "cleaned", landmarker=None, force=False)
+    assert calls, "fake_extract was never called — fallback path not exercised"
     assert row["verdict"] == "failed"
     assert "no pose found" in row["reason"]

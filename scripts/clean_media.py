@@ -27,7 +27,6 @@ import cv2  # noqa: E402
 
 from scripts.photo_qc import PhotoScore, build_landmarker, score_photo  # noqa: E402
 from scripts.intake_check import IMAGE_EXTENSIONS, VIDEO_EXTENSIONS  # noqa: E402
-from scripts.extract_best_frame import extract_best_frame  # noqa: E402
 
 QC_COLS = [
     "child_id", "verdict", "front_source", "front_via",
@@ -173,7 +172,11 @@ def clean_child(
             "scores": _score_dict(front.score),
         }
     elif videos:
-        # Fallback: best frame from the first video that yields one
+        # Fallback: best frame from the first video that yields one.
+        # Imported here (not at module level) because extract_best_frame
+        # pulls in mediapipe/tensorflow, which are heavy and should stay
+        # lazy for consumers that never hit the video-fallback path.
+        from scripts.extract_best_frame import extract_best_frame
         for v in videos:
             try:
                 extract_best_frame(v, out_dir / "front.jpg", verbose=False)
