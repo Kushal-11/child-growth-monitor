@@ -192,9 +192,46 @@ def generate_template(out_path: Path = Path("data/ground_truth_template.csv")):
     print("Fill in the measurements and save as data/ground_truth.csv")
 
 
-def _compute_age_months(dob: date) -> float:
-    delta = datetime.utcnow().date() - dob
-    return delta.days / 30.4375
+def _compute_age_months(dob: date, at: Optional[date] = None) -> float:
+    """Age in months at `at` (the measurement date). Falls back to today,
+    which is only correct when assessment runs the same day as measurement."""
+    ref = at or datetime.utcnow().date()
+    return (ref - dob).days / 30.4375
+
+
+_WASTING_SEVERITY = {"SAM": 2, "MAM": 1, "Normal": 0}
+
+
+def _muac_status(muac_cm: Optional[float]) -> Optional[str]:
+    """WHO fixed thresholds: <11.5 SAM, 11.5-12.5 MAM, >=12.5 Normal."""
+    if muac_cm is None:
+        return None
+    if muac_cm < 11.5:
+        return "SAM"
+    if muac_cm < 12.5:
+        return "MAM"
+    return "Normal"
+
+
+def _collapse_wasting(status: Optional[str]) -> Optional[str]:
+    """Collapse the 5-class scale to the wasting axis SAM/MAM/Normal."""
+    if status is None:
+        return None
+    return status if status in ("SAM", "MAM") else "Normal"
+
+
+def _combine_status(
+    whz_status: Optional[str],
+    muac_status: Optional[str],
+    oedema_present: bool,
+) -> Optional[str]:
+    """WHO OR-rule: SAM if oedema OR MUAC<11.5 OR WHZ<-3 (worst arm wins)."""
+    if oedema_present:
+        return "SAM"
+    arms = [s for s in (_collapse_wasting(whz_status), muac_status) if s]
+    if not arms:
+        return None
+    return max(arms, key=lambda s: _WASTING_SEVERITY[s])
 
 
 def _whz_status_from_z(z: Optional[float]) -> Optional[str]:
@@ -244,6 +281,14 @@ def run_batch(
     use_per_child = _looks_like_per_child_layout(images_dir)
     if use_per_child:
         print(f"Detected per-child layout in {images_dir}")
+        master_gt: dict[str, dict] = {}
+        if ground_truth_csv and ground_truth_csv.exists():
+            with open(ground_truth_csv, newline="", encoding="utf-8") as f:
+                for row in csv.DictReader(f):
+                    cid = (row.get("child_id") or "").strip()
+                    if cid:
+                        master_gt[cid] = row
+            print(f"Master ground truth: {len(master_gt)} row(s).")
         per_child_entries = _enumerate_per_child(images_dir)
         if not per_child_entries:
             print(f"No usable child folders in {images_dir}", file=sys.stderr)
@@ -251,6 +296,7 @@ def run_batch(
         print(f"Found {len(per_child_entries)} child folder(s).\n")
         results = _run_per_child(
             per_child_entries, meas_svc, ml_svc, nutr_svc, who_data, verbose,
+            master_gt=master_gt,
         )
     else:
         # Build ground-truth lookup keyed by image filename
@@ -331,12 +377,18 @@ def _process_child_image(
     sex = (gt.get("sex") or "M").strip().upper() or "M"
 
     dob_str = (gt.get("date_of_birth") or "").strip()
+    mdate_str = (gt.get("measurement_date") or "").strip()
+    try:
+        meas_date = date.fromisoformat(mdate_str) if mdate_str else None
+    except ValueError:
+        meas_date = None
     try:
         dob = date.fromisoformat(dob_str)
-        age_months = _compute_age_months(dob)
+        age_months = _compute_age_months(dob, meas_date)
     except ValueError:
         dob = None
         age_months = 24.0
+    oedema_present = (gt.get("oedema") or "").strip().lower() == "yes"
 
     actual_height = _parse_float(gt.get("actual_height_cm"))
     actual_weight = _parse_float(gt.get("actual_weight_kg"))
@@ -412,11 +464,21 @@ def _process_child_image(
     height_error = round(pred_height - actual_height, 2) if pred_height and actual_height else None
     weight_error = round(pred_weight_ml - actual_weight, 2) if pred_weight_ml and actual_weight else None
 
+    # --- WHO OR-rule statuses (gold standard vs app) ---
+    actual_muac_status = _muac_status(manual_muac)
+    actual_combined_status = _combine_status(
+        actual_whz_status, actual_muac_status, oedema_present,
+    )
+    pred_status_final = _collapse_wasting(
+        wasting_status_ml if wasting_status_ml else pred_whz_status
+    )
+
     row = {
         "image_file":           fname,
         "child_name":           child_name,
         "age_months":           round(age_months, 1),
         "sex":                  sex,
+        "measurement_date":     mdate_str,
         # Ground truth
         "actual_height_cm":     actual_height,
         "actual_weight_kg":     actual_weight,
@@ -424,6 +486,10 @@ def _process_child_image(
         "actual_whz_z":         actual_whz_z,
         "actual_haz_status":    actual_haz_status,
         "actual_whz_status":    actual_whz_status,
+        "muac_cm":              manual_muac,
+        "actual_muac_status":   actual_muac_status,
+        "actual_oedema":        "yes" if oedema_present else "",
+        "actual_combined_status": actual_combined_status,
         # Predictions
         "pred_height_cm":       round(pred_height, 1) if pred_height else None,
         "pred_weight_ml_kg":    round(pred_weight_ml, 2) if pred_weight_ml else None,
@@ -432,6 +498,7 @@ def _process_child_image(
         "pred_haz_status":      pred_haz_status,
         "pred_whz_status":      pred_whz_status,
         "ml_wasting_status":    wasting_status_ml,
+        "pred_status_final":    pred_status_final,
         "sam_probability":      sam_prob,
         "mam_probability":      mam_prob,
         # Errors
@@ -479,23 +546,34 @@ def _run_per_child(
     entries,
     meas_svc, ml_svc, nutr_svc, who_data,
     verbose: bool,
+    master_gt: Optional[dict] = None,
 ):
     """
     Process a per-child layout: each entry is (child_id, front, side, values).
-    Side image, when present, supplies AP-depth features.
+    Ground truth per child comes from the master CSV row (keyed by folder
+    name == child_id) merged over any per-folder values.csv; the master
+    CSV wins on conflicts.
     """
     import numpy as np  # noqa: F401
 
+    master_gt = master_gt or {}
     results = []
     for child_id, front_path, side_path, values in entries:
+        merged = dict(values)
+        merged.update({
+            k: v for k, v in (master_gt.get(child_id) or {}).items()
+            if (v or "").strip()
+        })
         gt = {
-            "child_name":       values.get("child_name", child_id),
-            "sex":              values.get("sex", ""),
-            "date_of_birth":    values.get("date_of_birth", ""),
-            "actual_height_cm": values.get("actual_height_cm", ""),
-            "actual_weight_kg": values.get("actual_weight_kg", ""),
-            "muac_cm":          values.get("muac_cm", ""),
-            "notes":            values.get("notes", ""),
+            "child_name":       merged.get("child_name", child_id),
+            "sex":              merged.get("sex", ""),
+            "date_of_birth":    merged.get("date_of_birth", ""),
+            "measurement_date": merged.get("measurement_date", ""),
+            "actual_height_cm": merged.get("actual_height_cm", ""),
+            "actual_weight_kg": merged.get("actual_weight_kg", ""),
+            "muac_cm":          merged.get("muac_cm", ""),
+            "oedema":           merged.get("oedema", ""),
+            "notes":            merged.get("notes", ""),
         }
         side_bytes = side_path.read_bytes() if side_path else None
         try:
@@ -531,12 +609,15 @@ def _write_results(output_csv: Path, results: list[dict]):
     output_csv.parent.mkdir(parents=True, exist_ok=True)
 
     fieldnames = [
-        "image_file", "child_name", "age_months", "sex",
+        "image_file", "child_name", "age_months", "sex", "measurement_date",
         "actual_height_cm", "actual_weight_kg",
         "actual_haz_z", "actual_whz_z", "actual_haz_status", "actual_whz_status",
+        "muac_cm", "actual_muac_status", "actual_oedema",
+        "actual_combined_status",
         "pred_height_cm", "pred_weight_ml_kg",
         "pred_haz_z", "pred_whz_z", "pred_haz_status", "pred_whz_status",
-        "ml_wasting_status", "sam_probability", "mam_probability",
+        "ml_wasting_status", "pred_status_final",
+        "sam_probability", "mam_probability",
         "height_error_cm", "weight_error_kg",
         "pose_confidence", "estimation_method", "annotated_image",
         "feat_shoulder_width_cm", "feat_hip_width_cm", "feat_torso_length_cm",
