@@ -84,7 +84,7 @@ from typing import Optional
 # Ensure project root on path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from scripts.validate_ground_truth import AGE_RANGE_MONTHS  # noqa: E402
+from scripts.validate_ground_truth import AGE_RANGE_MONTHS, validate_rows  # noqa: E402
 
 TEMPLATE_CSV = """\
 image_file,child_name,date_of_birth,measurement_date,sex,actual_height_cm,actual_weight_kg,muac_cm,oedema,notes
@@ -318,11 +318,10 @@ def run_batch(
         print(f"Detected per-child layout in {images_dir}")
         master_gt: dict[str, dict] = {}
         if ground_truth_csv and ground_truth_csv.exists():
-            with open(ground_truth_csv, newline="", encoding="utf-8") as f:
-                for row in csv.DictReader(f):
-                    cid = (row.get("child_id") or "").strip()
-                    if cid:
-                        master_gt[cid] = row
+            # Hard gate: a master ground-truth CSV with impossible values
+            # must never silently produce a study — abort before any
+            # child is assessed. See _load_master_ground_truth.
+            master_gt = _load_master_ground_truth(ground_truth_csv)
             print(f"Master ground truth: {len(master_gt)} row(s).")
         per_child_entries = _enumerate_per_child(images_dir)
         if not per_child_entries:
@@ -435,8 +434,18 @@ def _process_child_image(
             # rejected the same way an unparseable dob is: never let a
             # fabricated age drive pose/ML/WHO lookups into a clean-looking
             # verdict. Matches scripts/validate_ground_truth.py's range.
+            # Display precision: 1 decimal is plenty for a value that's
+            # unambiguously out of range (e.g. -12.0, 600.0), but a value
+            # that rounds to exactly the boundary itself at 1 decimal
+            # (e.g. 60.0246 -> "60.0") would read as self-contradictory
+            # next to "out of range 0-60" - show extra precision only
+            # then, so the rejection is self-explanatory.
+            rounded_1dp = round(age_months, 1)
+            age_disp = (
+                f"{age_months:.2f}" if rounded_1dp in (lo, hi) else f"{rounded_1dp:.1f}"
+            )
             age_range_error = (
-                f"age_months {age_months:.1f} out of range {lo:.0f}-{hi:.0f} "
+                f"age_months {age_disp} out of range {lo:.0f}-{hi:.0f} "
                 f"(date_of_birth='{dob_str}', "
                 f"measurement_date='{mdate_str or 'unset - fell back to today'}')"
             )
@@ -604,20 +613,31 @@ def _process_child_image(
     return row
 
 
-def _clean_master_row(row: Optional[dict]) -> dict[str, str]:
+def _clean_master_row(row: Optional[dict]) -> tuple[dict[str, str], Optional[str]]:
     """Sanitize a master ground-truth CSV row before merging it into a
     per-child dict.
 
     A row with more fields than its header makes csv.DictReader stash the
-    overflow under a `None` key whose value is a `list` (a ragged row).
-    Guard against any non-string key/value here so that one malformed
-    master row can never raise and take down the whole batch.
+    overflow under a `None` key whose value is a `list` (a ragged row) —
+    every column after the missing/extra one is shifted, so its values are
+    not trustworthy. Guard against any non-string key/value here so that
+    one malformed master row can never raise and take down the whole
+    batch.
+
+    Returns `(cleaned, ragged_error)`. `ragged_error` is `None` for a
+    well-formed row; otherwise it names the problem so the caller can
+    surface it in that child's `error` field instead of silently
+    assessing shifted data — belt and braces alongside the
+    `validate_ground_truth` gate in `_load_master_ground_truth`, in case a
+    caller bypasses that gate.
     """
     if not row:
-        return {}
+        return {}, None
     out: dict[str, str] = {}
+    ragged = False
     for k, v in row.items():
         if not isinstance(k, str):
+            ragged = True
             continue  # e.g. the None key csv.DictReader uses for overflow
         if isinstance(v, list):
             v = ",".join(str(x) for x in v if x is not None)
@@ -627,7 +647,48 @@ def _clean_master_row(row: Optional[dict]) -> dict[str, str]:
             v = str(v)
         if v.strip():
             out[k] = v
-    return out
+    ragged_error = (
+        "master ground-truth CSV row is ragged (more fields than the "
+        "header) - columns after the mismatch are shifted, values not "
+        "trusted"
+    ) if ragged else None
+    return out, ragged_error
+
+
+def _load_master_ground_truth(ground_truth_csv: Path) -> dict[str, dict]:
+    """Load the master ground-truth CSV for the per-child layout and gate
+    on `validate_ground_truth.validate_rows` before any child is assessed.
+
+    A ground-truth file with impossible values (e.g. a ragged row whose
+    shift produces an out-of-range height/weight/MUAC, a bad date, an age
+    outside 0-60 months, ...) must never silently produce a study — refuse
+    to run at all rather than assess every child against untrustworthy
+    data. Warnings (missing optional measurements) are printed but do not
+    block.
+    """
+    with open(ground_truth_csv, newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+
+    errors, warnings = validate_rows(rows)
+    for w in warnings:
+        print(f"  WARNING  {w}")
+    if errors:
+        for e in errors:
+            print(f"  ERROR    {e}")
+        print(
+            f"\n{ground_truth_csv}: {len(errors)} error(s) found in the "
+            "master ground-truth CSV - refusing to assess any child.\n"
+            "Fix the file and re-check it with:\n"
+            f"  PYTHONPATH=. .venv/bin/python scripts/validate_ground_truth.py {ground_truth_csv}"
+        )
+        sys.exit(1)
+
+    master_gt: dict[str, dict] = {}
+    for row in rows:
+        cid = (row.get("child_id") or "").strip()
+        if cid:
+            master_gt[cid] = row
+    return master_gt
 
 
 def _run_per_child(
@@ -652,7 +713,8 @@ def _run_per_child(
         # child's row, never abort the batch for every other child.
         try:
             merged = dict(values)
-            merged.update(_clean_master_row(master_gt.get(child_id)))
+            cleaned_master, ragged_error = _clean_master_row(master_gt.get(child_id))
+            merged.update(cleaned_master)
             gt = {
                 "child_name":       merged.get("child_name", child_id),
                 "sex":              merged.get("sex", ""),
@@ -677,6 +739,15 @@ def _run_per_child(
                 child_id=child_id,
                 verbose=verbose,
             )
+            if ragged_error:
+                # Belt and braces: never let a ragged master row present a
+                # verdict derived from shifted columns as clean, even
+                # though _load_master_ground_truth should already have
+                # refused to run before reaching this point.
+                row["error"] = (
+                    f"{row['error']}; {ragged_error}" if row.get("error") else ragged_error
+                )
+                row["pred_status_final"] = None
         except Exception as e:
             print(f"    [ERROR] {child_id}: {e}")
             row = _error_row(

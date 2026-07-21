@@ -1,14 +1,17 @@
 """Tests for the pure helpers in scripts/batch_assess.py."""
 import csv
 import io
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
+
+import pytest
 
 from scripts.batch_assess import (
     TEMPLATE_CSV,
     _collapse_wasting,
     _combine_status,
     _compute_age_months,
+    _load_master_ground_truth,
     _muac_status,
     _parse_dob,
     _process_child_image,
@@ -150,11 +153,19 @@ def test_unparseable_dob_sets_error_and_suppresses_verdict():
 
 def test_valid_dob_with_missing_height_weight_processes_normally():
     """Regression guard: a child with a valid DOB but no height/weight must
-    still process without an error (only unparseable DOB should error)."""
+    still process without an error (only unparseable DOB should error).
+    measurement_date is pinned explicitly (rather than left to the
+    today's-date fallback) so this assertion is stable regardless of which
+    real day the suite runs on - the fixed dob would otherwise cross the
+    60-month ceiling in 2028 and start failing for an unrelated reason."""
     row = _process_child_image(
         fname="child_ok.jpg",
         img_path=Path("child_ok.jpg"),
-        gt={"date_of_birth": "2023-01-01", "sex": "M"},
+        gt={
+            "date_of_birth": "2023-01-01",
+            "measurement_date": "2024-06-01",
+            "sex": "M",
+        },
         meas_svc=_FakeMeasService(),
         ml_svc=_FakeMLService(),
         nutr_svc=_FakeNutritionService(),
@@ -171,12 +182,17 @@ def test_invalid_measurement_date_warns_but_falls_back_to_today(capsys):
     """A typo'd measurement_date (e.g. '2026-13-45') must not be silently
     indistinguishable from 'not supplied' — it should print a clear warning
     naming the child and the bad value, but still fall back to today's date
-    rather than failing the row."""
+    rather than failing the row. date_of_birth is pinned relative to
+    today (an offset, not a fixed calendar date) so the fallback-to-today
+    age this test exercises stays ~24 months regardless of which real day
+    it runs on - a fixed calendar dob would eventually cross the 60-month
+    ceiling and fail for a reason unrelated to what this test checks."""
+    dob = date.today() - timedelta(days=730)
     row = _process_child_image(
         fname="child2.jpg",
         img_path=Path("child2.jpg"),
         gt={
-            "date_of_birth": "2023-01-01",
+            "date_of_birth": dob.isoformat(),
             "measurement_date": "2026-13-45",
             "sex": "F",
             "child_name": "Child Two",
@@ -272,6 +288,40 @@ def test_age_over_60_months_sets_error_and_suppresses_verdict():
     assert row["pred_status_final"] is None
 
 
+def test_age_boundary_error_message_shows_precise_value_not_60_0():
+    """A child measured 1827 days after birth (60.0246 months - just past
+    the WHO 60-month ceiling) must still be rejected (the 0.0-60.0 inclusive
+    boundary itself does not change), but the error message must show that
+    precisely (e.g. '60.02'), not round to the self-contradictory
+    '60.0 out of range 0-60', which reads like a bug to a field worker."""
+    dob = date(2020, 1, 1)
+    mdate = dob + timedelta(days=1827)
+    row = _process_child_image(
+        fname="child_boundary.jpg",
+        img_path=Path("child_boundary.jpg"),
+        gt={
+            "date_of_birth": dob.isoformat(),
+            "measurement_date": mdate.isoformat(),
+            "sex": "M",
+        },
+        meas_svc=_FakeMeasService(predicted_height_cm=85.0, body_segments={"stub": True}),
+        ml_svc=_FakeMLService(wasting_status="SAM"),
+        nutr_svc=_FakeNutritionService(),
+        who_data=_FakeWHOData(),
+        side_image_bytes=None,
+        child_id=None,
+        verbose=False,
+    )
+    expected_age = _compute_age_months(dob, mdate)
+    assert expected_age > 60.0, "test fixture must actually be past the ceiling"
+    assert row["error"], "an age just past 60 months must still be rejected"
+    assert f"{expected_age:.2f}" in row["error"]
+    assert "60.0 out of range" not in row["error"], (
+        "rounding to '60.0' is self-contradictory next to 'out of range 0-60'"
+    )
+    assert row["pred_status_final"] is None
+
+
 def test_no_date_of_birth_supplied_is_distinct_from_malformed():
     """The --images-only mode (no ground-truth CSV) leaves date_of_birth
     blank. That is a supported, working mode - not a malformed value - so
@@ -300,11 +350,14 @@ def test_ragged_master_csv_row_does_not_abort_batch():
     csv.DictReader stash the overflow under a None key with a list value.
     That must not raise and kill the whole batch - only (at most) the
     affected child's row may be degraded; every other child must still be
-    processed and appear in the results."""
+    processed and appear in the results. measurement_date is pinned
+    explicitly for child_ok so this assertion is stable regardless of which
+    real day the suite runs on (a fixed dob + today's-date fallback would
+    otherwise cross the 60-month ceiling in 2028)."""
     master_csv_text = (
-        "child_id,sex,date_of_birth\n"
-        "child_bad,M,2023-01-01,unexpected,extra,columns\n"
-        "child_ok,F,2023-06-01\n"
+        "child_id,sex,date_of_birth,measurement_date\n"
+        "child_bad,M,2023-01-01,2024-01-01,unexpected,extra,columns\n"
+        "child_ok,F,2023-06-01,2023-08-01\n"
     )
     master_gt: dict = {}
     for row in csv.DictReader(io.StringIO(master_csv_text)):
@@ -330,6 +383,92 @@ def test_ragged_master_csv_row_does_not_abort_batch():
     assert len(results) == 2, "the ragged row must not abort processing of other children"
     child_ok_row = results[1]
     assert child_ok_row["error"] == ""
+
+
+def test_ragged_master_row_marks_child_error_instead_of_silent_shift():
+    """Even when the validate_ground_truth gate is bypassed (defense in
+    depth), a ragged master row (one extra field shifts every column after
+    it) must never be silently sanitized into a clean-looking verdict.
+    Verified reproduction: 'child_x,M,2023-01-01,,2024-06-01,90,12,13,no,'
+    has one extra empty field, so muac_cm picks up the weight column ('12'),
+    producing actual_muac_status='MAM' / actual_combined_status='MAM' - a
+    wrong nutritional status that must be flagged with a non-empty error,
+    not presented as valid."""
+    header = (
+        "child_id,sex,date_of_birth,measurement_date,"
+        "actual_height_cm,actual_weight_kg,muac_cm,oedema,notes"
+    )
+    ragged_row = "child_x,M,2023-01-01,,2024-06-01,90,12,13,no,"
+    master_csv_text = header + "\n" + ragged_row + "\n"
+
+    master_gt: dict = {}
+    for row in csv.DictReader(io.StringIO(master_csv_text)):
+        cid = (row.get("child_id") or "").strip()
+        if cid:
+            master_gt[cid] = row
+
+    entries = [("child_x", Path("child_x_front.jpg"), None, {})]
+
+    results = _run_per_child(
+        entries,
+        meas_svc=_FakeMeasService(),
+        ml_svc=_FakeMLService(),
+        nutr_svc=_FakeNutritionService(),
+        who_data=_FakeWHOData(),
+        verbose=False,
+        master_gt=master_gt,
+    )
+
+    assert len(results) == 1
+    row = results[0]
+    # Reproduce the exact wrong-status bug from the shifted columns.
+    assert row["actual_muac_status"] == "MAM"
+    assert row["actual_combined_status"] == "MAM"
+    # ... but it must now be flagged, never silently presented as valid.
+    assert row["error"], (
+        "a ragged master row must never be silently sanitized into a "
+        "clean-looking row - the child's error field must be non-empty"
+    )
+
+
+def test_master_gt_validation_gate_blocks_bad_master_csv(tmp_path, capsys):
+    """A master ground-truth CSV that scripts.validate_ground_truth.validate_rows
+    flags as broken (here: the same ragged row above, which produces 4
+    plausibility errors) must abort the whole batch with a non-zero exit
+    before a single child is assessed - a ground-truth file with impossible
+    values must never silently produce a study. The operator must be
+    pointed at scripts/validate_ground_truth.py to fix the file."""
+    bad_csv = tmp_path / "master_ground_truth.csv"
+    bad_csv.write_text(
+        "child_id,sex,date_of_birth,measurement_date,"
+        "actual_height_cm,actual_weight_kg,muac_cm,oedema,notes\n"
+        "child_x,M,2023-01-01,,2024-06-01,90,12,13,no,\n"
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        _load_master_ground_truth(bad_csv)
+
+    assert exc_info.value.code != 0
+    captured = capsys.readouterr()
+    assert "validate_ground_truth.py" in captured.out
+
+
+def test_master_gt_validation_gate_allows_valid_csv(tmp_path):
+    """A well-formed master CSV (no plausibility errors) must pass the gate
+    and build the child_id -> row lookup normally; optional-field warnings
+    must not block."""
+    good_csv = tmp_path / "master_ground_truth.csv"
+    good_csv.write_text(
+        "child_id,sex,date_of_birth,measurement_date,"
+        "actual_height_cm,actual_weight_kg,muac_cm,oedema,notes\n"
+        "child_a,M,2023-01-01,2024-06-01,85.0,11.2,14.5,no,\n"
+        "child_b,F,2023-07-01,2024-06-01,,,13.2,,weight not available\n"
+    )
+
+    master_gt = _load_master_ground_truth(good_csv)
+
+    assert set(master_gt.keys()) == {"child_a", "child_b"}
+    assert master_gt["child_a"]["sex"] == "M"
 
 
 def test_template_csv_includes_measurement_date_muac_and_oedema():
