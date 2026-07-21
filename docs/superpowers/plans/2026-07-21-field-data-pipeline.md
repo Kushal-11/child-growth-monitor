@@ -1033,12 +1033,6 @@ def test_unusable_photos_never_selected():
     assert sel["front"] is None
 
 
-def _fake_scorer(mapping):
-    def scorer(image_bgr, landmarker):
-        return mapping[scorer.current]
-    return scorer
-
-
 def test_clean_child_writes_outputs(tmp_path, monkeypatch):
     raw = tmp_path / "raw" / "001"
     raw.mkdir(parents=True)
@@ -1049,11 +1043,11 @@ def test_clean_child_writes_outputs(tmp_path, monkeypatch):
     cv2.imwrite(str(raw / "front.jpg"), img)
     cv2.imwrite(str(raw / "side.jpg"), img)
 
-    scores = {"front.jpg": _score(), "side.jpg": _score(orientation="side")}
+    # clean_child scores photos in sorted order: front.jpg then side.jpg
+    pending = [_score(), _score(orientation="side")]
     monkeypatch.setattr(
         "scripts.clean_media.score_photo",
-        lambda image_bgr, landmarker, _n=iter(["front.jpg", "side.jpg"]):
-            scores[next(_n)],
+        lambda image_bgr, landmarker: pending.pop(0),
     )
 
     cleaned = tmp_path / "cleaned"
@@ -2337,8 +2331,8 @@ def test_intake_and_ground_truth_chain(tmp_path):
     assert manifest.exists()
 
 
-@pytest.mark.slow
 def test_clean_media_with_real_model(tmp_path):
+    """Slow: loads the real MediaPipe heavy model. Skips when absent."""
     if not POSE_MODEL.exists():
         pytest.skip("pose model not downloaded")
     raw = _build_raw(tmp_path)
