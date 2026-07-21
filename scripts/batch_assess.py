@@ -59,10 +59,16 @@ Ground-truth CSV columns (flat layout)
 image_file         : filename (just the name) — must match a file in --images
 child_name         : child's name or ID
 date_of_birth      : YYYY-MM-DD
+measurement_date   : YYYY-MM-DD, the date the photo/measurements were taken
+                      (leave blank to fall back to today's date — but every
+                      WHO z-score depends on age, so fill this in whenever
+                      the assessment doesn't run the same day as measurement)
 sex                : M or F
 actual_height_cm   : measured height in cm  (leave blank if unknown)
 actual_weight_kg   : measured weight in kg  (leave blank if unknown)
 muac_cm            : measured MUAC in cm    (leave blank if unknown)
+oedema             : "yes" if bilateral pitting oedema is present, else
+                      blank or "no" — an independent WHO SAM trigger
 notes              : free-text (optional)
 
 All other columns are ignored and preserved in the output.
@@ -79,10 +85,10 @@ from typing import Optional
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 TEMPLATE_CSV = """\
-image_file,child_name,date_of_birth,sex,actual_height_cm,actual_weight_kg,notes
-child1.jpg,Child 1,2022-03-15,M,85.0,11.2,
-child2.jpg,Child 2,2023-07-01,F,78.5,,weight not available
-child3.jpg,Child 3,2021-11-20,M,,,height and weight unknown
+image_file,child_name,date_of_birth,measurement_date,sex,actual_height_cm,actual_weight_kg,muac_cm,oedema,notes
+child1.jpg,Child 1,2022-03-15,2024-03-20,M,85.0,11.2,14.5,no,
+child2.jpg,Child 2,2023-07-01,2024-03-20,F,78.5,,13.2,no,weight not available
+child3.jpg,Child 3,2021-11-20,2024-03-20,M,,,,,height and weight unknown
 """
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
@@ -197,6 +203,25 @@ def _compute_age_months(dob: date, at: Optional[date] = None) -> float:
     which is only correct when assessment runs the same day as measurement."""
     ref = at or datetime.utcnow().date()
     return (ref - dob).days / 30.4375
+
+
+def _parse_dob(dob_str: str) -> tuple[Optional[date], Optional[str]]:
+    """Parse a date_of_birth string.
+
+    Returns (dob, error_message). On success `error_message` is None. On
+    failure (empty or unparseable) `dob` is None and `error_message` names
+    the problem so the caller can surface it in the result row instead of
+    fabricating an age and emitting a verdict derived from it.
+    """
+    if dob_str:
+        try:
+            return date.fromisoformat(dob_str), None
+        except ValueError:
+            pass
+    return (
+        None,
+        f"unparseable date_of_birth: '{dob_str}' - age and all z-scores unavailable",
+    )
 
 
 _WASTING_SEVERITY = {"SAM": 2, "MAM": 1, "Normal": 0}
@@ -378,15 +403,23 @@ def _process_child_image(
 
     dob_str = (gt.get("date_of_birth") or "").strip()
     mdate_str = (gt.get("measurement_date") or "").strip()
-    try:
-        meas_date = date.fromisoformat(mdate_str) if mdate_str else None
-    except ValueError:
-        meas_date = None
-    try:
-        dob = date.fromisoformat(dob_str)
+    meas_date = None
+    if mdate_str:
+        try:
+            meas_date = date.fromisoformat(mdate_str)
+        except ValueError:
+            print(
+                f"    [WARN] {child_name}: invalid measurement_date "
+                f"'{mdate_str}' - using today's date instead"
+            )
+
+    dob, dob_error = _parse_dob(dob_str)
+    if dob is not None:
         age_months = _compute_age_months(dob, meas_date)
-    except ValueError:
-        dob = None
+    else:
+        # Placeholder only, to keep the pose/ML pipeline running below;
+        # dob_error forces error + pred_status_final=None on the row so
+        # nothing derived from this fabricated age is presented as usable.
         age_months = 24.0
     oedema_present = (gt.get("oedema") or "").strip().lower() == "yes"
 
@@ -472,6 +505,10 @@ def _process_child_image(
     pred_status_final = _collapse_wasting(
         wasting_status_ml if wasting_status_ml else pred_whz_status
     )
+    if dob_error:
+        # dob could not be parsed: never present a verdict derived from the
+        # fabricated placeholder age.
+        pred_status_final = None
 
     row = {
         "image_file":           fname,
@@ -509,7 +546,7 @@ def _process_child_image(
         "estimation_method":    meas.estimation_method,
         "annotated_image":      meas.annotated_image_filename,
         "notes":                gt.get("notes", ""),
-        "error":                "",
+        "error":                dob_error or "",
     }
 
     if ml_svc.is_available and meas.body_segments and effective_height:
