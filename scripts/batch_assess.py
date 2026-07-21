@@ -84,6 +84,8 @@ from typing import Optional
 # Ensure project root on path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from scripts.validate_ground_truth import AGE_RANGE_MONTHS  # noqa: E402
+
 TEMPLATE_CSV = """\
 image_file,child_name,date_of_birth,measurement_date,sex,actual_height_cm,actual_weight_kg,muac_cm,oedema,notes
 child1.jpg,Child 1,2022-03-15,2024-03-20,M,85.0,11.2,14.5,no,
@@ -209,19 +211,27 @@ def _parse_dob(dob_str: str) -> tuple[Optional[date], Optional[str]]:
     """Parse a date_of_birth string.
 
     Returns (dob, error_message). On success `error_message` is None. On
-    failure (empty or unparseable) `dob` is None and `error_message` names
-    the problem so the caller can surface it in the result row instead of
-    fabricating an age and emitting a verdict derived from it.
+    failure `dob` is None and `error_message` names the problem so the
+    caller can surface it in the result row instead of fabricating an age
+    and emitting a verdict derived from it.
+
+    Empty/blank (nothing supplied, e.g. the --images-only mode with no
+    ground truth) is distinguished from a garbled value (something was
+    supplied but doesn't parse) so a working "just run the system" mode
+    isn't mislabelled as broken.
     """
-    if dob_str:
-        try:
-            return date.fromisoformat(dob_str), None
-        except ValueError:
-            pass
-    return (
-        None,
-        f"unparseable date_of_birth: '{dob_str}' - age and all z-scores unavailable",
-    )
+    if not dob_str:
+        return (
+            None,
+            "no date_of_birth supplied - age and all z-scores unavailable",
+        )
+    try:
+        return date.fromisoformat(dob_str), None
+    except ValueError:
+        return (
+            None,
+            f"unparseable date_of_birth: '{dob_str}' - age and all z-scores unavailable",
+        )
 
 
 _WASTING_SEVERITY = {"SAM": 2, "MAM": 1, "Normal": 0}
@@ -414,8 +424,22 @@ def _process_child_image(
             )
 
     dob, dob_error = _parse_dob(dob_str)
+    age_range_error = None
     if dob is not None:
         age_months = _compute_age_months(dob, meas_date)
+        lo, hi = AGE_RANGE_MONTHS
+        if not (lo <= age_months <= hi):
+            # WHO growth standards are only defined for 0-60 months. A
+            # parseable-but-impossible age (swapped dob/measurement_date
+            # columns, a future dob, a one-digit year typo, ...) must be
+            # rejected the same way an unparseable dob is: never let a
+            # fabricated age drive pose/ML/WHO lookups into a clean-looking
+            # verdict. Matches scripts/validate_ground_truth.py's range.
+            age_range_error = (
+                f"age_months {age_months:.1f} out of range {lo:.0f}-{hi:.0f} "
+                f"(date_of_birth='{dob_str}', "
+                f"measurement_date='{mdate_str or 'unset - fell back to today'}')"
+            )
     else:
         # Placeholder only, to keep the pose/ML pipeline running below;
         # dob_error forces error + pred_status_final=None on the row so
@@ -505,9 +529,10 @@ def _process_child_image(
     pred_status_final = _collapse_wasting(
         wasting_status_ml if wasting_status_ml else pred_whz_status
     )
-    if dob_error:
-        # dob could not be parsed: never present a verdict derived from the
-        # fabricated placeholder age.
+    if dob_error or age_range_error:
+        # dob could not be parsed, or the resulting age is outside the
+        # 0-60 month range WHO growth standards are defined for: never
+        # present a verdict derived from a fabricated or impossible age.
         pred_status_final = None
 
     row = {
@@ -546,7 +571,7 @@ def _process_child_image(
         "estimation_method":    meas.estimation_method,
         "annotated_image":      meas.annotated_image_filename,
         "notes":                gt.get("notes", ""),
-        "error":                dob_error or "",
+        "error":                dob_error or age_range_error or "",
     }
 
     if ml_svc.is_available and meas.body_segments and effective_height:
@@ -579,6 +604,32 @@ def _process_child_image(
     return row
 
 
+def _clean_master_row(row: Optional[dict]) -> dict[str, str]:
+    """Sanitize a master ground-truth CSV row before merging it into a
+    per-child dict.
+
+    A row with more fields than its header makes csv.DictReader stash the
+    overflow under a `None` key whose value is a `list` (a ragged row).
+    Guard against any non-string key/value here so that one malformed
+    master row can never raise and take down the whole batch.
+    """
+    if not row:
+        return {}
+    out: dict[str, str] = {}
+    for k, v in row.items():
+        if not isinstance(k, str):
+            continue  # e.g. the None key csv.DictReader uses for overflow
+        if isinstance(v, list):
+            v = ",".join(str(x) for x in v if x is not None)
+        elif v is None:
+            v = ""
+        elif not isinstance(v, str):
+            v = str(v)
+        if v.strip():
+            out[k] = v
+    return out
+
+
 def _run_per_child(
     entries,
     meas_svc, ml_svc, nutr_svc, who_data,
@@ -596,24 +647,24 @@ def _run_per_child(
     master_gt = master_gt or {}
     results = []
     for child_id, front_path, side_path, values in entries:
-        merged = dict(values)
-        merged.update({
-            k: v for k, v in (master_gt.get(child_id) or {}).items()
-            if (v or "").strip()
-        })
-        gt = {
-            "child_name":       merged.get("child_name", child_id),
-            "sex":              merged.get("sex", ""),
-            "date_of_birth":    merged.get("date_of_birth", ""),
-            "measurement_date": merged.get("measurement_date", ""),
-            "actual_height_cm": merged.get("actual_height_cm", ""),
-            "actual_weight_kg": merged.get("actual_weight_kg", ""),
-            "muac_cm":          merged.get("muac_cm", ""),
-            "oedema":           merged.get("oedema", ""),
-            "notes":            merged.get("notes", ""),
-        }
-        side_bytes = side_path.read_bytes() if side_path else None
+        # The merge (and everything derived from it) lives inside the
+        # per-child try: a malformed master CSV row must degrade only this
+        # child's row, never abort the batch for every other child.
         try:
+            merged = dict(values)
+            merged.update(_clean_master_row(master_gt.get(child_id)))
+            gt = {
+                "child_name":       merged.get("child_name", child_id),
+                "sex":              merged.get("sex", ""),
+                "date_of_birth":    merged.get("date_of_birth", ""),
+                "measurement_date": merged.get("measurement_date", ""),
+                "actual_height_cm": merged.get("actual_height_cm", ""),
+                "actual_weight_kg": merged.get("actual_weight_kg", ""),
+                "muac_cm":          merged.get("muac_cm", ""),
+                "oedema":           merged.get("oedema", ""),
+                "notes":            merged.get("notes", ""),
+            }
+            side_bytes = side_path.read_bytes() if side_path else None
             row = _process_child_image(
                 fname=front_path.name,
                 img_path=front_path,
@@ -630,11 +681,11 @@ def _run_per_child(
             print(f"    [ERROR] {child_id}: {e}")
             row = _error_row(
                 fname=front_path.name,
-                child_name=gt["child_name"],
+                child_name=(values.get("child_name") or child_id),
                 age_months=24.0,
-                sex=gt["sex"] or "M",
-                actual_height=_parse_float(gt["actual_height_cm"]),
-                actual_weight=_parse_float(gt["actual_weight_kg"]),
+                sex=(values.get("sex") or "M"),
+                actual_height=_parse_float(values.get("actual_height_cm")),
+                actual_weight=_parse_float(values.get("actual_weight_kg")),
                 error_msg=str(e),
             )
         results.append(row)

@@ -1,4 +1,6 @@
 """Tests for the pure helpers in scripts/batch_assess.py."""
+import csv
+import io
 from datetime import date
 from pathlib import Path
 
@@ -10,6 +12,7 @@ from scripts.batch_assess import (
     _muac_status,
     _parse_dob,
     _process_child_image,
+    _run_per_child,
 )
 
 
@@ -190,6 +193,143 @@ def test_invalid_measurement_date_warns_but_falls_back_to_today(capsys):
     assert "Child Two" in captured.out
     assert "2026-13-45" in captured.out
     assert row["error"] == ""
+
+
+def test_negative_age_from_swapped_dates_sets_error_and_suppresses_verdict():
+    """A parseable date_of_birth combined with a measurement_date before it
+    (e.g. the two columns got swapped) yields a negative age. WHO growth
+    standards are only defined for 0-60 months, so this must be treated the
+    same as an unparseable DOB: error set, pred_status_final forced None."""
+    row = _process_child_image(
+        fname="child_swapped.jpg",
+        img_path=Path("child_swapped.jpg"),
+        gt={
+            "date_of_birth": "2024-01-01",
+            "measurement_date": "2023-01-01",
+            "sex": "M",
+        },
+        meas_svc=_FakeMeasService(predicted_height_cm=85.0, body_segments={"stub": True}),
+        ml_svc=_FakeMLService(wasting_status="SAM"),
+        nutr_svc=_FakeNutritionService(),
+        who_data=_FakeWHOData(),
+        side_image_bytes=None,
+        child_id=None,
+        verbose=False,
+    )
+    assert abs(row["age_months"] - (-12.0)) < 0.5
+    assert row["error"], "a negative computed age must populate the error field"
+    assert "-12" in row["error"] or "-12.0" in row["error"]
+    assert row["pred_status_final"] is None
+
+
+def test_future_dob_sets_error_and_suppresses_verdict():
+    """A date_of_birth far in the future (relative to the measurement date,
+    or to today when measurement_date is blank) produces a negative age and
+    must be rejected the same way, rather than emitting a clean verdict."""
+    row = _process_child_image(
+        fname="child_future.jpg",
+        img_path=Path("child_future.jpg"),
+        gt={
+            "date_of_birth": "2099-01-01",
+            "sex": "M",
+        },
+        meas_svc=_FakeMeasService(predicted_height_cm=85.0, body_segments={"stub": True}),
+        ml_svc=_FakeMLService(wasting_status="SAM"),
+        nutr_svc=_FakeNutritionService(),
+        who_data=_FakeWHOData(),
+        side_image_bytes=None,
+        child_id=None,
+        verbose=False,
+    )
+    assert row["age_months"] < 0
+    assert row["error"], "a future date_of_birth must populate the error field"
+    assert row["pred_status_final"] is None
+
+
+def test_age_over_60_months_sets_error_and_suppresses_verdict():
+    """WHO growth standards are only defined for 0-60 months; an age far
+    beyond that (e.g. a one-digit year typo in measurement_date) must be
+    rejected rather than driving a clean-looking verdict."""
+    row = _process_child_image(
+        fname="child_ancient.jpg",
+        img_path=Path("child_ancient.jpg"),
+        gt={
+            "date_of_birth": "2024-01-01",
+            "measurement_date": "2074-01-01",
+            "sex": "M",
+        },
+        meas_svc=_FakeMeasService(predicted_height_cm=85.0, body_segments={"stub": True}),
+        ml_svc=_FakeMLService(wasting_status="SAM"),
+        nutr_svc=_FakeNutritionService(),
+        who_data=_FakeWHOData(),
+        side_image_bytes=None,
+        child_id=None,
+        verbose=False,
+    )
+    assert abs(row["age_months"] - 600.0) < 0.5
+    assert row["error"], "an age over 60 months must populate the error field"
+    assert "600" in row["error"]
+    assert row["pred_status_final"] is None
+
+
+def test_no_date_of_birth_supplied_is_distinct_from_malformed():
+    """The --images-only mode (no ground-truth CSV) leaves date_of_birth
+    blank. That is a supported, working mode - not a malformed value - so
+    the error message must say plainly that nothing was supplied, distinct
+    from the 'unparseable' message used for a garbled value."""
+    row = _process_child_image(
+        fname="child_no_gt.jpg",
+        img_path=Path("child_no_gt.jpg"),
+        gt={},
+        meas_svc=_FakeMeasService(predicted_height_cm=85.0, body_segments={"stub": True}),
+        ml_svc=_FakeMLService(wasting_status="SAM"),
+        nutr_svc=_FakeNutritionService(),
+        who_data=_FakeWHOData(),
+        side_image_bytes=None,
+        child_id=None,
+        verbose=False,
+    )
+    assert row["error"], "a blank date_of_birth must still suppress the verdict"
+    assert "no date_of_birth supplied" in row["error"]
+    assert "unparseable" not in row["error"]
+    assert row["pred_status_final"] is None
+
+
+def test_ragged_master_csv_row_does_not_abort_batch():
+    """A master ground-truth CSV row with more fields than its header makes
+    csv.DictReader stash the overflow under a None key with a list value.
+    That must not raise and kill the whole batch - only (at most) the
+    affected child's row may be degraded; every other child must still be
+    processed and appear in the results."""
+    master_csv_text = (
+        "child_id,sex,date_of_birth\n"
+        "child_bad,M,2023-01-01,unexpected,extra,columns\n"
+        "child_ok,F,2023-06-01\n"
+    )
+    master_gt: dict = {}
+    for row in csv.DictReader(io.StringIO(master_csv_text)):
+        cid = (row.get("child_id") or "").strip()
+        if cid:
+            master_gt[cid] = row
+
+    entries = [
+        ("child_bad", Path("child_bad_front.jpg"), None, {}),
+        ("child_ok", Path("child_ok_front.jpg"), None, {}),
+    ]
+
+    results = _run_per_child(
+        entries,
+        meas_svc=_FakeMeasService(),
+        ml_svc=_FakeMLService(),
+        nutr_svc=_FakeNutritionService(),
+        who_data=_FakeWHOData(),
+        verbose=False,
+        master_gt=master_gt,
+    )
+
+    assert len(results) == 2, "the ragged row must not abort processing of other children"
+    child_ok_row = results[1]
+    assert child_ok_row["error"] == ""
 
 
 def test_template_csv_includes_measurement_date_muac_and_oedema():
