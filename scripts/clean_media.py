@@ -27,6 +27,7 @@ import cv2  # noqa: E402
 
 from scripts.photo_qc import PhotoScore, build_landmarker, score_photo  # noqa: E402
 from scripts.intake_check import IMAGE_EXTENSIONS, VIDEO_EXTENSIONS  # noqa: E402
+from scripts.extract_best_frame import extract_best_frame  # noqa: E402
 
 QC_COLS = [
     "child_id", "verdict", "front_source", "front_via",
@@ -55,7 +56,6 @@ def select_best(cands: list[Candidate]) -> dict:
     Filename hint wins over pose classification; unnamed photos use the
     pose-derived orientation and are flagged auto_classified.
     """
-    auto = False
     pools: dict[str, list[Candidate]] = {"front": [], "side": []}
     for c in cands:
         if not c.score.usable:
@@ -63,13 +63,18 @@ def select_best(cands: list[Candidate]) -> dict:
         role = c.role_hint or c.score.orientation
         if role not in pools:
             continue                      # 'unknown' orientation: ineligible
-        if not c.role_hint:
-            auto = True
         pools[role].append(c)
 
+    front = max(pools["front"], key=lambda c: _rank(c, "front"), default=None)
+    side = max(pools["side"], key=lambda c: _rank(c, "side"), default=None)
+    # auto_classified means an auto-classified photo was actually selected —
+    # not merely that one was in the running.
+    auto = (front is not None and not front.role_hint) or \
+           (side is not None and not side.role_hint)
+
     return {
-        "front": max(pools["front"], key=lambda c: _rank(c, "front"), default=None),
-        "side": max(pools["side"], key=lambda c: _rank(c, "side"), default=None),
+        "front": front,
+        "side": side,
         "auto_classified": auto,
     }
 
@@ -95,7 +100,7 @@ def _score_dict(s: PhotoScore) -> dict:
 
 
 def clean_child(
-    child_dir: Path, cleaned_root: Path, landmarker, force: bool,
+    child_dir: Path, cleaned_root: Path, landmarker: object, force: bool,
 ) -> dict:
     """Clean one child folder. Returns a QC report row (never raises)."""
     cid = child_dir.name
@@ -103,8 +108,16 @@ def clean_child(
     prov_path = out_dir / "provenance.json"
 
     if prov_path.exists() and not force:
-        prov = json.loads(prov_path.read_text())
-        return _report_row_from_provenance(prov)
+        try:
+            prov = json.loads(prov_path.read_text())
+            if "child_id" not in prov or "verdict" not in prov:
+                raise KeyError("provenance missing required keys")
+            return _report_row_from_provenance(prov)
+        except (json.JSONDecodeError, OSError, KeyError):
+            # Truncated (crash mid-write) or written by an older version:
+            # treat as "not yet cleaned" and fall through to re-clean rather
+            # than aborting the whole batch.
+            pass
 
     photos = sorted(
         p for p in child_dir.iterdir()
@@ -119,19 +132,30 @@ def clean_child(
 
     cands: list[Candidate] = []
     fail_reasons: list[str] = []
+    side_reject_reasons: list[str] = []
     for p in photos:
+        hint = _role_hint(p)
         img = cv2.imread(str(p))
         if img is None:
-            fail_reasons.append(f"{p.name}: unreadable")
+            reason = f"{p.name}: unreadable"
+            fail_reasons.append(reason)
+            if hint == "side":
+                side_reject_reasons.append(reason)
             continue
         try:
             s = score_photo(img, landmarker)
         except Exception as e:              # one bad photo never aborts the child
-            fail_reasons.append(f"{p.name}: {e}")
+            reason = f"{p.name}: {e}"
+            fail_reasons.append(reason)
+            if hint == "side":
+                side_reject_reasons.append(reason)
             continue
         if not s.usable:
-            fail_reasons.append(f"{p.name}: {s.reason}")
-        cands.append(Candidate(p, _role_hint(p), s))
+            reason = f"{p.name}: {s.reason}"
+            fail_reasons.append(reason)
+            if hint == "side" or (not hint and s.orientation == "side"):
+                side_reject_reasons.append(reason)
+        cands.append(Candidate(p, hint, s))
 
     sel = select_best(cands)
     front, side = sel["front"], sel["side"]
@@ -150,7 +174,6 @@ def clean_child(
         }
     elif videos:
         # Fallback: best frame from the first video that yields one
-        from scripts.extract_best_frame import extract_best_frame
         for v in videos:
             try:
                 extract_best_frame(v, out_dir / "front.jpg", verbose=False)
@@ -172,6 +195,10 @@ def clean_child(
         prov["reason"] = "; ".join(fail_reasons) or "no usable photo or video"
     elif prov["side"] is None:
         prov["verdict"] = "usable_no_side"
+        # Distinguish "a side photo existed but failed QC" from "no side
+        # photo was ever taken" — the latter leaves reason empty.
+        if side_reject_reasons:
+            prov["reason"] = "; ".join(side_reject_reasons)
     else:
         prov["verdict"] = "ok"
 
@@ -180,11 +207,16 @@ def clean_child(
 
 
 def _report_row_from_provenance(prov: dict) -> dict:
+    """Build a QC row from a provenance dict, defensively.
+
+    Uses .get() with sensible defaults throughout so a provenance dict
+    missing an optional key still yields a usable row instead of raising.
+    """
     front = prov.get("front") or {}
     side = prov.get("side") or {}
     return {
-        "child_id": prov["child_id"],
-        "verdict": prov["verdict"],
+        "child_id": prov.get("child_id", ""),
+        "verdict": prov.get("verdict", "failed"),
         "front_source": front.get("source", ""),
         "front_via": front.get("via", ""),
         "side_source": side.get("source", ""),
@@ -197,11 +229,27 @@ def _report_row_from_provenance(prov: dict) -> dict:
 def run_clean(
     raw_dir: Path, cleaned_root: Path, report_path: Path, force: bool,
 ) -> list[dict]:
-    landmarker = build_landmarker()
+    landmarker: object = build_landmarker()
     rows: list[dict] = []
     for child_dir in sorted(d for d in raw_dir.iterdir() if d.is_dir()):
         print(f"  Cleaning {child_dir.name} ...")
-        rows.append(clean_child(child_dir, cleaned_root, landmarker, force))
+        try:
+            rows.append(clean_child(child_dir, cleaned_root, landmarker, force))
+        except Exception as e:
+            # One child's unexpected failure must never abort the batch —
+            # record it as failed and keep going so the QC report still
+            # covers every child.
+            print(f"  ERROR     [{child_dir.name}] {e}")
+            rows.append({
+                "child_id": child_dir.name,
+                "verdict": "failed",
+                "front_source": "",
+                "front_via": "",
+                "side_source": "",
+                "side_via": "",
+                "needs_confirmation": False,
+                "reason": f"unexpected error: {e}",
+            })
 
     report_path.parent.mkdir(parents=True, exist_ok=True)
     with open(report_path, "w", newline="", encoding="utf-8") as f:
