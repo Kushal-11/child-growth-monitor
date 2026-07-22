@@ -199,15 +199,19 @@ def analyze(results: list[dict]) -> dict:
     # bucket — exclude them from age stratification (they still count in
     # the whole-study statistics above) rather than silently mislabelling
     # them as "age 6-23m" via a `0` fallback.
+    # WHO growth standards run 0-60 months (the assessment stage already
+    # rejects ages outside that range), so a ceiling mirrors the floor:
+    # an age >= 60 would otherwise silently mislabel "age 24-59m" the same
+    # way a sub-6-month age used to mislabel "age 6-23m".
     ages = [(r, _f(r, "age_months")) for r in rows]
     out["age_excluded_from_subgroups"] = sum(
-        1 for _, age in ages if age is None or age < 6
+        1 for _, age in ages if age is None or age < 6 or age >= 60
     )
     partitions = {
         "sex=M": [r for r in rows if (r.get("sex") or "").upper() == "M"],
         "sex=F": [r for r in rows if (r.get("sex") or "").upper() == "F"],
         "age 6-23m": [r for r, age in ages if age is not None and 6 <= age < 24],
-        "age 24-59m": [r for r, age in ages if age is not None and age >= 24],
+        "age 24-59m": [r for r, age in ages if age is not None and 24 <= age < 60],
     }
     for name, part in partitions.items():
         out["subgroups"][name] = _analyze_block(part)
@@ -229,7 +233,17 @@ def coverage(
         (r["child_id"] or "").strip()
         for r in qc_rows if r.get("verdict") == "failed"
     }
-    result_ids = {(r.get("child_name") or "").strip() for r in results}
+    # Blank/missing child_id rows are a distinct integrity problem from
+    # "child_id not in the manifest" — a row with no id at all can never be
+    # matched to anything, so it is counted and reported on its own rather
+    # than folded into `unknown_ids` as an unreadable "" entry (Finding 3).
+    blank_child_id_rows = sum(
+        1 for r in results if not (r.get("child_name") or "").strip()
+    )
+    result_ids = {
+        (r.get("child_name") or "").strip() for r in results
+        if (r.get("child_name") or "").strip()
+    }
     assessed_ids = {
         (r.get("child_name") or "").strip()
         for r in results if not (r.get("error") or "").strip()
@@ -239,16 +253,35 @@ def coverage(
     # Children present in the results file but absent from the intake
     # manifest: `analyze()` still counts these in its statistics (it never
     # consults the manifest), so the denominators silently disagree unless
-    # this is flagged (see Finding 3).
+    # this is flagged.
     unknown_ids = result_ids - total_ids
+
+    # "Assessed" (ran without error) overstates data capture unless it is
+    # broken down by whether the row actually produced a usable app
+    # verdict — a child whose ML step failed silently (blank
+    # `pred_status_final`, blank `error`) is not meaningfully "assessed"
+    # for the purposes of the statistics section (Finding 2). This is a
+    # breakdown WITHIN the assessed bucket, not a new top-level bucket —
+    # the two counts below always sum to `assessed`.
+    assessed_with_verdict_ids = {
+        (r.get("child_name") or "").strip()
+        for r in results
+        if not (r.get("error") or "").strip()
+        and (r.get("pred_status_final") or "").strip() in STATUS_CATS
+    } & assessed_ids
+    assessed_with_verdict = len(assessed_with_verdict_ids)
+    assessed_without_verdict = len(assessed_ids) - assessed_with_verdict
 
     cov = {
         "total": len(total_ids),
         "assessed": len(assessed_ids),
+        "assessed_with_verdict": assessed_with_verdict,
+        "assessed_without_verdict": assessed_without_verdict,
         "qc_failed": len(qc_failed_ids),
         "missing_data": len(missing_ids),
         "missing_ids": sorted(missing_ids),
         "unknown_ids": sorted(unknown_ids),
+        "blank_child_id_rows": blank_child_id_rows,
         "discrepancy": "",
     }
     problems = []
@@ -259,6 +292,14 @@ def coverage(
             f"the intake manifest (e.g. {sample}) — the statistics above "
             "include these children even though this coverage report "
             "cannot account for them."
+        )
+    if blank_child_id_rows:
+        problems.append(
+            f"{blank_child_id_rows} result row(s) have a blank/missing "
+            "child_id (<blank>) and cannot be matched to the intake "
+            "manifest at all — the statistics above include these "
+            "children even though this coverage report cannot account "
+            "for them."
         )
     if cov["assessed"] + cov["qc_failed"] + cov["missing_data"] != cov["total"]:
         problems.append(
@@ -305,7 +346,11 @@ def render_report(analysis: dict, cov: dict) -> str:
     lines += ["## Coverage", ""]
     lines += [
         f"- Total children (intake manifest): {cov['total']}",
-        f"- Assessed: {cov['assessed']}",
+        f"- Assessed (processed without error): {cov['assessed']}",
+        f"  - Of which produced an app verdict: "
+        f"{cov.get('assessed_with_verdict', cov['assessed'])}",
+        f"  - Of which produced no app verdict (pose/ML step failed or "
+        f"was skipped): {cov.get('assessed_without_verdict', 0)}",
         f"- QC-failed (recapture list): {cov['qc_failed']}",
         f"- Missing data (no ground truth / not cleaned / errored): "
         f"{cov['missing_data']}",
@@ -316,6 +361,12 @@ def render_report(analysis: dict, cov: dict) -> str:
         lines += [
             f"- Result rows with child_id not in intake manifest: "
             f"{len(cov['unknown_ids'])} ({', '.join(cov['unknown_ids'])})"
+        ]
+    if cov.get("blank_child_id_rows"):
+        lines += [
+            f"- Result rows with blank/missing child_id: "
+            f"{cov['blank_child_id_rows']} (<blank> — cannot be matched "
+            "to any manifest entry)"
         ]
     if cov["discrepancy"]:
         lines += ["", f"**{cov['discrepancy']}**"]
@@ -440,6 +491,8 @@ def render_report(analysis: dict, cov: dict) -> str:
     for name, block in analysis["subgroups"].items():
         h, w = block["height"], block["weight"]
         s = block["sam"]
+        sg_excl = block.get("excluded_unverdicted", 0)
+        sg_excl_sam = block.get("excluded_unverdicted_sam", 0)
         lines += [
             f"### {name}",
             "",
@@ -449,6 +502,9 @@ def render_report(analysis: dict, cov: dict) -> str:
             f"- Weight n={w.get('n', 0)}"
             + (f", bias {w['bias']:+.2f} kg, MAE {w['mae']:.2f} kg"
                if w.get("n") else ""),
+            f"- Paired statuses (Framing A): n={block.get('status_n', 0)}, "
+            f"excluded (gold-standard status but no app verdict): "
+            f"{sg_excl} (of which gold-standard SAM: {sg_excl_sam})",
             f"- SAM sensitivity (Framing A, full gold standard): "
             f"{_fmt_rate(s['sensitivity'])}",
             "",

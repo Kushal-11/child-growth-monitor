@@ -356,3 +356,142 @@ def test_render_report_shows_age_exclusion_count():
     )
     assert "## Subgroups" in text
     assert "excluded from age stratification" in text.lower()
+
+
+# --- Review round: Finding 1 — subgroup sensitivities are undenominated ---
+#
+# `_analyze_block` already computes `excluded_unverdicted` (and the
+# gold-standard-SAM breakout) for every subgroup, but `render_report` never
+# emitted it in `## Subgroups` — each subgroup printed a bare sensitivity
+# figure with only `Height n=<N>` above it, inviting the reader to take the
+# height n as the denominator. Reproduces the verified probe: 3
+# gold-standard SAM children, 2 unverdicted, all male.
+
+def test_subgroup_sensitivity_shows_exclusion_counts_not_bare():
+    rows = [
+        _row(child_name="001", sex="M", actual_combined_status="SAM",
+             pred_status_final="SAM"),   # correctly verdicted
+        _row(child_name="002", sex="M", actual_combined_status="SAM",
+             pred_status_final=""),      # ML failed silently -> no verdict
+        _row(child_name="003", sex="M", actual_combined_status="SAM",
+             pred_status_final=""),      # ML failed silently -> no verdict
+    ]
+    text = render_report(
+        analyze(rows),
+        coverage([{"child_id": c} for c in ("001", "002", "003")], [], rows),
+    )
+
+    start = text.index("### sex=M")
+    end = text.index("### sex=F")
+    section = text[start:end]
+
+    # The subgroup's SAM sensitivity is 1.000 (1/1 on the one verdicted
+    # row), but it must never appear without the exclusion counts sitting
+    # right beside it in the same subgroup block.
+    assert "SAM sensitivity" in section
+    assert "1.000" in section
+    assert "excluded" in section.lower()
+    # 2 unverdicted rows dropped, both gold-standard SAM — the SAM
+    # breakout must not be omitted.
+    assert "2" in section
+
+
+# --- Review round: Finding 2 — Assessed overstates capture -----------------
+#
+# `coverage()` keyed `assessed_ids` on `error` alone, so a child whose ML
+# step failed silently (blank `pred_status_final`, blank `error`) was
+# reported as fully "Assessed". Coverage is the first section a clinician
+# reads; its numbers must reconcile with `status_n`, not silently disagree
+# with it.
+
+def test_coverage_distinguishes_assessed_with_and_without_verdict():
+    intake = [{"child_id": str(i)} for i in range(1, 19)]  # 18 children
+    results = []
+    for i in range(1, 16):  # 15 fully verdicted
+        results.append(_row(child_name=str(i)))
+    for i in range(16, 19):  # 3 processed without error, but no app verdict
+        results.append(_row(child_name=str(i), pred_status_final=""))
+
+    cov = coverage(intake, [], results)
+    a = analyze(results)
+
+    assert cov["assessed"] == 18
+    assert cov["missing_data"] == 0
+    assert cov["assessed_with_verdict"] == 15
+    assert cov["assessed_without_verdict"] == 3
+    assert (cov["assessed_with_verdict"] + cov["assessed_without_verdict"]
+            == cov["assessed"])
+    # The whole point: Coverage's verdict count must reconcile with the
+    # denominator the statistics section actually uses.
+    assert cov["assessed_with_verdict"] == a["status_n"]
+
+    # Bucket-sum invariant is unchanged — this is a breakdown WITHIN the
+    # assessed bucket, not a new top-level bucket.
+    assert cov["assessed"] + cov["qc_failed"] + cov["missing_data"] == cov["total"]
+
+
+def test_render_report_coverage_reconciles_with_status_n():
+    intake = [{"child_id": str(i)} for i in range(1, 19)]
+    results = []
+    for i in range(1, 16):
+        results.append(_row(child_name=str(i)))
+    for i in range(16, 19):
+        results.append(_row(child_name=str(i), pred_status_final=""))
+
+    text = render_report(analyze(results), coverage(intake, [], results))
+    start = text.index("## Coverage")
+    end = text.index("## Height agreement")
+    section = text[start:end]
+
+    assert "18" in section
+    assert "15" in section
+    assert "3" in section
+    assert "verdict" in section.lower()
+
+
+# --- Review round: Finding 3 — blank child_name unreadable banner ----------
+#
+# A results row with a blank `child_name` put `""` into `unknown_ids`,
+# firing the banner as `1 result row(s) reference child_id(s) ... (e.g. )`
+# and rendering `not in intake manifest: 1 ()`. The signal is genuine but
+# unreadable, and conflates "no child id at all" with "child id not in the
+# manifest".
+
+def test_coverage_blank_child_name_reported_distinctly():
+    intake = [{"child_id": "001"}]
+    results = [_row(child_name="001"), _row(child_name="")]
+    cov = coverage(intake, [], results)
+
+    assert cov["blank_child_id_rows"] == 1
+    assert "" not in cov["unknown_ids"]
+    assert cov["unknown_ids"] == []
+
+
+def test_render_report_blank_child_id_renders_readably():
+    intake = [{"child_id": "001"}]
+    results = [_row(child_name="001"), _row(child_name="")]
+    text = render_report(analyze(results), coverage(intake, [], results))
+
+    assert "<blank>" in text
+    assert "(e.g. )" not in text
+    assert "not in intake manifest: 1 ()" not in text
+
+
+# --- Review round: Finding 4 — the age floor fix is one-sided --------------
+#
+# The prior round added a `>= 6` month floor so "age 6-23m" became
+# accurate, but there is no ceiling: a 72-month-old lands in "age 24-59m"
+# and is not counted as excluded. WHO growth standards run 0-60 months and
+# the assessment stage already rejects ages outside 0-60, so this should be
+# rare in practice, but the label must be true regardless.
+
+def test_age_subgroups_exclude_over_59_month_rows():
+    rows = [
+        _row(child_name="001", age_months="30.0"),  # genuine 24-59m
+        _row(child_name="002", age_months="72.0"),  # over the ceiling
+    ]
+    a = analyze(rows)
+    assert a["subgroups"]["age 24-59m"]["status_n"] == 1
+    assert a["age_excluded_from_subgroups"] == 1
+    # Whole-study statistics still include both rows.
+    assert a["status_n"] == 2
