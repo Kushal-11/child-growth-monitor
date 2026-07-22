@@ -569,3 +569,23 @@ def test_errored_row_with_blank_gold_standard_still_flagged_via_raw_muac():
     assert "SAM or possibly SAM: 2" in text
     # tp=1 over 1 paired + 2 possibly-SAM = 0.333
     assert "0.333" in text
+
+
+def test_errored_row_from_pipeline_exception_still_carries_muac_and_oedema():
+    """A pipeline exception routes through `_error_row`, which used to drop
+    the ground truth entirely — so a child whose pose step threw with a
+    10.5 cm arm recorded vanished from the study. Same blind spot as the
+    garbled-DOB case, reached by a different route."""
+    from scripts.batch_assess import _error_row
+
+    row = _error_row(
+        fname="c.jpg", child_name="007", age_months=24.0, sex="M",
+        actual_height=None, actual_weight=None,
+        manual_muac=10.5, oedema="", error_msg="pose model raised",
+    )
+    assert row["muac_cm"] == 10.5
+
+    a = analyze([_row(child_name="001"), {**_row(child_name="007"), **row}])
+    assert a["errored_possible_sam"] == 1, (
+        "an exception row with a SAM-range arm must still be counted"
+    )

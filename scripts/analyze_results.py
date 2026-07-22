@@ -34,8 +34,21 @@ WHO_TEM_HEIGHT_CM = 0.7
 
 
 def _f(row: dict, key: str) -> Optional[float]:
+    """Read a numeric cell, tolerating both CSV strings and live values.
+
+    The CLI always feeds `csv.DictReader` output, so every cell is a str.
+    But rows built in-process (`_error_row`, tests) hold real floats, and
+    `"".strip()` on one raised AttributeError — which escaped the
+    `(TypeError, ValueError)` catch and crashed the whole analysis rather
+    than degrading to None for that one cell. Accept both shapes.
+    """
+    val = row.get(key)
+    if val is None or isinstance(val, bool):
+        return None
+    if isinstance(val, (int, float)):
+        return float(val)
     try:
-        return float((row.get(key) or "").strip())
+        return float(str(val).strip())
     except (TypeError, ValueError):
         return None
 
@@ -516,12 +529,15 @@ def render_report(analysis: dict, cov: dict) -> str:
         "of children this sensitivity figure is actually computed over",
         f"- Excluded (gold-standard WHZ status but no app verdict): "
         f"{excl_b} child(ren), of which gold-standard SAM: {excl_b_sam}",
-        f"- Excluded (row errored): {analysis.get('errored', 0)} child(ren), "
-        f"of which gold-standard SAM by the WHZ arm: "
-        f"{analysis.get('errored_sam_whz', 0)}",
+        f"- Excluded (row errored): {analysis.get('errored', 0)} child(ren). "
+        f"Their WHZ arm is not computable, not negative — an errored row "
+        f"has no trustworthy age, and WHZ cannot be derived without one, "
+        f"so these children cannot enter this framing either way. See "
+        f"Framing A's SAM/possibly-SAM count for what is known about them "
+        f"from the raw MUAC reading and oedema box.",
         f"- Worst-case sensitivity if every excluded gold-standard SAM "
         f"child were a miss: "
-        f"{_fmt_rate(_worst_case_sensitivity(sam_whz, excl_b_sam + analysis.get('errored_sam_whz', 0)))}",
+        f"{_fmt_rate(_worst_case_sensitivity(sam_whz, excl_b_sam))}",
         f"- Confusion: TP {sam_whz['tp']}, FN {sam_whz['fn']}, "
         f"FP {sam_whz['fp']}, TN {sam_whz['tn']}",
         f"- SAM sensitivity: {_fmt_rate(sam_whz['sensitivity'])}",

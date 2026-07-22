@@ -419,6 +419,8 @@ def _run_flat(
                 sex=(gt.get("sex") or "M").strip().upper(),
                 actual_height=_parse_float(gt.get("actual_height_cm")),
                 actual_weight=_parse_float(gt.get("actual_weight_kg")),
+                manual_muac=_parse_float(gt.get("muac_cm")),
+                oedema=(gt.get("oedema") or "").strip().lower(),
                 error_msg=str(e),
             )
         results.append(row)
@@ -847,6 +849,8 @@ def _run_per_child(
                 sex=(values.get("sex") or "M"),
                 actual_height=_parse_float(values.get("actual_height_cm")),
                 actual_weight=_parse_float(values.get("actual_weight_kg")),
+                manual_muac=_parse_float(values.get("muac_cm")),
+                oedema=(values.get("oedema") or "").strip().lower(),
                 error_msg=str(e),
             )
         results.append(row)
@@ -963,7 +967,26 @@ def _parse_float(val) -> Optional[float]:
         return None
 
 
-def _error_row(fname, child_name, age_months, sex, actual_height, actual_weight, error_msg):
+def _error_row(
+    fname: str,
+    child_name: str,
+    age_months: float,
+    sex: str,
+    actual_height: Optional[float],
+    actual_weight: Optional[float],
+    error_msg: str,
+    manual_muac: Optional[float] = None,
+    oedema: str = "",
+) -> dict:
+    """Result row for a child whose pipeline raised before producing one.
+
+    Carries `muac_cm`/`actual_oedema` through even though no verdict was
+    reached: they are what `analyze_results._possible_sam_on_errored_row`
+    keys on, and without them a child whose pose step threw with a 10.5 cm
+    arm recorded would disappear from the study silently — the same blind
+    spot the errored-row accounting exists to close, just reached by a
+    different route.
+    """
     return {
         "image_file":   fname,
         "child_name":   child_name,
@@ -971,6 +994,8 @@ def _error_row(fname, child_name, age_months, sex, actual_height, actual_weight,
         "sex":          sex,
         "actual_height_cm": actual_height,
         "actual_weight_kg": actual_weight,
+        "muac_cm":      manual_muac,
+        "actual_oedema": oedema,
         "error":        error_msg,
     }
 
