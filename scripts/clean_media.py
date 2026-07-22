@@ -78,12 +78,35 @@ def select_best(cands: list[Candidate]) -> dict:
     }
 
 
+# Roles the assessment pipeline consumes. Anything else is archived in
+# raw/ but never fed to pose measurement.
+SELECTABLE_ROLES = ("front", "side")
+
+# Roles that are captured in the field but are NOT usable for whole-body
+# pose measurement. They must be recognised by NAME because the pose
+# classifier cannot identify them:
+#   back - a rear view has the same shoulder-width/torso-height ratio as a
+#          front view, so landmark_metrics() reports it as 'front'. Left
+#          unnamed, a sharp back photo can outscore the real front photo
+#          and be measured as if the child were facing the camera.
+#   arm  - a MUAC close-up has no full-body pose at all, so it is rejected
+#          as unusable; naming it keeps it out of the failure list, where
+#          it would read as a photo problem rather than a different shot.
+ARCHIVED_ROLE_PREFIXES = {
+    "back": ("back", "rear"),
+    "arm": ("arm", "muac"),
+}
+
+
 def _role_hint(path: Path) -> str:
+    """Map a filename to a role. '' means 'let the pose classifier decide'."""
     stem = path.stem.lower()
-    if stem.startswith("front"):
-        return "front"
-    if stem.startswith("side"):
-        return "side"
+    for role in SELECTABLE_ROLES:
+        if stem.startswith(role):
+            return role
+    for role, prefixes in ARCHIVED_ROLE_PREFIXES.items():
+        if stem.startswith(prefixes):
+            return role
     return ""
 
 
@@ -132,8 +155,16 @@ def clean_child(
     cands: list[Candidate] = []
     fail_reasons: list[str] = []
     side_reject_reasons: list[str] = []
+    archived: dict[str, list[str]] = {}
     for p in photos:
         hint = _role_hint(p)
+        if hint in ARCHIVED_ROLE_PREFIXES:
+            # Not a whole-body pose shot. Record that it exists and move on
+            # without scoring: a MUAC close-up has no full-body pose, so
+            # scoring it only produces a "no pose detected" entry that reads
+            # like a photo problem in the recapture list.
+            archived.setdefault(hint, []).append(p.name)
+            continue
         img = cv2.imread(str(p))
         if img is None:
             reason = f"{p.name}: unreadable"
@@ -161,6 +192,10 @@ def clean_child(
     prov: dict = {
         "child_id": cid, "front": None, "side": None,
         "needs_confirmation": sel["auto_classified"], "reason": "",
+        # Shots kept in raw/ that this pipeline does not measure. Recorded
+        # so a later stage (e.g. an image-MUAC model) can find them without
+        # rescanning, and so their absence is visible now.
+        "archived": archived,
     }
     out_dir.mkdir(parents=True, exist_ok=True)
 

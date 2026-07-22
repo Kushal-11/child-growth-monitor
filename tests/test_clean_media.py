@@ -389,3 +389,59 @@ def test_clean_child_video_fallback_raises_reports_failed(tmp_path, monkeypatch)
     assert calls, "fake_extract was never called — fallback path not exercised"
     assert row["verdict"] == "failed"
     assert "no pose found" in row["reason"]
+
+
+def test_back_and_arm_photos_get_named_roles():
+    """Back and arm shots must be identified by filename, not pose."""
+    from scripts.clean_media import _role_hint
+
+    assert _role_hint(Path("back.jpg")) == "back"
+    assert _role_hint(Path("rear_view.jpg")) == "back"
+    assert _role_hint(Path("arm.jpg")) == "arm"
+    assert _role_hint(Path("muac_closeup.jpg")) == "arm"
+    assert _role_hint(Path("front.jpg")) == "front"
+    assert _role_hint(Path("side.jpg")) == "side"
+    assert _role_hint(Path("IMG_01.jpg")) == ""
+
+
+def test_back_photo_never_selected_as_front():
+    """A rear view has the same shoulder/torso ratio as a front view, so the
+    pose classifier calls it 'front'. Only the filename can exclude it, and a
+    sharper back photo must not outrank the real front photo."""
+    front = Candidate(Path("front.jpg"), "front", _score())
+    back = Candidate(
+        Path("back.jpg"), "back",
+        PhotoScore(0.99, 0.99, 1.0, 0.99, 999.0, "front", True, ""),
+    )
+    sel = select_best([front, back])
+    assert sel["front"] is front
+    assert sel["side"] is None
+
+
+def test_arm_photo_not_scored_or_blamed(tmp_path, monkeypatch):
+    """A MUAC close-up has no full-body pose; it must be archived rather than
+    scored, so it never appears as a photo failure in the recapture list."""
+    import cv2
+    import numpy as np
+
+    raw = tmp_path / "raw" / "001"
+    raw.mkdir(parents=True)
+    img = np.full((10, 10, 3), 255, dtype=np.uint8)
+    cv2.imwrite(str(raw / "front.jpg"), img)
+    cv2.imwrite(str(raw / "arm.jpg"), img)
+
+    scored: list = []
+
+    def _only_front(image_bgr, landmarker):
+        scored.append(1)
+        return _score()
+
+    monkeypatch.setattr("scripts.clean_media.score_photo", _only_front)
+
+    row = clean_child(raw, tmp_path / "cleaned", landmarker=None, force=False)
+    assert len(scored) == 1                    # arm.jpg never pose-scored
+    assert "arm.jpg" not in row["reason"]
+    prov = json.loads(
+        (tmp_path / "cleaned" / "001" / "provenance.json").read_text()
+    )
+    assert prov["archived"]["arm"] == ["arm.jpg"]
