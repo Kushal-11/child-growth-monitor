@@ -56,13 +56,25 @@ Usage
 
 Ground-truth CSV columns (flat layout)
 --------------------------------------
-image_file         : filename (just the name) — must match a file in --images
-child_name         : child's name or ID
+image_file         : filename (just the name) — must match a file in --images.
+                      This is the ONLY identifier this layout uses. Do not
+                      add a child_name/ID column — no child names belong in
+                      folder names, filenames, or CSVs anywhere in this
+                      pipeline (see docs/field_data_guide.md). The results
+                      CSV's own "child_name" column is always populated from
+                      image_file (or the per-child folder id), never from
+                      an operator-supplied value.
 date_of_birth      : YYYY-MM-DD
+measurement_date   : YYYY-MM-DD, the date the photo/measurements were taken
+                      (leave blank to fall back to today's date — but every
+                      WHO z-score depends on age, so fill this in whenever
+                      the assessment doesn't run the same day as measurement)
 sex                : M or F
 actual_height_cm   : measured height in cm  (leave blank if unknown)
 actual_weight_kg   : measured weight in kg  (leave blank if unknown)
 muac_cm            : measured MUAC in cm    (leave blank if unknown)
+oedema             : "yes" if bilateral pitting oedema is present, else
+                      blank or "no" — an independent WHO SAM trigger
 notes              : free-text (optional)
 
 All other columns are ignored and preserved in the output.
@@ -71,18 +83,20 @@ All other columns are ignored and preserved in the output.
 import argparse
 import csv
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Optional
 
 # Ensure project root on path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from scripts.validate_ground_truth import AGE_RANGE_MONTHS, validate_rows  # noqa: E402
+
 TEMPLATE_CSV = """\
-image_file,child_name,date_of_birth,sex,actual_height_cm,actual_weight_kg,notes
-child1.jpg,Child 1,2022-03-15,M,85.0,11.2,
-child2.jpg,Child 2,2023-07-01,F,78.5,,weight not available
-child3.jpg,Child 3,2021-11-20,M,,,height and weight unknown
+image_file,date_of_birth,measurement_date,sex,actual_height_cm,actual_weight_kg,muac_cm,oedema,notes
+child1.jpg,2022-03-15,2024-03-20,M,85.0,11.2,14.5,no,
+child2.jpg,2023-07-01,2024-03-20,F,78.5,,13.2,no,weight not available
+child3.jpg,2021-11-20,2024-03-20,M,,,,,height and weight unknown
 """
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
@@ -192,9 +206,95 @@ def generate_template(out_path: Path = Path("data/ground_truth_template.csv")):
     print("Fill in the measurements and save as data/ground_truth.csv")
 
 
-def _compute_age_months(dob: date) -> float:
-    delta = datetime.utcnow().date() - dob
-    return delta.days / 30.4375
+def _compute_age_months(dob: date, at: Optional[date] = None) -> float:
+    """Age in months at `at` (the measurement date). Falls back to today,
+    which is only correct when assessment runs the same day as measurement."""
+    ref = at or datetime.now(timezone.utc).date()
+    return (ref - dob).days / 30.4375
+
+
+def _parse_dob(dob_str: str) -> tuple[Optional[date], Optional[str]]:
+    """Parse a date_of_birth string.
+
+    Returns (dob, error_message). On success `error_message` is None. On
+    failure `dob` is None and `error_message` names the problem so the
+    caller can surface it in the result row instead of fabricating an age
+    and emitting a verdict derived from it.
+
+    Empty/blank (nothing supplied, e.g. the --images-only mode with no
+    ground truth) is distinguished from a garbled value (something was
+    supplied but doesn't parse) so a working "just run the system" mode
+    isn't mislabelled as broken.
+    """
+    if not dob_str:
+        return (
+            None,
+            "no date_of_birth supplied - age and all z-scores unavailable",
+        )
+    try:
+        return date.fromisoformat(dob_str), None
+    except ValueError:
+        return (
+            None,
+            f"unparseable date_of_birth: '{dob_str}' - age and all z-scores unavailable",
+        )
+
+
+_WASTING_SEVERITY = {"SAM": 2, "MAM": 1, "Normal": 0}
+
+# WHO MUAC cutoffs are defined for 6-59 months only. Mirrors
+# app/services/muac_service.py's `age_in_range` bounds exactly.
+MUAC_AGE_RANGE_MONTHS = (6.0, 59.9)
+
+
+def _muac_status(
+    muac_cm: Optional[float], age_months: Optional[float]
+) -> Optional[str]:
+    """WHO fixed thresholds: <11.5 SAM, 11.5-12.5 MAM, >=12.5 Normal.
+
+    WHO defines these absolute cutoffs for 6-59 months ONLY; below 6 months
+    an 11.4 cm arm is normal infant anatomy, not wasting. Applying them
+    anyway would mint gold-standard SAM labels the app is then scored
+    against, inflating the apparent false-negative count with no visible
+    signal. Returns None outside the window (unknown, not "Normal") so
+    `_combine_status` drops the arm rather than treating it as a negative.
+
+    The window matches app/services/muac_service.py's `age_in_range`
+    (6.0-59.9) so the study's gold standard and the app's own classifier
+    cannot drift apart. `age_months` is None when age is unknown, which is
+    likewise not a licence to classify.
+    """
+    if muac_cm is None or age_months is None:
+        return None
+    lo, hi = MUAC_AGE_RANGE_MONTHS
+    if not (lo <= age_months <= hi):
+        return None
+    if muac_cm < 11.5:
+        return "SAM"
+    if muac_cm < 12.5:
+        return "MAM"
+    return "Normal"
+
+
+def _collapse_wasting(status: Optional[str]) -> Optional[str]:
+    """Collapse the 5-class scale to the wasting axis SAM/MAM/Normal."""
+    if status is None:
+        return None
+    return status if status in ("SAM", "MAM") else "Normal"
+
+
+def _combine_status(
+    whz_status: Optional[str],
+    muac_status: Optional[str],
+    oedema_present: bool,
+) -> Optional[str]:
+    """WHO OR-rule: SAM if oedema OR MUAC<11.5 OR WHZ<-3 (worst arm wins)."""
+    if oedema_present:
+        return "SAM"
+    arms = [s for s in (_collapse_wasting(whz_status), muac_status) if s]
+    if not arms:
+        return None
+    return max(arms, key=lambda s: _WASTING_SEVERITY[s])
 
 
 def _whz_status_from_z(z: Optional[float]) -> Optional[str]:
@@ -244,6 +344,13 @@ def run_batch(
     use_per_child = _looks_like_per_child_layout(images_dir)
     if use_per_child:
         print(f"Detected per-child layout in {images_dir}")
+        master_gt: dict[str, dict] = {}
+        if ground_truth_csv and ground_truth_csv.exists():
+            # Hard gate: a master ground-truth CSV with impossible values
+            # must never silently produce a study — abort before any
+            # child is assessed. See _load_master_ground_truth.
+            master_gt = _load_master_ground_truth(ground_truth_csv)
+            print(f"Master ground truth: {len(master_gt)} row(s).")
         per_child_entries = _enumerate_per_child(images_dir)
         if not per_child_entries:
             print(f"No usable child folders in {images_dir}", file=sys.stderr)
@@ -251,6 +358,7 @@ def run_batch(
         print(f"Found {len(per_child_entries)} child folder(s).\n")
         results = _run_per_child(
             per_child_entries, meas_svc, ml_svc, nutr_svc, who_data, verbose,
+            master_gt=master_gt,
         )
     else:
         # Build ground-truth lookup keyed by image filename
@@ -306,11 +414,13 @@ def _run_flat(
             print(f"    [ERROR] {fname}: {e}")
             row = _error_row(
                 fname=fname,
-                child_name=gt.get("child_name", fname),
+                child_name=fname,  # I-3: identity, never an operator-supplied name
                 age_months=24.0,
                 sex=(gt.get("sex") or "M").strip().upper(),
                 actual_height=_parse_float(gt.get("actual_height_cm")),
                 actual_weight=_parse_float(gt.get("actual_weight_kg")),
+                manual_muac=_parse_float(gt.get("muac_cm")),
+                oedema=(gt.get("oedema") or "").strip().lower(),
                 error_msg=str(e),
             )
         results.append(row)
@@ -327,16 +437,89 @@ def _process_child_image(
     verbose: bool,
 ) -> dict:
     """Run the full assessment pipeline for one image. Returns a result row."""
-    child_name = gt.get("child_name") or child_id or fname
+    # I-3: the child is keyed strictly on the folder id (per-child layout)
+    # or the image filename (flat layout) — never on an operator-supplied
+    # name. This is what ends up in the results CSV's "child_name" column,
+    # which analyze_results.coverage() uses as its join key against the
+    # intake manifest's child_id; a personal name there both violates the
+    # no-PII-in-CSVs rule and silently breaks that join (see final-review
+    # I-3). `_display_label` is a display-only convenience for the console
+    # warning below - it is never persisted to any file.
+    identity = child_id or fname
+    _display_label = gt.get("child_name") or identity
     sex = (gt.get("sex") or "M").strip().upper() or "M"
 
     dob_str = (gt.get("date_of_birth") or "").strip()
-    try:
-        dob = date.fromisoformat(dob_str)
-        age_months = _compute_age_months(dob)
-    except ValueError:
-        dob = None
+    mdate_str = (gt.get("measurement_date") or "").strip()
+    meas_date = None
+    mdate_error = None
+    # Provenance of the date every z-score is ultimately computed against,
+    # persisted to the results CSV so a reader can tell a real measurement
+    # date from a fallback instead of having to trust that one was supplied.
+    measurement_date_source = "supplied"
+    if mdate_str:
+        try:
+            meas_date = date.fromisoformat(mdate_str)
+        except ValueError:
+            # Same treatment as an unparseable date_of_birth: age drives
+            # every WHO z-score AND selects the WFL (<24m) vs WFH (>=24m)
+            # LMS table, so silently substituting today's date yields a
+            # clean-looking verdict computed from an age that is wrong by
+            # however long elapsed between the field visit and this run.
+            # A console WARN is not a signal on a 250-child batch.
+            mdate_error = (
+                f"unparseable measurement_date: '{mdate_str}' - age and all "
+                "z-scores unavailable"
+            )
+            measurement_date_source = "unparseable"
+    else:
+        # Blank remains permitted (the flat layout and --images-only mode
+        # predate this column), but it is recorded and counted rather than
+        # passing as if a date had been supplied.
+        measurement_date_source = "today_fallback"
+
+    dob, dob_error = _parse_dob(dob_str)
+    age_range_error = None
+    if dob is not None and mdate_error is None:
+        age_months = _compute_age_months(dob, meas_date)
+        lo, hi = AGE_RANGE_MONTHS
+        if not (lo <= age_months <= hi):
+            # WHO growth standards are only defined for 0-60 months. A
+            # parseable-but-impossible age (swapped dob/measurement_date
+            # columns, a future dob, a one-digit year typo, ...) must be
+            # rejected the same way an unparseable dob is: never let a
+            # fabricated age drive pose/ML/WHO lookups into a clean-looking
+            # verdict. Matches scripts/validate_ground_truth.py's range.
+            # Display precision: 1 decimal is plenty for a value that's
+            # unambiguously out of range (e.g. -12.0, 600.0), but a value
+            # that rounds to exactly the boundary itself at 1 decimal
+            # (e.g. 60.0246 -> "60.0") would read as self-contradictory
+            # next to "out of range 0-60" - show extra precision only
+            # then, so the rejection is self-explanatory.
+            rounded_1dp = round(age_months, 1)
+            age_disp = (
+                f"{age_months:.2f}" if rounded_1dp in (lo, hi) else f"{rounded_1dp:.1f}"
+            )
+            age_range_error = (
+                f"age_months {age_disp} out of range {lo:.0f}-{hi:.0f} "
+                f"(date_of_birth='{dob_str}', "
+                f"measurement_date='{mdate_str or 'unset - fell back to today'}')"
+            )
+    else:
+        # Placeholder only, to keep the pose/ML pipeline running below;
+        # dob_error/mdate_error forces error + pred_status_final=None on the
+        # row so nothing derived from this fabricated age is presented as
+        # usable.
         age_months = 24.0
+    # True age, or None when it could not be established. Distinct from the
+    # 24.0 placeholder above, which exists only to keep pose/ML running —
+    # anything that classifies against age must use this, never the
+    # placeholder.
+    known_age_months = (
+        age_months if (dob is not None and mdate_error is None and not age_range_error)
+        else None
+    )
+    oedema_present = (gt.get("oedema") or "").strip().lower() == "yes"
 
     actual_height = _parse_float(gt.get("actual_height_cm"))
     actual_weight = _parse_float(gt.get("actual_weight_kg"))
@@ -381,14 +564,23 @@ def _process_child_image(
     actual_whz_z      = None
     actual_haz_status = None
     actual_whz_status = None
-    if actual_height and dob:
-        actual_haz_z = nutr_svc.compute_haz(sex, int(round(age_months)), actual_height)
-        if actual_haz_z:
+    # Guarded on `known_age_months`, NOT on `dob`. A parseable dob combined
+    # with an unparseable measurement_date leaves `dob` truthy while
+    # `age_months` holds the 24.0 placeholder — which is both fabricated and
+    # sitting exactly on the WFL/WFH table boundary. Keying on `dob` here
+    # would compute the gold standard at that fabricated age and write it to
+    # the CSV as if it were real. WHO tables are indexed by COMPLETED months,
+    # so truncate rather than round: 23.7 months is row 23.
+    if actual_height and known_age_months is not None:
+        actual_haz_z = nutr_svc.compute_haz(sex, int(known_age_months), actual_height)
+        if actual_haz_z is not None:
             actual_haz_status = _haz_status_from_z(actual_haz_z)
             actual_haz_z = round(actual_haz_z, 3)
-    if actual_height and actual_weight and dob:
-        actual_whz_z = nutr_svc.compute_whz(sex, age_months, actual_height, actual_weight)
-        if actual_whz_z:
+    if actual_height and actual_weight and known_age_months is not None:
+        actual_whz_z = nutr_svc.compute_whz(
+            sex, known_age_months, actual_height, actual_weight,
+        )
+        if actual_whz_z is not None:
             actual_whz_status = _whz_status_from_z(actual_whz_z)
             actual_whz_z = round(actual_whz_z, 3)
 
@@ -397,14 +589,16 @@ def _process_child_image(
     pred_whz_z      = None
     pred_haz_status = None
     pred_whz_status = None
-    if pred_height and dob:
-        pred_haz_z = nutr_svc.compute_haz(sex, int(round(age_months)), pred_height)
-        if pred_haz_z:
+    if pred_height and known_age_months is not None:
+        pred_haz_z = nutr_svc.compute_haz(sex, int(known_age_months), pred_height)
+        if pred_haz_z is not None:
             pred_haz_status = _haz_status_from_z(pred_haz_z)
             pred_haz_z = round(pred_haz_z, 3)
-    if pred_height and pred_weight_ml and dob:
-        pred_whz_z = nutr_svc.compute_whz(sex, age_months, pred_height, pred_weight_ml)
-        if pred_whz_z:
+    if pred_height and pred_weight_ml and known_age_months is not None:
+        pred_whz_z = nutr_svc.compute_whz(
+            sex, known_age_months, pred_height, pred_weight_ml,
+        )
+        if pred_whz_z is not None:
             pred_whz_status = _whz_status_from_z(pred_whz_z)
             pred_whz_z = round(pred_whz_z, 3)
 
@@ -412,11 +606,39 @@ def _process_child_image(
     height_error = round(pred_height - actual_height, 2) if pred_height and actual_height else None
     weight_error = round(pred_weight_ml - actual_weight, 2) if pred_weight_ml and actual_weight else None
 
+    # --- WHO OR-rule statuses (gold standard vs app) ---
+    actual_muac_status = _muac_status(manual_muac, known_age_months)
+    actual_combined_status = _combine_status(
+        actual_whz_status, actual_muac_status, oedema_present,
+    )
+    # The app's own verdict combines its two available arms by the same
+    # worst-arm-wins rule the gold standard uses above. The previous
+    # `ml if ml else whz` let a "Normal" ML verdict silently discard a
+    # predicted WHZ < -3 — a manufactured false negative in a system whose
+    # stated hard rule is that false negatives endanger lives. The app has
+    # no oedema input, so that arm is absent (not negative) on this side.
+    _pred_arms = [
+        s for s in (
+            _collapse_wasting(wasting_status_ml),
+            _collapse_wasting(pred_whz_status),
+        ) if s
+    ]
+    pred_status_final = (
+        max(_pred_arms, key=lambda s: _WASTING_SEVERITY[s]) if _pred_arms else None
+    )
+    if dob_error or age_range_error or mdate_error:
+        # dob could not be parsed, or the resulting age is outside the
+        # 0-60 month range WHO growth standards are defined for: never
+        # present a verdict derived from a fabricated or impossible age.
+        pred_status_final = None
+
     row = {
         "image_file":           fname,
-        "child_name":           child_name,
+        "child_name":           identity,
         "age_months":           round(age_months, 1),
         "sex":                  sex,
+        "measurement_date":     mdate_str,
+        "measurement_date_source": measurement_date_source,
         # Ground truth
         "actual_height_cm":     actual_height,
         "actual_weight_kg":     actual_weight,
@@ -424,6 +646,10 @@ def _process_child_image(
         "actual_whz_z":         actual_whz_z,
         "actual_haz_status":    actual_haz_status,
         "actual_whz_status":    actual_whz_status,
+        "muac_cm":              manual_muac,
+        "actual_muac_status":   actual_muac_status,
+        "actual_oedema":        "yes" if oedema_present else "",
+        "actual_combined_status": actual_combined_status,
         # Predictions
         "pred_height_cm":       round(pred_height, 1) if pred_height else None,
         "pred_weight_ml_kg":    round(pred_weight_ml, 2) if pred_weight_ml else None,
@@ -432,6 +658,7 @@ def _process_child_image(
         "pred_haz_status":      pred_haz_status,
         "pred_whz_status":      pred_whz_status,
         "ml_wasting_status":    wasting_status_ml,
+        "pred_status_final":    pred_status_final,
         "sam_probability":      sam_prob,
         "mam_probability":      mam_prob,
         # Errors
@@ -442,7 +669,7 @@ def _process_child_image(
         "estimation_method":    meas.estimation_method,
         "annotated_image":      meas.annotated_image_filename,
         "notes":                gt.get("notes", ""),
-        "error":                "",
+        "error":                dob_error or age_range_error or mdate_error or "",
     }
 
     if ml_svc.is_available and meas.body_segments and effective_height:
@@ -475,30 +702,123 @@ def _process_child_image(
     return row
 
 
+def _clean_master_row(row: Optional[dict]) -> tuple[dict[str, str], Optional[str]]:
+    """Sanitize a master ground-truth CSV row before merging it into a
+    per-child dict.
+
+    A row with more fields than its header makes csv.DictReader stash the
+    overflow under a `None` key whose value is a `list` (a ragged row) —
+    every column after the missing/extra one is shifted, so its values are
+    not trustworthy. Guard against any non-string key/value here so that
+    one malformed master row can never raise and take down the whole
+    batch.
+
+    Returns `(cleaned, ragged_error)`. `ragged_error` is `None` for a
+    well-formed row; otherwise it names the problem so the caller can
+    surface it in that child's `error` field instead of silently
+    assessing shifted data — belt and braces alongside the
+    `validate_ground_truth` gate in `_load_master_ground_truth`, in case a
+    caller bypasses that gate.
+    """
+    if not row:
+        return {}, None
+    out: dict[str, str] = {}
+    ragged = False
+    for k, v in row.items():
+        if not isinstance(k, str):
+            ragged = True
+            continue  # e.g. the None key csv.DictReader uses for overflow
+        if isinstance(v, list):
+            v = ",".join(str(x) for x in v if x is not None)
+        elif v is None:
+            v = ""
+        elif not isinstance(v, str):
+            v = str(v)
+        if v.strip():
+            out[k] = v
+    ragged_error = (
+        "master ground-truth CSV row is ragged (more fields than the "
+        "header) - columns after the mismatch are shifted, values not "
+        "trusted"
+    ) if ragged else None
+    return out, ragged_error
+
+
+def _load_master_ground_truth(ground_truth_csv: Path) -> dict[str, dict]:
+    """Load the master ground-truth CSV for the per-child layout and gate
+    on `validate_ground_truth.validate_rows` before any child is assessed.
+
+    A ground-truth file with impossible values (e.g. a ragged row whose
+    shift produces an out-of-range height/weight/MUAC, a bad date, an age
+    outside 0-60 months, ...) must never silently produce a study — refuse
+    to run at all rather than assess every child against untrustworthy
+    data. Warnings (missing optional measurements) are printed but do not
+    block.
+    """
+    with open(ground_truth_csv, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        fieldnames = list(reader.fieldnames or [])
+        rows = list(reader)
+
+    errors, warnings = validate_rows(rows, fieldnames=fieldnames)
+    for w in warnings:
+        print(f"  WARNING  {w}")
+    if errors:
+        for e in errors:
+            print(f"  ERROR    {e}", file=sys.stderr)
+        print(
+            f"\n{ground_truth_csv}: {len(errors)} error(s) found in the "
+            "master ground-truth CSV - refusing to assess any child.\n"
+            "Fix the file and re-check it with:\n"
+            f"  PYTHONPATH=. .venv/bin/python scripts/validate_ground_truth.py {ground_truth_csv}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    master_gt: dict[str, dict] = {}
+    for row in rows:
+        cid = (row.get("child_id") or "").strip()
+        if cid:
+            master_gt[cid] = row
+    return master_gt
+
+
 def _run_per_child(
     entries,
     meas_svc, ml_svc, nutr_svc, who_data,
     verbose: bool,
+    master_gt: Optional[dict] = None,
 ):
     """
     Process a per-child layout: each entry is (child_id, front, side, values).
-    Side image, when present, supplies AP-depth features.
+    Ground truth per child comes from the master CSV row (keyed by folder
+    name == child_id) merged over any per-folder values.csv; the master
+    CSV wins on conflicts.
     """
     import numpy as np  # noqa: F401
 
+    master_gt = master_gt or {}
     results = []
     for child_id, front_path, side_path, values in entries:
-        gt = {
-            "child_name":       values.get("child_name", child_id),
-            "sex":              values.get("sex", ""),
-            "date_of_birth":    values.get("date_of_birth", ""),
-            "actual_height_cm": values.get("actual_height_cm", ""),
-            "actual_weight_kg": values.get("actual_weight_kg", ""),
-            "muac_cm":          values.get("muac_cm", ""),
-            "notes":            values.get("notes", ""),
-        }
-        side_bytes = side_path.read_bytes() if side_path else None
+        # The merge (and everything derived from it) lives inside the
+        # per-child try: a malformed master CSV row must degrade only this
+        # child's row, never abort the batch for every other child.
         try:
+            merged = dict(values)
+            cleaned_master, ragged_error = _clean_master_row(master_gt.get(child_id))
+            merged.update(cleaned_master)
+            gt = {
+                "child_name":       merged.get("child_name", child_id),
+                "sex":              merged.get("sex", ""),
+                "date_of_birth":    merged.get("date_of_birth", ""),
+                "measurement_date": merged.get("measurement_date", ""),
+                "actual_height_cm": merged.get("actual_height_cm", ""),
+                "actual_weight_kg": merged.get("actual_weight_kg", ""),
+                "muac_cm":          merged.get("muac_cm", ""),
+                "oedema":           merged.get("oedema", ""),
+                "notes":            merged.get("notes", ""),
+            }
+            side_bytes = side_path.read_bytes() if side_path else None
             row = _process_child_image(
                 fname=front_path.name,
                 img_path=front_path,
@@ -511,15 +831,26 @@ def _run_per_child(
                 child_id=child_id,
                 verbose=verbose,
             )
+            if ragged_error:
+                # Belt and braces: never let a ragged master row present a
+                # verdict derived from shifted columns as clean, even
+                # though _load_master_ground_truth should already have
+                # refused to run before reaching this point.
+                row["error"] = (
+                    f"{row['error']}; {ragged_error}" if row.get("error") else ragged_error
+                )
+                row["pred_status_final"] = None
         except Exception as e:
             print(f"    [ERROR] {child_id}: {e}")
             row = _error_row(
                 fname=front_path.name,
-                child_name=gt["child_name"],
+                child_name=child_id,  # I-3: identity, never an operator-supplied name
                 age_months=24.0,
-                sex=gt["sex"] or "M",
-                actual_height=_parse_float(gt["actual_height_cm"]),
-                actual_weight=_parse_float(gt["actual_weight_kg"]),
+                sex=(values.get("sex") or "M"),
+                actual_height=_parse_float(values.get("actual_height_cm")),
+                actual_weight=_parse_float(values.get("actual_weight_kg")),
+                manual_muac=_parse_float(values.get("muac_cm")),
+                oedema=(values.get("oedema") or "").strip().lower(),
                 error_msg=str(e),
             )
         results.append(row)
@@ -531,12 +862,16 @@ def _write_results(output_csv: Path, results: list[dict]):
     output_csv.parent.mkdir(parents=True, exist_ok=True)
 
     fieldnames = [
-        "image_file", "child_name", "age_months", "sex",
+        "image_file", "child_name", "age_months", "sex", "measurement_date",
+        "measurement_date_source",
         "actual_height_cm", "actual_weight_kg",
         "actual_haz_z", "actual_whz_z", "actual_haz_status", "actual_whz_status",
+        "muac_cm", "actual_muac_status", "actual_oedema",
+        "actual_combined_status",
         "pred_height_cm", "pred_weight_ml_kg",
         "pred_haz_z", "pred_whz_z", "pred_haz_status", "pred_whz_status",
-        "ml_wasting_status", "sam_probability", "mam_probability",
+        "ml_wasting_status", "pred_status_final",
+        "sam_probability", "mam_probability",
         "height_error_cm", "weight_error_kg",
         "pose_confidence", "estimation_method", "annotated_image",
         "feat_shoulder_width_cm", "feat_hip_width_cm", "feat_torso_length_cm",
@@ -565,6 +900,20 @@ def _print_summary(results: list[dict]):
     print(f"\n{'='*60}")
     print(f"SUMMARY  |  {total} images  |  {errors} errors")
     print(f"{'='*60}")
+
+    # Surface the today-fallback count once per batch: individually these are
+    # silent, but in aggregate they say "N children's ages — and therefore
+    # every z-score derived from them — were computed against the run date
+    # rather than the field-visit date."
+    fallback = sum(
+        1 for r in results if r.get("measurement_date_source") == "today_fallback"
+    )
+    if fallback:
+        print(
+            f"  [WARN] {fallback} child(ren) had no measurement_date; age "
+            f"computed from today's date. Every z-score for those children "
+            f"is wrong by the time elapsed since their field visit."
+        )
 
     if with_height:
         errs = [abs(float(r["height_error_cm"])) for r in with_height]
@@ -618,7 +967,26 @@ def _parse_float(val) -> Optional[float]:
         return None
 
 
-def _error_row(fname, child_name, age_months, sex, actual_height, actual_weight, error_msg):
+def _error_row(
+    fname: str,
+    child_name: str,
+    age_months: float,
+    sex: str,
+    actual_height: Optional[float],
+    actual_weight: Optional[float],
+    error_msg: str,
+    manual_muac: Optional[float] = None,
+    oedema: str = "",
+) -> dict:
+    """Result row for a child whose pipeline raised before producing one.
+
+    Carries `muac_cm`/`actual_oedema` through even though no verdict was
+    reached: they are what `analyze_results._possible_sam_on_errored_row`
+    keys on, and without them a child whose pose step threw with a 10.5 cm
+    arm recorded would disappear from the study silently — the same blind
+    spot the errored-row accounting exists to close, just reached by a
+    different route.
+    """
     return {
         "image_file":   fname,
         "child_name":   child_name,
@@ -626,6 +994,8 @@ def _error_row(fname, child_name, age_months, sex, actual_height, actual_weight,
         "sex":          sex,
         "actual_height_cm": actual_height,
         "actual_weight_kg": actual_weight,
+        "muac_cm":      manual_muac,
+        "actual_oedema": oedema,
         "error":        error_msg,
     }
 
