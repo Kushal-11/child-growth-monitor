@@ -28,6 +28,14 @@ from scripts.study_stats import (  # noqa: E402
 
 STATUS_CATS = ["SAM", "MAM", "Normal"]
 
+# Height-for-age (stunting) scale, worst-to-best. Order is load-bearing for
+# `weighted_kappa`: it is what makes mistaking Severely Stunted for Normal
+# cost more than mistaking it for Stunted. Wasting's SAM/MAM/Normal cutoffs
+# above are WHO WHZ/MUAC thresholds; this is a separate WHO HAZ scale (see
+# `_haz_status_from_z` in scripts/batch_assess.py) and must not be merged
+# with STATUS_CATS.
+HAZ_CATS = ["Severely Stunted", "Stunted", "Normal", "Tall"]
+
 # Published yardsticks (see docs/ml_pipeline_improvement_and_feedback_loop.md)
 SMART_HEIGHT_TOLERANCE_CM = 1.4
 WHO_TEM_HEIGHT_CM = 0.7
@@ -136,6 +144,54 @@ def _confusion_block(actual: list[str], pred: list[str]) -> dict:
     return out
 
 
+def _stunting_pairs(
+    rows: list[dict],
+) -> tuple[list[str], list[str], list[dict], list[dict]]:
+    """Gold standard (`actual_haz_status`, from MEASURED height) vs the
+    app's height-for-age verdict (`pred_haz_status`, from ESTIMATED height).
+
+    Returns (actual, pred, paired_rows, excluded_rows) — mirrors
+    `_status_pairs` exactly: `excluded_rows` carry a gold-standard HAZ
+    status but no usable predicted HAZ status (the pose/height-estimation
+    step failed or was skipped), and must be surfaced to the caller, never
+    silently dropped from the sensitivity denominator.
+    """
+    actual, pred, paired_rows, excluded_rows = [], [], [], []
+    for r in rows:
+        a = (r.get("actual_haz_status") or "").strip()
+        p = (r.get("pred_haz_status") or "").strip()
+        if a in HAZ_CATS:
+            if p in HAZ_CATS:
+                actual.append(a)
+                pred.append(p)
+                paired_rows.append(r)
+            else:
+                excluded_rows.append(r)
+    return actual, pred, paired_rows, excluded_rows
+
+
+def _stunting_confusion_block(actual: list[str], pred: list[str]) -> dict:
+    """Stunting / severe-stunting confusion matrices and weighted kappa.
+
+    Mirrors `_confusion_block`: "stunting" collapses the four-level HAZ
+    scale to positive = {Severely Stunted, Stunted} vs negative =
+    {Normal, Tall}; "severe_stunting" isolates the clinically urgent
+    Severely Stunted category on its own, exactly as SAM gets its own
+    headline separate from SAM+MAM above — a missed severe case is the
+    dangerous direction.
+    """
+    out: dict = {"status_n": len(actual)}
+    for name, positive in (
+        ("stunting", {"Severely Stunted", "Stunted"}),
+        ("severe_stunting", {"Severely Stunted"}),
+    ):
+        tp, fp, tn, fn = confusion_binary(actual, pred, positive)
+        out[name] = {"tp": tp, "fp": fp, "tn": tn, "fn": fn,
+                     **binary_metrics(tp, fp, tn, fn)}
+    out["kappa"] = weighted_kappa(actual, pred, HAZ_CATS) if len(set(actual)) > 1 else None
+    return out
+
+
 def _sam_detectability(rows: list[dict]) -> dict:
     """Among gold-standard SAM cases, how many were reachable via the WHZ
     arm (the only arm the app can see) versus only via MUAC or oedema (arms
@@ -224,6 +280,23 @@ def _analyze_block(rows: list[dict]) -> dict:
     # Scoped to the same paired rows as Framing A's matrix, so this total
     # reconciles with tp+fn of `sam` above instead of contradicting it.
     out["sam_detectability"] = _sam_detectability(paired_a)
+
+    # Stunting (height-for-age): gold standard `actual_haz_status` (from
+    # measured height) vs `pred_haz_status` (from the app's estimated
+    # height). Mirrors Framing A's SAM accounting above — a gold-standard
+    # stunted verdict with no usable prediction is counted, never silently
+    # dropped from the sensitivity denominator.
+    sa_haz, sp_haz, _paired_haz, excl_haz = _stunting_pairs(rows)
+    cb_haz = _stunting_confusion_block(sa_haz, sp_haz)
+    out["stunting_status_n"] = cb_haz["status_n"]
+    out["stunting"] = cb_haz["stunting"]
+    out["severe_stunting"] = cb_haz["severe_stunting"]
+    out["stunting_kappa"] = cb_haz["kappa"]
+    out["excluded_unverdicted_stunting"] = len(excl_haz)
+    out["excluded_unverdicted_severe_stunting"] = sum(
+        1 for r in excl_haz
+        if (r.get("actual_haz_status") or "").strip() == "Severely Stunted"
+    )
 
     return out
 
@@ -590,6 +663,61 @@ def render_report(analysis: dict, cov: dict) -> str:
         "",
     ]
 
+    lines += ["## Stunting status agreement (height-for-age)", ""]
+    lines += [
+        "`actual_haz_status` is the gold standard, computed from the "
+        "MEASURED height. `pred_haz_status` is the app's verdict, computed "
+        "from its photo-based ESTIMATED height. Positive = Severely "
+        "Stunted or Stunted; negative = Normal or Tall.",
+        "",
+    ]
+
+    stunting = analysis["stunting"]
+    excl_st = analysis.get("excluded_unverdicted_stunting", 0)
+    excl_st_severe = analysis.get("excluded_unverdicted_severe_stunting", 0)
+    lines += [
+        "### Stunting sensitivity (Severely Stunted or Stunted vs "
+        "Normal/Tall)",
+        "",
+        f"- Paired statuses: n = {analysis['stunting_status_n']} — the "
+        "number of children this sensitivity figure is actually computed "
+        "over",
+        f"- Excluded (gold-standard HAZ status but no predicted HAZ "
+        f"status — height-estimation step failed or was skipped): "
+        f"{excl_st} child(ren), of which gold-standard Severely Stunted: "
+        f"{excl_st_severe}",
+        f"- Confusion: TP {stunting['tp']}, FN {stunting['fn']}, "
+        f"FP {stunting['fp']}, TN {stunting['tn']}",
+        f"- Stunting sensitivity: {_fmt_rate(stunting['sensitivity'])}",
+        f"- Stunting specificity: {_fmt_rate(stunting['specificity'])}",
+        f"- PPV: {_fmt_rate(stunting['ppv'])}   "
+        f"NPV: {_fmt_rate(stunting['npv'])}",
+        "",
+    ]
+
+    severe = analysis["severe_stunting"]
+    lines += [
+        "### Severe stunting sensitivity (Severely Stunted only)",
+        "",
+        "Severe stunting is the clinically urgent category — mirrored on "
+        "the SAM-only headline above, it gets its own sensitivity number "
+        "rather than being pooled with Stunted, because a missed severe "
+        "case is the dangerous direction.",
+        "",
+        f"- Confusion: TP {severe['tp']}, FN {severe['fn']}, "
+        f"FP {severe['fp']}, TN {severe['tn']}",
+        f"- Severe stunting sensitivity: {_fmt_rate(severe['sensitivity'])}",
+        f"- Severe stunting specificity: {_fmt_rate(severe['specificity'])}",
+        f"- PPV: {_fmt_rate(severe['ppv'])}   "
+        f"NPV: {_fmt_rate(severe['npv'])}",
+        "",
+    ]
+    lines += [
+        f"- Weighted κ (linear, Severely Stunted>Stunted>Normal>Tall): "
+        + _fmt_kappa(analysis["stunting_kappa"]),
+        "",
+    ]
+
     lines += ["## Subgroups", ""]
     age_excluded = analysis.get("age_excluded_from_subgroups", 0)
     if age_excluded:
@@ -602,8 +730,10 @@ def render_report(analysis: dict, cov: dict) -> str:
     for name, block in analysis["subgroups"].items():
         h, w = block["height"], block["weight"]
         s = block["sam"]
+        st = block["stunting"]
         sg_excl = block.get("excluded_unverdicted", 0)
         sg_excl_sam = block.get("excluded_unverdicted_sam", 0)
+        sg_excl_st = block.get("excluded_unverdicted_stunting", 0)
         lines += [
             f"### {name}",
             "",
@@ -618,6 +748,10 @@ def render_report(analysis: dict, cov: dict) -> str:
             f"{sg_excl} (of which gold-standard SAM: {sg_excl_sam})",
             f"- SAM sensitivity (Framing A, full gold standard): "
             f"{_fmt_rate(s['sensitivity'])}",
+            f"- Paired stunting statuses: n={block.get('stunting_status_n', 0)}, "
+            f"excluded (gold-standard HAZ status but no predicted HAZ "
+            f"status): {sg_excl_st}",
+            f"- Stunting sensitivity: {_fmt_rate(st['sensitivity'])}",
             "",
         ]
 

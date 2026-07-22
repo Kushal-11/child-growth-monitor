@@ -589,3 +589,196 @@ def test_errored_row_from_pipeline_exception_still_carries_muac_and_oedema():
     assert a["errored_possible_sam"] == 1, (
         "an exception row with a SAM-range arm must still be counted"
     )
+
+
+# --- Stunting (height-for-age) analysis -------------------------------------
+#
+# Mirrors the SAM/MAM wasting analysis above: `actual_haz_status` (gold
+# standard, from measured height) vs `pred_haz_status` (from the app's
+# estimated height). The four-level scale (Severely Stunted / Stunted /
+# Normal / Tall) collapses to a clinical positive/negative question for
+# sensitivity/specificity, with severe stunting broken out on its own —
+# exactly like SAM gets its own headline separate from SAM+MAM — because a
+# missed severely-stunted case is the dangerous direction.
+
+from scripts.analyze_results import HAZ_CATS  # noqa: E402
+from scripts.study_stats import weighted_kappa  # noqa: E402
+
+
+def test_stunting_collapses_four_level_scale_to_positive_negative():
+    rows = [
+        _row(child_name="1", actual_haz_status="Stunted",
+             pred_haz_status="Severely Stunted"),          # TP (pos/pos)
+        _row(child_name="2", actual_haz_status="Tall",
+             pred_haz_status="Normal"),                    # TN (neg/neg)
+        _row(child_name="3", actual_haz_status="Normal",
+             pred_haz_status="Stunted"),                   # FP
+        _row(child_name="4", actual_haz_status="Severely Stunted",
+             pred_haz_status="Tall"),                       # FN
+    ]
+    a = analyze(rows)
+    st = a["stunting"]
+    assert (st["tp"], st["fp"], st["tn"], st["fn"]) == (1, 1, 1, 1)
+    v, _, _ = st["sensitivity"]
+    assert v == 0.5
+
+
+def test_severe_stunting_sensitivity_counted_separately_from_all_stunting():
+    # One Severely Stunted child correctly flagged, one Stunted child
+    # correctly flagged: "any stunting" sensitivity is 2/2, but severe
+    # stunting sensitivity must only be computed over the 1 severe case.
+    rows = [
+        _row(child_name="1", actual_haz_status="Severely Stunted",
+             pred_haz_status="Severely Stunted"),
+        _row(child_name="2", actual_haz_status="Stunted",
+             pred_haz_status="Stunted"),
+    ]
+    a = analyze(rows)
+    v_all, _, _ = a["stunting"]["sensitivity"]
+    assert v_all == 1.0
+    assert a["severe_stunting"]["tp"] == 1 and a["severe_stunting"]["fn"] == 0
+    v_severe, _, _ = a["severe_stunting"]["sensitivity"]
+    assert v_severe == 1.0
+    # The "Stunted" (non-severe) row must not have entered the severe
+    # confusion matrix as a TP/FN at all — only as a TN/FP slot.
+    assert a["severe_stunting"]["tp"] + a["severe_stunting"]["fn"] == 1
+
+
+def test_severe_stunting_sensitivity_none_when_no_severe_cases():
+    rows = [
+        _row(child_name="1", actual_haz_status="Normal",
+             pred_haz_status="Normal"),
+        _row(child_name="2", actual_haz_status="Stunted",
+             pred_haz_status="Stunted"),
+    ]
+    a = analyze(rows)
+    assert a["severe_stunting"]["sensitivity"] is None
+    assert a["severe_stunting"]["ppv"] is None
+
+
+def test_haz_cats_ordering_scores_far_errors_worse():
+    # Severely Stunted misread as Normal must cost more than Severely
+    # Stunted misread as Stunted — this is what makes HAZ_CATS's order
+    # (not, say, alphabetical) load-bearing for the weighted kappa call.
+    actual = ["Severely Stunted", "Stunted", "Normal", "Tall"]
+    near = ["Stunted", "Stunted", "Normal", "Tall"]   # SevStunted -> Stunted
+    far = ["Normal", "Stunted", "Normal", "Tall"]     # SevStunted -> Normal
+    assert weighted_kappa(actual, far, HAZ_CATS) < weighted_kappa(actual, near, HAZ_CATS)
+
+
+def test_stunting_kappa_via_analyze_orders_severity():
+    rows_near = [
+        _row(child_name="1", actual_haz_status="Severely Stunted",
+             pred_haz_status="Stunted"),
+        _row(child_name="2", actual_haz_status="Stunted",
+             pred_haz_status="Stunted"),
+        _row(child_name="3", actual_haz_status="Normal",
+             pred_haz_status="Normal"),
+        _row(child_name="4", actual_haz_status="Tall",
+             pred_haz_status="Tall"),
+    ]
+    rows_far = [
+        _row(child_name="1", actual_haz_status="Severely Stunted",
+             pred_haz_status="Normal"),
+        _row(child_name="2", actual_haz_status="Stunted",
+             pred_haz_status="Stunted"),
+        _row(child_name="3", actual_haz_status="Normal",
+             pred_haz_status="Normal"),
+        _row(child_name="4", actual_haz_status="Tall",
+             pred_haz_status="Tall"),
+    ]
+    a_near = analyze(rows_near)
+    a_far = analyze(rows_far)
+    assert a_far["stunting_kappa"] < a_near["stunting_kappa"]
+
+
+def test_stunting_kappa_none_for_single_category():
+    rows = [_row(child_name="1", actual_haz_status="Normal",
+                  pred_haz_status="Normal")]
+    a = analyze(rows)
+    assert a["stunting_kappa"] is None
+
+
+def test_unverdicted_gold_stunted_rows_excluded_from_matrix_and_counted():
+    rows = [
+        _row(child_name="001", actual_haz_status="Severely Stunted",
+             pred_haz_status="Severely Stunted"),   # correctly verdicted
+        _row(child_name="002", actual_haz_status="Severely Stunted",
+             pred_haz_status=""),                   # height estimate missing
+        _row(child_name="003", actual_haz_status="Severely Stunted",
+             pred_haz_status=""),                   # height estimate missing
+    ]
+    a = analyze(rows)
+
+    assert a["severe_stunting"]["tp"] == 1 and a["severe_stunting"]["fn"] == 0
+    v, _, _ = a["severe_stunting"]["sensitivity"]
+    assert v == 1.0
+
+    # The other two must be counted as excluded, not silently dropped.
+    assert a["excluded_unverdicted_stunting"] == 2
+    assert a["excluded_unverdicted_severe_stunting"] == 2
+
+
+def test_stunting_status_n_excludes_rows_with_no_gold_standard():
+    # A row with no actual_haz_status at all (e.g. no measured height) must
+    # not enter paired or excluded counts for stunting.
+    rows = [
+        _row(child_name="1", actual_haz_status="Normal",
+             pred_haz_status="Normal"),
+        _row(child_name="2"),  # no actual_haz_status / pred_haz_status set
+    ]
+    a = analyze(rows)
+    assert a["stunting_status_n"] == 1
+    assert a["excluded_unverdicted_stunting"] == 0
+
+
+def test_render_report_contains_stunting_sections():
+    rows = [
+        _row(actual_haz_status="Severely Stunted",
+             pred_haz_status="Severely Stunted"),
+    ]
+    text = render_report(
+        analyze(rows),
+        coverage([{"child_id": "001"}],
+                 [{"child_id": "001", "verdict": "ok"}], rows),
+    )
+    assert "Stunting" in text
+    assert "Severe stunting" in text
+    assert "Weighted" in text
+
+
+def test_render_report_stunting_sensitivity_never_shown_without_exclusion_count():
+    rows = [
+        _row(child_name="001", actual_haz_status="Severely Stunted",
+             pred_haz_status="Severely Stunted"),
+        _row(child_name="002", actual_haz_status="Severely Stunted",
+             pred_haz_status=""),
+        _row(child_name="003", actual_haz_status="Severely Stunted",
+             pred_haz_status=""),
+    ]
+    text = render_report(
+        analyze(rows),
+        coverage([{"child_id": c} for c in ("001", "002", "003")], [], rows),
+    )
+    start = text.index("Stunting")
+    section = text[start:]
+    assert "excluded" in section.lower()
+    assert "2" in section
+
+
+def test_render_report_subgroup_stunting_sensitivity():
+    rows = [
+        _row(child_name="001", sex="M", age_months="30.0",
+             actual_haz_status="Severely Stunted",
+             pred_haz_status="Severely Stunted"),
+        _row(child_name="002", sex="F", age_months="30.0",
+             actual_haz_status="Normal", pred_haz_status="Normal"),
+    ]
+    text = render_report(
+        analyze(rows),
+        coverage([{"child_id": "001"}, {"child_id": "002"}], [], rows),
+    )
+    start = text.index("### sex=M")
+    end = text.index("### sex=F")
+    section = text[start:end]
+    assert "stunting" in section.lower()
