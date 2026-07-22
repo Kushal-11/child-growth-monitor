@@ -85,3 +85,41 @@ your confirmation in the QC report.
 4. Any time: run the intake check to list gaps (missing side photo,
    missing CSV row, empty folders). Fix gaps while you still have field
    access to the child.
+
+## Runbook — commands in order
+
+All commands from the project root.
+
+    # 0. One-time: create the ground-truth template
+    PYTHONPATH=. .venv/bin/python scripts/validate_ground_truth.py --template
+
+    # 1. While gathering: what's still missing?
+    PYTHONPATH=. .venv/bin/python scripts/intake_check.py
+
+    # 2. Validate the typed-in measurements (must pass before assessing)
+    PYTHONPATH=. .venv/bin/python scripts/validate_ground_truth.py
+
+    # 3. Clean: pick best front/side per child, get the recapture list
+    PYTHONPATH=. .venv/bin/python scripts/clean_media.py
+
+    # 4. Assess every cleaned child against ground truth
+    PYTHONPATH=. .venv/bin/python scripts/batch_assess.py \
+        --images field_data/cleaned \
+        --ground-truth field_data/ground_truth.csv \
+        --output field_data/reports/batch_results.csv
+
+    # 5. Generate the study report
+    PYTHONPATH=. .venv/bin/python scripts/analyze_results.py
+
+    # Read: field_data/reports/study_report.md
+
+Re-run any stage at any time; stages never modify `raw/` and cleaning
+skips already-cleaned children (add `--force` to redo them).
+
+Stage 2's validator (step 2 above) is not just a courtesy check: when
+`batch_assess.py` is given `--images field_data/cleaned` (the per-child
+layout), it re-runs `validate_rows` on the master ground-truth CSV itself
+before assessing a single child, and refuses to run at all if that CSV has
+any errors. Running step 2 first just means you find out about a bad row
+in seconds instead of after a full batch-assess pass aborts partway
+through.
