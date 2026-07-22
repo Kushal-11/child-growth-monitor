@@ -1,4 +1,8 @@
 """Tests for scripts/analyze_results.py — analysis and coverage accounting."""
+import csv
+import sys
+from pathlib import Path
+
 from scripts.analyze_results import analyze, coverage, render_report
 
 
@@ -173,3 +177,182 @@ def test_render_report_none_kappa_renders_without_crashing():
                  [{"child_id": "001", "verdict": "ok"}], rows),
     )
     assert "n/a (needs ≥2 distinct actual categories)" in text
+
+
+# --- Finding 1: unverdicted gold-standard SAM rows must not silently -------
+# vanish from the confusion matrix and inflate sensitivity.
+#
+# batch_assess.py catches an ML/pose failure, prints a [WARN], and leaves
+# `error` blank while `pred_status_final` ends up blank too. Reproduces the
+# verified failure: 3 gold-standard SAM children, 2 unverdicted.
+
+def test_unverdicted_gold_sam_rows_excluded_from_matrix_and_counted():
+    rows = [
+        _row(child_name="001", actual_combined_status="SAM",
+             pred_status_final="SAM"),   # correctly verdicted
+        _row(child_name="002", actual_combined_status="SAM",
+             pred_status_final=""),      # ML failed silently -> no verdict
+        _row(child_name="003", actual_combined_status="SAM",
+             pred_status_final=""),      # ML failed silently -> no verdict
+    ]
+    a = analyze(rows)
+
+    # Only the one verdicted SAM row can participate in the confusion matrix.
+    assert a["sam"]["tp"] == 1 and a["sam"]["fn"] == 0
+    v, _, _ = a["sam"]["sensitivity"]
+    assert v == 1.0
+
+    # The other two must be counted as excluded, not silently dropped.
+    assert a["excluded_unverdicted"] == 2
+    assert a["excluded_unverdicted_sam"] == 2
+
+    # sam_detectability must reconcile with the matrix: it is scoped to the
+    # same paired rows, so its total equals tp+fn of the SAM confusion, not
+    # all 3 gold-standard SAM children in the batch.
+    assert a["sam_detectability"]["total_actual_sam"] == 1
+
+
+def test_report_never_shows_bare_sam_sensitivity_without_exclusion_count():
+    rows = [
+        _row(child_name="001", actual_combined_status="SAM",
+             pred_status_final="SAM"),
+        _row(child_name="002", actual_combined_status="SAM",
+             pred_status_final=""),
+        _row(child_name="003", actual_combined_status="SAM",
+             pred_status_final=""),
+    ]
+    text = render_report(
+        analyze(rows),
+        coverage([{"child_id": c} for c in ("001", "002", "003")], [], rows),
+    )
+    assert "SAM sensitivity: 1.000" in text
+
+    start = text.index("Framing A")
+    end = text.index("Framing B")
+    section = text[start:end]
+    # The bare "1.000" must not appear without the exclusion count sitting
+    # right beside it in the same Framing A block.
+    assert "SAM sensitivity: 1.000" in section
+    assert "excluded" in section.lower()
+    assert "2" in section
+
+
+# --- Finding 2 & 3: coverage() must flag results rows absent from intake ---
+
+def test_coverage_flags_results_ids_absent_from_intake():
+    intake = [{"child_id": "001"}]
+    results = [_row(child_name="001"), _row(child_name="999")]
+    cov = coverage(intake, [], results)
+
+    # Denominator stays keyed off the intake manifest...
+    assert cov["assessed"] == 1
+    # ...but the mismatch with the statistics' denominator (status_n == 2)
+    # must be visible, not silently absorbed.
+    assert cov["discrepancy"] != ""
+    assert "999" in cov["discrepancy"]
+    assert "1" in cov["discrepancy"]
+    assert cov["unknown_ids"] == ["999"]
+
+    a = analyze(results)
+    # Both rows have a full Normal/Normal gold-standard/verdict pair, so
+    # the statistics' denominator (2) disagrees with coverage's (1) — that
+    # disagreement is exactly what must be surfaced, not silently absorbed.
+    assert a["status_n"] == 2
+    assert cov["assessed"] != a["status_n"]
+
+
+def test_render_report_surfaces_unknown_result_ids():
+    intake = [{"child_id": "001"}]
+    results = [_row(child_name="001"), _row(child_name="999")]
+    text = render_report(analyze(results), coverage(intake, [], results))
+    assert "999" in text
+
+
+def test_coverage_discrepancy_is_not_dead_code_for_normal_input():
+    """20,000 randomized well-formed inputs never triggered the old
+    'BUCKET SUM MISMATCH' check because it was structurally unreachable.
+    The real integrity failure (results not in intake) must be reachable."""
+    intake = [{"child_id": "001"}, {"child_id": "002"}]
+    results = [_row(child_name="001"), _row(child_name="002")]
+    cov = coverage(intake, [], results)
+    assert cov["discrepancy"] == ""  # well-formed input stays clean
+
+
+# --- Finding 4: child_id must be stripped consistently in coverage() -------
+
+def test_coverage_strips_whitespace_from_intake_child_id():
+    intake = [{"child_id": " 001"}]  # leading space, e.g. dirty CSV export
+    results = [_row(child_name="001")]
+    cov = coverage(intake, [], results)
+    assert cov["assessed"] == 1
+    assert cov["missing_data"] == 0
+
+
+# --- Finding 5: report write must not crash on a non-UTF-8 locale ----------
+
+def test_main_writes_report_with_utf8_encoding(tmp_path, monkeypatch):
+    results_csv = tmp_path / "results.csv"
+    intake_csv = tmp_path / "intake.csv"
+    out_path = tmp_path / "report.md"
+
+    row = _row()
+    with open(results_csv, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=list(row.keys()))
+        w.writeheader()
+        w.writerow(row)
+    with open(intake_csv, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=["child_id"])
+        w.writeheader()
+        w.writerow({"child_id": "001"})
+
+    captured: dict = {}
+    orig_write_text = Path.write_text
+
+    def spy_write_text(self, data, *args, **kwargs):
+        if self == out_path:
+            captured["encoding"] = kwargs.get("encoding")
+        return orig_write_text(self, data, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", spy_write_text)
+    monkeypatch.setattr(sys, "argv", [
+        "analyze_results.py",
+        "--results", str(results_csv),
+        "--intake", str(intake_csv),
+        "--qc-report", str(tmp_path / "no_such_qc.csv"),
+        "--out", str(out_path),
+    ])
+
+    from scripts.analyze_results import main
+    main()
+
+    assert captured["encoding"] == "utf-8"
+
+
+# --- Finding 6: blank/infant ages must not land in the "6-23m" bucket ------
+
+def test_age_subgroups_exclude_blank_and_under_6_month_rows():
+    rows = [
+        _row(child_name="001", age_months="12.0"),  # genuine 6-23m
+        _row(child_name="002", age_months=""),       # blank age
+        _row(child_name="003", age_months="3.0"),    # genuine 3-month-old
+        _row(child_name="004", age_months="30.0"),   # 24-59m
+    ]
+    a = analyze(rows)
+    assert a["subgroups"]["age 6-23m"]["status_n"] == 1
+    assert a["subgroups"]["age 24-59m"]["status_n"] == 1
+    assert a["age_excluded_from_subgroups"] == 2
+    # Whole-study statistics still include all 4 rows.
+    assert a["status_n"] == 4
+
+
+def test_render_report_shows_age_exclusion_count():
+    rows = [
+        _row(child_name="001", age_months="3.0"),
+        _row(child_name="002", age_months="12.0"),
+    ]
+    text = render_report(
+        analyze(rows),
+        coverage([{"child_id": "001"}, {"child_id": "002"}], [], rows),
+    )
+    assert "## Subgroups" in text
+    assert "excluded from age stratification" in text.lower()

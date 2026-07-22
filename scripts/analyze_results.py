@@ -47,16 +47,29 @@ def _pairs(rows: list[dict], a_key: str, p_key: str) -> tuple[list, list]:
     return actual, pred
 
 
-def _status_pairs(rows: list[dict]) -> tuple[list[str], list[str]]:
-    """Full gold standard (`actual_combined_status`) vs the app's verdict."""
-    actual, pred = [], []
+def _status_pairs(
+    rows: list[dict],
+) -> tuple[list[str], list[str], list[dict], list[dict]]:
+    """Full gold standard (`actual_combined_status`) vs the app's verdict.
+
+    Returns (actual, pred, paired_rows, excluded_rows). `excluded_rows` are
+    rows that carry a gold-standard status but no usable app verdict (e.g.
+    the pose/ML step failed and `pred_status_final` is blank while `error`
+    stayed empty) — these rows vanish from the confusion matrix and must be
+    surfaced to the caller, never silently dropped (see Finding 1).
+    """
+    actual, pred, paired_rows, excluded_rows = [], [], [], []
     for r in rows:
         a = (r.get("actual_combined_status") or "").strip()
         p = (r.get("pred_status_final") or "").strip()
-        if a in STATUS_CATS and p in STATUS_CATS:
-            actual.append(a)
-            pred.append(p)
-    return actual, pred
+        if a in STATUS_CATS:
+            if p in STATUS_CATS:
+                actual.append(a)
+                pred.append(p)
+                paired_rows.append(r)
+            else:
+                excluded_rows.append(r)
+    return actual, pred, paired_rows, excluded_rows
 
 
 def _collapse_whz(status: Optional[str]) -> Optional[str]:
@@ -72,20 +85,28 @@ def _collapse_whz(status: Optional[str]) -> Optional[str]:
     return s if s in ("SAM", "MAM") else "Normal"
 
 
-def _status_pairs_whz(rows: list[dict]) -> tuple[list[str], list[str]]:
+def _status_pairs_whz(
+    rows: list[dict],
+) -> tuple[list[str], list[str], list[dict], list[dict]]:
     """WHZ arm alone (`actual_whz_status`, collapsed) vs the app's verdict.
 
     Isolates the app's own height/weight-estimation quality from the
-    structural gap caused by having no oedema or MUAC input.
+    structural gap caused by having no oedema or MUAC input. Returns
+    (actual, pred, paired_rows, excluded_rows) — see `_status_pairs` for
+    what `excluded_rows` means.
     """
-    actual, pred = [], []
+    actual, pred, paired_rows, excluded_rows = [], [], [], []
     for r in rows:
         a = _collapse_whz(r.get("actual_whz_status"))
         p = (r.get("pred_status_final") or "").strip()
-        if a is not None and p in STATUS_CATS:
-            actual.append(a)
-            pred.append(p)
-    return actual, pred
+        if a is not None:
+            if p in STATUS_CATS:
+                actual.append(a)
+                pred.append(p)
+                paired_rows.append(r)
+            else:
+                excluded_rows.append(r)
+    return actual, pred, paired_rows, excluded_rows
 
 
 def _confusion_block(actual: list[str], pred: list[str]) -> dict:
@@ -132,21 +153,37 @@ def _analyze_block(rows: list[dict]) -> dict:
     out["weight"] = bland_altman(aw, pw) if aw else {"n": 0}
 
     # Framing A: full WHO OR-rule gold standard (oedema OR MUAC OR WHZ).
-    sa, sp = _status_pairs(rows)
+    sa, sp, paired_a, excl_a = _status_pairs(rows)
     cb = _confusion_block(sa, sp)
     out["status_n"] = cb["status_n"]
     out["sam"] = cb["sam"]
     out["sam_mam"] = cb["sam_mam"]
     out["kappa"] = cb["kappa"]
+    # Rows with a gold-standard status but no usable app verdict — excluded
+    # from the confusion matrix above and reported here so a sensitivity
+    # figure can never be read without also seeing what was dropped.
+    out["excluded_unverdicted"] = len(excl_a)
+    out["excluded_unverdicted_sam"] = sum(
+        1 for r in excl_a
+        if (r.get("actual_combined_status") or "").strip() == "SAM"
+    )
 
     # Framing B: WHZ arm alone — isolates the app's own estimation quality
     # from the structural blind spot to oedema/MUAC-only SAM cases.
-    sa_whz, sp_whz = _status_pairs_whz(rows)
+    sa_whz, sp_whz, paired_b, excl_b = _status_pairs_whz(rows)
     cb_whz = _confusion_block(sa_whz, sp_whz)
     out["status_n_whz"] = cb_whz["status_n"]
     out["sam_whz"] = cb_whz["sam"]
     out["sam_mam_whz"] = cb_whz["sam_mam"]
     out["kappa_whz"] = cb_whz["kappa"]
+    out["excluded_unverdicted_whz"] = len(excl_b)
+    out["excluded_unverdicted_sam_whz"] = sum(
+        1 for r in excl_b if _collapse_whz(r.get("actual_whz_status")) == "SAM"
+    )
+
+    # Scoped to the same paired rows as Framing A's matrix, so this total
+    # reconciles with tp+fn of `sam` above instead of contradicting it.
+    out["sam_detectability"] = _sam_detectability(paired_a)
 
     return out
 
@@ -155,15 +192,22 @@ def analyze(results: list[dict]) -> dict:
     """Pure analysis over assessed rows (rows with error are excluded)."""
     rows = [r for r in results if not (r.get("error") or "").strip()]
     out = _analyze_block(rows)
-    out["sam_detectability"] = _sam_detectability(rows)
     out["subgroups"] = {}
+
+    # Rows with a missing/unparseable age, or a genuine age below the
+    # youngest defined band, cannot be placed in an accurately-labelled age
+    # bucket — exclude them from age stratification (they still count in
+    # the whole-study statistics above) rather than silently mislabelling
+    # them as "age 6-23m" via a `0` fallback.
+    ages = [(r, _f(r, "age_months")) for r in rows]
+    out["age_excluded_from_subgroups"] = sum(
+        1 for _, age in ages if age is None or age < 6
+    )
     partitions = {
         "sex=M": [r for r in rows if (r.get("sex") or "").upper() == "M"],
         "sex=F": [r for r in rows if (r.get("sex") or "").upper() == "F"],
-        "age 6-23m": [r for r in rows
-                      if (_f(r, "age_months") or 0) < 24],
-        "age 24-59m": [r for r in rows
-                       if (_f(r, "age_months") or 0) >= 24],
+        "age 6-23m": [r for r, age in ages if age is not None and 6 <= age < 24],
+        "age 24-59m": [r for r, age in ages if age is not None and age >= 24],
     }
     for name, part in partitions.items():
         out["subgroups"][name] = _analyze_block(part)
@@ -180,16 +224,23 @@ def coverage(
     an errored row's ground truth/prediction cannot be trusted for coverage
     accounting either.
     """
-    total_ids = {r["child_id"] for r in intake_rows}
+    total_ids = {(r["child_id"] or "").strip() for r in intake_rows}
     qc_failed_ids = {
-        r["child_id"] for r in qc_rows if r.get("verdict") == "failed"
+        (r["child_id"] or "").strip()
+        for r in qc_rows if r.get("verdict") == "failed"
     }
+    result_ids = {(r.get("child_name") or "").strip() for r in results}
     assessed_ids = {
         (r.get("child_name") or "").strip()
         for r in results if not (r.get("error") or "").strip()
     } & total_ids
     qc_failed_ids &= total_ids - assessed_ids
     missing_ids = total_ids - assessed_ids - qc_failed_ids
+    # Children present in the results file but absent from the intake
+    # manifest: `analyze()` still counts these in its statistics (it never
+    # consults the manifest), so the denominators silently disagree unless
+    # this is flagged (see Finding 3).
+    unknown_ids = result_ids - total_ids
 
     cov = {
         "total": len(total_ids),
@@ -197,12 +248,23 @@ def coverage(
         "qc_failed": len(qc_failed_ids),
         "missing_data": len(missing_ids),
         "missing_ids": sorted(missing_ids),
+        "unknown_ids": sorted(unknown_ids),
         "discrepancy": "",
     }
+    problems = []
+    if unknown_ids:
+        sample = ", ".join(sorted(unknown_ids)[:5])
+        problems.append(
+            f"{len(unknown_ids)} result row(s) reference child_id(s) not in "
+            f"the intake manifest (e.g. {sample}) — the statistics above "
+            "include these children even though this coverage report "
+            "cannot account for them."
+        )
     if cov["assessed"] + cov["qc_failed"] + cov["missing_data"] != cov["total"]:
-        cov["discrepancy"] = (
+        problems.append(
             "BUCKET SUM MISMATCH — investigate before trusting this report"
         )
+    cov["discrepancy"] = " ".join(problems)
     return cov
 
 
@@ -250,6 +312,11 @@ def render_report(analysis: dict, cov: dict) -> str:
     ]
     if cov["missing_ids"]:
         lines += [f"- Missing-data IDs: {', '.join(cov['missing_ids'])}"]
+    if cov.get("unknown_ids"):
+        lines += [
+            f"- Result rows with child_id not in intake manifest: "
+            f"{len(cov['unknown_ids'])} ({', '.join(cov['unknown_ids'])})"
+        ]
     if cov["discrepancy"]:
         lines += ["", f"**{cov['discrepancy']}**"]
     lines += [""]
@@ -278,6 +345,8 @@ def render_report(analysis: dict, cov: dict) -> str:
     ]
 
     sam = analysis["sam"]
+    excl_a = analysis.get("excluded_unverdicted", 0)
+    excl_a_sam = analysis.get("excluded_unverdicted_sam", 0)
     lines += [
         "### SAM sensitivity — Framing A: full gold standard "
         "(oedema OR MUAC<11.5 OR WHZ<-3)",
@@ -285,7 +354,11 @@ def render_report(analysis: dict, cov: dict) -> str:
         "Answers: can photo screening replace a full manual assessment? "
         "This is the honest headline number for deployment decisions.",
         "",
-        f"- Paired statuses: n = {analysis['status_n']}",
+        f"- Paired statuses: n = {analysis['status_n']} — the number of "
+        "children this sensitivity figure is actually computed over",
+        f"- Excluded (gold-standard status but no app verdict — pose/ML "
+        f"step failed or was skipped): {excl_a} child(ren), of which "
+        f"gold-standard SAM: {excl_a_sam}",
         f"- Confusion: TP {sam['tp']}, FN {sam['fn']}, FP {sam['fp']}, "
         f"TN {sam['tn']}",
         f"- SAM sensitivity: {_fmt_rate(sam['sensitivity'])}",
@@ -295,6 +368,8 @@ def render_report(analysis: dict, cov: dict) -> str:
     ]
 
     sam_whz = analysis["sam_whz"]
+    excl_b = analysis.get("excluded_unverdicted_whz", 0)
+    excl_b_sam = analysis.get("excluded_unverdicted_sam_whz", 0)
     lines += [
         "### SAM sensitivity — Framing B: WHZ arm alone "
         "(manual height/weight only, collapsed to SAM/MAM/Normal)",
@@ -303,7 +378,10 @@ def render_report(analysis: dict, cov: dict) -> str:
         "This isolates ML quality from the structural blind spot to "
         "oedema/MUAC-only cases.",
         "",
-        f"- Paired statuses: n = {analysis['status_n_whz']}",
+        f"- Paired statuses: n = {analysis['status_n_whz']} — the number "
+        "of children this sensitivity figure is actually computed over",
+        f"- Excluded (gold-standard WHZ status but no app verdict): "
+        f"{excl_b} child(ren), of which gold-standard SAM: {excl_b_sam}",
         f"- Confusion: TP {sam_whz['tp']}, FN {sam_whz['fn']}, "
         f"FP {sam_whz['fp']}, TN {sam_whz['tn']}",
         f"- SAM sensitivity: {_fmt_rate(sam_whz['sensitivity'])}",
@@ -316,7 +394,8 @@ def render_report(analysis: dict, cov: dict) -> str:
         "**Why these differ:** the app cannot in principle detect SAM "
         "cases triggered only by oedema or only by MUAC, because it never "
         "receives that data. Of the "
-        f"{det['total_actual_sam']} gold-standard SAM cases in this batch, "
+        f"{det['total_actual_sam']} gold-standard SAM cases with a usable "
+        "app verdict in this batch, "
         f"{det['whz_detectable']} were detectable in principle from the "
         f"WHZ arm and {det['muac_or_oedema_only']} were reachable only via "
         "MUAC or oedema. A gap between Framing A and Framing B sensitivity "
@@ -324,6 +403,14 @@ def render_report(analysis: dict, cov: dict) -> str:
         "the underlying model.",
         "",
     ]
+    if excl_a_sam:
+        lines += [
+            f"**Not counted above:** {excl_a_sam} additional gold-standard "
+            "SAM case(s) received no app verdict at all (pose/ML step "
+            "failed or was skipped) and are excluded from every sensitivity "
+            "figure on this page — see \"Excluded\" under Framing A.",
+            "",
+        ]
 
     sm = analysis["sam_mam"]
     lines += [
@@ -342,6 +429,14 @@ def render_report(analysis: dict, cov: dict) -> str:
     ]
 
     lines += ["## Subgroups", ""]
+    age_excluded = analysis.get("age_excluded_from_subgroups", 0)
+    if age_excluded:
+        lines += [
+            f"- {age_excluded} row(s) excluded from age stratification "
+            "(missing/unparseable age, or age below the youngest defined "
+            "band) — still counted in the whole-study statistics above.",
+            "",
+        ]
     for name, block in analysis["subgroups"].items():
         h, w = block["height"], block["weight"]
         s = block["sam"]
@@ -406,7 +501,7 @@ def main() -> None:
     report = render_report(analyze(results),
                            coverage(intake_rows, qc_rows, results))
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(report)
+    args.out.write_text(report, encoding="utf-8")
     print(f"Report written to {args.out}")
 
 
