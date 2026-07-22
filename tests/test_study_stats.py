@@ -62,3 +62,29 @@ def test_weighted_kappa_orders_error_severity():
     near = ["MAM", "MAM", "Normal", "SAM", "MAM", "Normal"]   # SAM->MAM
     far = ["Normal", "MAM", "Normal", "SAM", "MAM", "Normal"]  # SAM->Normal
     assert weighted_kappa(actual, far, CATS) < weighted_kappa(actual, near, CATS)
+
+
+def test_weighted_kappa_single_category_is_none_not_nan():
+    # Entirely realistic for a subgroup (e.g. an age band where all
+    # children are Normal): kappa's formula divides 0/0. Must report
+    # None, never a silent nan that could pass unnoticed in a report.
+    y = ["Normal", "Normal", "Normal", "Normal"]
+    assert weighted_kappa(y, y, CATS) is None
+
+
+def test_confusion_binary_mismatched_lengths_raises():
+    actual = ["SAM", "MAM", "Normal"]
+    pred = ["SAM", "MAM"]
+    with pytest.raises(ValueError, match=r"3.*2|2.*3"):
+        confusion_binary(actual, pred, positive={"SAM"})
+
+
+def test_bland_altman_single_pair_loa_is_none():
+    # With n=1 the sample SD is undefined; a zero-width interval would
+    # misleadingly read as perfect agreement. bias/mae ARE computable.
+    r = bland_altman(actual=[80.0], predicted=[82.0])
+    assert r["n"] == 1
+    assert r["bias"] == pytest.approx(2.0)
+    assert r["mae"] == pytest.approx(2.0)
+    assert r["loa_low"] is None
+    assert r["loa_high"] is None

@@ -6,6 +6,7 @@ for proportions; linearly weighted Cohen's kappa for the ordered
 SAM > MAM > Normal scale.
 """
 import math
+import warnings
 from typing import Optional
 
 import numpy as np
@@ -18,12 +19,20 @@ def bland_altman(actual: list[float], predicted: list[float]) -> dict:
         raise ValueError("need equal, non-empty actual/predicted lists")
     diffs = np.asarray(predicted, dtype=float) - np.asarray(actual, dtype=float)
     bias = float(np.mean(diffs))
-    sd = float(np.std(diffs, ddof=1)) if len(diffs) > 1 else 0.0
+    if len(diffs) > 1:
+        sd = float(np.std(diffs, ddof=1))
+        loa_low: Optional[float] = bias - 1.96 * sd
+        loa_high: Optional[float] = bias + 1.96 * sd
+    else:
+        # Sample SD (ddof=1) is undefined for a single pair; a zero-width
+        # interval would misreport this as perfect agreement.
+        loa_low = None
+        loa_high = None
     return {
         "n": len(diffs),
         "bias": bias,
-        "loa_low": bias - 1.96 * sd,
-        "loa_high": bias + 1.96 * sd,
+        "loa_low": loa_low,
+        "loa_high": loa_high,
         "mae": float(np.mean(np.abs(diffs))),
     }
 
@@ -43,6 +52,10 @@ def confusion_binary(
     actual: list[str], pred: list[str], positive: set[str],
 ) -> tuple[int, int, int, int]:
     """(tp, fp, tn, fn) treating membership of `positive` as the positive class."""
+    if len(actual) != len(pred):
+        raise ValueError(
+            f"need equal-length actual/pred lists, got {len(actual)} and {len(pred)}"
+        )
     tp = fp = tn = fn = 0
     for a, p in zip(actual, pred):
         a_pos, p_pos = a in positive, p in positive
@@ -76,8 +89,18 @@ def binary_metrics(tp: int, fp: int, tn: int, fn: int) -> dict:
 
 def weighted_kappa(
     actual: list[str], pred: list[str], categories: list[str],
-) -> float:
-    """Linearly weighted Cohen's kappa over an ordered category scale."""
-    return float(
-        cohen_kappa_score(actual, pred, labels=categories, weights="linear")
-    )
+) -> Optional[float]:
+    """Linearly weighted Cohen's kappa over an ordered category scale.
+
+    Undefined (0/0) when there is no disagreement variance to weight —
+    e.g. every value falls in a single category, entirely realistic for
+    a subgroup. sklearn returns `nan` with a RuntimeWarning in that case;
+    this reports `None` instead so a stratified report never prints a
+    silent `nan`.
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        kappa = cohen_kappa_score(actual, pred, labels=categories, weights="linear")
+    if math.isnan(kappa):
+        return None
+    return float(kappa)
