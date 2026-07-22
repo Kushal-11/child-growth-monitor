@@ -37,18 +37,123 @@ DEFAULT_GROUND_TRUTH = Path("field_data/ground_truth.csv")
 
 # Columns that identify a real child. Kept in the roster, never written to
 # ground_truth.csv, never seen by the assessment pipeline.
-IDENTIFYING_COLS = ["child_name", "caregiver_name", "village"]
+IDENTIFYING_COLS = ["child_name", "area"]
+
+# The category the health worker wrote on the paper form. Recorded as a
+# CROSS-CHECK, never as the gold standard: the pipeline computes status
+# from the measurements via the WHO OR-rule, and a disagreement between
+# the two means a transcription error worth investigating. Also excluded
+# from ground_truth.csv so it cannot leak into the study's gold standard.
+FIELD_CATEGORY_COL = "field_category"
+VALID_CATEGORIES = {"SAM", "MAM", "NORMAL"}
 
 ROSTER_COLS = (
     ["child_id"] + IDENTIFYING_COLS
     + [c for c in ALL_COLS if c != "child_id"]
+    + [FIELD_CATEGORY_COL]
 )
 
 TEMPLATE = (
     ",".join(ROSTER_COLS) + "\n"
-    + "001,Example Child,Example Caregiver,Example Village,"
-      "F,2023-04-12,2026-07-15,82.5,10.4,13.2,no,delete this example row\n"
+    + "001,Example Child,Example Village,"
+      "F,2023-04-12,2026-07-15,82.5,10.4,13.2,no,delete this example row,Normal\n"
 )
+
+
+def _computed_category(row: dict) -> tuple[str, str]:
+    """
+    Compute WHO status from this row's measurements via the OR-rule.
+
+    Returns (status, detail). status is '' when too little was measured to
+    decide - which is not an error, just an unknown.
+    """
+    from datetime import date
+
+    from app.services.nutrition_service import NutritionService
+    from app.services.who_data_service import WHODataService
+
+    from scripts.batch_assess import _combine_status, _muac_status
+
+    global _WHO_SERVICES
+    if _WHO_SERVICES is None:
+        who = WHODataService()
+        who.load_all()
+        _WHO_SERVICES = (who, NutritionService(who))
+    who, nutr = _WHO_SERVICES
+
+    def _f(key: str):
+        try:
+            return float((row.get(key) or "").strip())
+        except (TypeError, ValueError):
+            return None
+
+    sex = (row.get("sex") or "").strip().upper()
+    height, weight, muac = _f("actual_height_cm"), _f("actual_weight_kg"), _f("muac_cm")
+    oedema = (row.get("oedema") or "").strip().lower() == "yes"
+
+    age_months = None
+    try:
+        dob = date.fromisoformat((row.get("date_of_birth") or "").strip())
+        mdate = date.fromisoformat((row.get("measurement_date") or "").strip())
+        age_months = (mdate - dob).days / 30.4375
+    except ValueError:
+        pass
+
+    whz_status = None
+    detail_bits = []
+    if (height and weight and sex in ("M", "F")
+            and age_months is not None and 0 <= age_months <= 60):
+        whz = nutr.compute_whz(sex, age_months, height, weight)
+        if whz is not None:
+            whz_status = "SAM" if whz < -3 else "MAM" if whz < -2 else "Normal"
+            detail_bits.append(f"WHZ {whz:+.2f}->{whz_status}")
+
+    # age_months gates MUAC: WHO's absolute cutoffs are defined for
+    # 6-59 months only, so _muac_status returns None outside that window.
+    muac_status = _muac_status(muac, age_months)
+    if muac_status:
+        detail_bits.append(f"MUAC {muac}->{muac_status}")
+    if oedema:
+        detail_bits.append("oedema->SAM")
+
+    combined = _combine_status(whz_status, muac_status, oedema)
+    return (combined or ""), ", ".join(detail_bits)
+
+
+_WHO_SERVICES = None
+
+
+def check_field_categories(rows: list[dict]) -> list[str]:
+    """
+    Compare the health worker's written category against the category the
+    WHO OR-rule computes from the same row's measurements.
+
+    A mismatch is reported as a warning, never an error: it may be a
+    transcription slip, but it may equally be clinical judgment the
+    measurements alone do not capture. Either way a human should look.
+    """
+    warnings: list[str] = []
+    for i, row in enumerate(rows, start=2):
+        written = (row.get(FIELD_CATEGORY_COL) or "").strip()
+        if not written:
+            continue
+        cid = (row.get("child_id") or "").strip() or "?"
+        if written.upper() not in VALID_CATEGORIES:
+            warnings.append(
+                f"row {i} (child {cid}): field_category '{written}' is not "
+                f"SAM, MAM, or Normal"
+            )
+            continue
+        computed, detail = _computed_category(row)
+        if not computed:
+            continue
+        if computed.upper() != written.upper():
+            warnings.append(
+                f"row {i} (child {cid}): form says {written.upper()}, "
+                f"measurements compute {computed.upper()} ({detail}) "
+                f"- check for a transcription error"
+            )
+    return warnings
 
 
 def read_roster(path: Path) -> tuple[list[dict], list[str]]:
@@ -133,6 +238,7 @@ def main() -> None:
     # Validate BEFORE writing, so a bad roster never produces a
     # ground-truth file that looks usable.
     errors, warnings = validate_rows(gt_rows, fieldnames=ALL_COLS)
+    warnings += check_field_categories(roster_rows)
     for w in warnings:
         print(f"WARNING  {w}")
     if errors:
