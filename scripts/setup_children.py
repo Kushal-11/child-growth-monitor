@@ -56,8 +56,102 @@ ROSTER_COLS = (
 TEMPLATE = (
     ",".join(ROSTER_COLS) + "\n"
     + "001,Example Child,Example Village,"
-      "F,2023-04-12,2026-07-15,82.5,10.4,13.2,no,delete this example row,Normal\n"
+      "F,12/04/2023,15/07/2026,82.5,10.4,13.2,no,"
+      "DATES ARE DD/MM/YYYY - delete this example row,Normal\n"
 )
+
+
+DATE_COLS = ["date_of_birth", "measurement_date"]
+
+# Indian convention, matching the CMAM paper forms: day first.
+_DMY_SEPARATORS = "/-."
+
+
+def normalize_date(raw: str) -> tuple[str, str]:
+    """
+    Accept a roster date and return (iso_value, error).
+
+    Accepts DD/MM/YYYY as written on the paper forms (also DD-MM-YYYY and
+    DD.MM.YYYY), and YYYY-MM-DD if already converted. Exactly one of the
+    two is returned as ISO; anything else is an error, never a guess.
+
+    Two-digit years are REJECTED. '30/5/25' cannot be distinguished from
+    1925 by the parser, and a wrong century sails past the 0-60 month age
+    gate as a merely-implausible date rather than an impossible one.
+
+    Day-first is assumed because that is what the forms use. A date like
+    05/06/2025 is therefore 5 June, never 6 May - which is why the caller
+    prints the interpretation back for a human to eyeball.
+    """
+    from datetime import date
+
+    text = (raw or "").strip()
+    if not text:
+        return "", ""
+
+    # Already ISO (YYYY-MM-DD): 4-digit year first.
+    if len(text) >= 8 and text[:4].isdigit() and "-" in text:
+        try:
+            return date.fromisoformat(text).isoformat(), ""
+        except ValueError:
+            return "", f"'{text}' is not a real date"
+
+    sep = next((s for s in _DMY_SEPARATORS if s in text), None)
+    if sep is None:
+        return "", (
+            f"'{text}' is not a date - write it as DD/MM/YYYY, e.g. 30/05/2025"
+        )
+
+    parts = [p.strip() for p in text.split(sep)]
+    if len(parts) != 3 or not all(p.isdigit() for p in parts):
+        return "", (
+            f"'{text}' is not a date - write it as DD/MM/YYYY, e.g. 30/05/2025"
+        )
+
+    day, month, year = parts
+    if len(year) != 4:
+        return "", (
+            f"'{text}' has a {len(year)}-digit year - write the full year, "
+            f"e.g. 30/05/2025 not 30/05/25"
+        )
+    try:
+        return date(int(year), int(month), int(day)).isoformat(), ""
+    except ValueError:
+        if int(month) > 12 and int(day) <= 12:
+            return "", (
+                f"'{text}' looks like MM/DD/YYYY - this file uses DD/MM/YYYY "
+                f"(day first), so write it as {month}/{day}/{year}"
+            )
+        return "", f"'{text}' is not a real date (read as day/month/year)"
+
+
+def normalize_roster_dates(
+    rows: list[dict],
+) -> tuple[list[str], list[tuple[str, str, str, str]]]:
+    """
+    Rewrite date columns to ISO in place.
+
+    Returns (errors, interpretations) where each interpretation is
+    (child_id, column, original_text, iso_value) for rows whose date was
+    written day-first, so the caller can show a human what it understood.
+    """
+    from datetime import date
+
+    errors: list[str] = []
+    interpretations: list[tuple[str, str, str, str]] = []
+    for i, row in enumerate(rows, start=2):
+        cid = (row.get("child_id") or "").strip() or "?"
+        for col in DATE_COLS:
+            original = (row.get(col) or "").strip()
+            iso, err = normalize_date(original)
+            if err:
+                errors.append(f"row {i} (child {cid}): {col} {err}")
+                continue
+            row[col] = iso
+            if iso and iso != original:
+                pretty = date.fromisoformat(iso).strftime("%d %B %Y")
+                interpretations.append((cid, col, original, pretty))
+    return errors, interpretations
 
 
 def _computed_category(row: dict) -> tuple[str, str]:
@@ -232,6 +326,23 @@ def main() -> None:
               file=sys.stderr)
         print(f"Expected: {', '.join(ROSTER_COLS)}", file=sys.stderr)
         sys.exit(1)
+
+    # Convert DD/MM/YYYY (as written on the paper forms) to ISO before
+    # anything downstream sees it. Bad dates stop the run here.
+    date_errors, interpretations = normalize_roster_dates(roster_rows)
+    if date_errors:
+        for e in date_errors:
+            print(f"ERROR    {e}")
+        print(f"\n{len(date_errors)} date problem(s) in {args.roster}. "
+              f"Dates go in as DD/MM/YYYY, e.g. 30/05/2025.")
+        print("Nothing was written.", file=sys.stderr)
+        sys.exit(1)
+
+    if interpretations:
+        print("Dates read as day/month/year — check these are right:")
+        for cid, col, original, pretty in interpretations:
+            print(f"  child {cid}  {col}: {original}  ->  {pretty}")
+        print()
 
     gt_rows = to_ground_truth_rows(roster_rows)
 
