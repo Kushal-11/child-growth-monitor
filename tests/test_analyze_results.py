@@ -535,3 +535,37 @@ def test_errored_gold_standard_sam_child_is_counted_not_discarded():
     assert "Worst-case sensitivity" in text
     # tp=1 over denominator 1 paired + 1 unverdicted + 1 errored = 0.333
     assert "0.333" in text
+
+
+def test_errored_row_with_blank_gold_standard_still_flagged_via_raw_muac():
+    """A garbled DOB leaves the age unknown, so `_muac_status` correctly
+    declines to classify and `actual_combined_status` comes back blank.
+
+    Blank means indeterminate, not negative. Counting only `== "SAM"`
+    would read it as negative and let a child with a 10.5 cm arm vanish
+    into a bare exclusion tally — the exact scenario the errored-row
+    accounting exists to prevent. The raw tape reading survives the error,
+    so the count keys on that.
+    """
+    rows = [
+        _row(child_name="001", actual_combined_status="SAM",
+             pred_status_final="SAM"),
+        _row(child_name="002", actual_combined_status="", muac_cm="10.5",
+             error="unparseable date_of_birth: 'xx'"),
+        _row(child_name="003", actual_combined_status="", actual_oedema="yes",
+             error="unparseable date_of_birth: 'yy'"),
+        _row(child_name="004", actual_combined_status="", muac_cm="13.0",
+             error="pose failed"),          # errored but no sign of SAM
+    ]
+    a = analyze(rows)
+
+    assert a["errored"] == 3
+    assert a["errored_sam"] == 0, "gold standard is genuinely indeterminate"
+    assert a["errored_possible_sam"] == 2, (
+        "the 10.5cm arm and the oedema tick must both still be counted"
+    )
+
+    text = render_report(a, coverage([], [], rows))
+    assert "SAM or possibly SAM: 2" in text
+    # tp=1 over 1 paired + 2 possibly-SAM = 0.333
+    assert "0.333" in text

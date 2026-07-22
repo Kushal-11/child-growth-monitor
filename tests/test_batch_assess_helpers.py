@@ -126,14 +126,26 @@ def test_muac_undefined_outside_6_to_59_months():
 
 def test_muac_age_window_matches_app_muac_service():
     """The study's gold standard and the app's own classifier must not
-    drift apart on the age window. Vocabularies differ (batch_assess says
+    drift apart on the age window.
+
+    Goes through MUACService.estimate() rather than _classify(): estimate()
+    evaluates the service's OWN age bound internally, so widening it (say
+    to `<= 60.0`) breaks this test. Passing a precomputed in_range flag to
+    _classify would only prove it honours a flag it was handed, which is
+    not the guarantee we need. Vocabularies differ (batch_assess says
     "MAM", MUACService says "At Risk (MAM)"), so compare definedness."""
     from app.services.muac_service import MUACService
 
     for age in (5.9, 6.0, 24.0, 59.9, 60.0):
-        in_range = 6.0 <= age <= 59.9
-        assert (_muac_status(11.4, age) is None) is (not in_range)
-        assert (MUACService._classify(11.4, in_range) is None) is (not in_range)
+        study = _muac_status(11.4, age)
+        app = MUACService.estimate(
+            age_months=age, sex="M", whz=None, manual_muac_cm=11.4,
+        )
+        assert (study is None) == (app.muac_status is None), (
+            f"age {age}: study={study!r} app={app.muac_status!r} — the "
+            "study gold standard and the app classifier disagree on "
+            "whether MUAC is defined at this age"
+        )
 
 
 def test_collapse_wasting():
@@ -739,3 +751,61 @@ def test_app_verdict_takes_worst_arm_in_both_directions():
 
     assert row["pred_whz_status"] == "Normal"
     assert row["pred_status_final"] == "SAM"
+
+
+class _SpyNutritionService:
+    """Records the age every WHO lookup is performed at."""
+
+    def __init__(self):
+        self.calls: list[tuple] = []
+
+    def compute_haz(self, sex, age, height):
+        self.calls.append(("haz", age))
+        return None
+
+    def compute_whz(self, sex, age, height, weight):
+        self.calls.append(("whz", age))
+        return None
+
+
+def test_unusable_measurement_date_computes_no_who_zscores_at_all():
+    """An unparseable measurement_date must not merely suppress the app's
+    verdict — it must stop the GOLD STANDARD being computed too.
+
+    Regression: the z-score guards keyed on `dob`, which stays truthy when
+    only measurement_date is bad, so WHO lookups ran at the 24.0-month
+    placeholder. That is a fabricated age sitting exactly on the WFL/WFH
+    table boundary, and its output was written to actual_whz_status /
+    actual_combined_status as though measured. For a child genuinely 6
+    months old this is an 18-month error in the gold standard the app is
+    scored against.
+    """
+    spy = _SpyNutritionService()
+    dob = date.today() - timedelta(days=183)  # genuinely ~6 months old
+    row = _process_child_image(
+        fname="child11.jpg",
+        img_path=Path("child11.jpg"),
+        gt={
+            "date_of_birth": dob.isoformat(),
+            "measurement_date": "2026-13-45",   # unparseable
+            "sex": "M",
+            "actual_height_cm": "65.0",
+            "actual_weight_kg": "6.0",
+        },
+        meas_svc=_FakeMeasService(
+            predicted_height_cm=65.0, body_segments={"torso": 1.0},
+        ),
+        ml_svc=_FakeMLService(wasting_status="Normal"),
+        nutr_svc=spy,
+        who_data=_FakeWHOData(),
+        side_image_bytes=None,
+        child_id=None,
+        verbose=False,
+    )
+
+    assert spy.calls == [], (
+        f"no WHO lookup may run without a trustworthy age; got {spy.calls}"
+    )
+    assert row["actual_whz_status"] is None
+    assert row["actual_combined_status"] is None
+    assert row["pred_status_final"] is None

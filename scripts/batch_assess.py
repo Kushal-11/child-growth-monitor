@@ -562,13 +562,22 @@ def _process_child_image(
     actual_whz_z      = None
     actual_haz_status = None
     actual_whz_status = None
-    if actual_height and dob:
-        actual_haz_z = nutr_svc.compute_haz(sex, int(round(age_months)), actual_height)
+    # Guarded on `known_age_months`, NOT on `dob`. A parseable dob combined
+    # with an unparseable measurement_date leaves `dob` truthy while
+    # `age_months` holds the 24.0 placeholder — which is both fabricated and
+    # sitting exactly on the WFL/WFH table boundary. Keying on `dob` here
+    # would compute the gold standard at that fabricated age and write it to
+    # the CSV as if it were real. WHO tables are indexed by COMPLETED months,
+    # so truncate rather than round: 23.7 months is row 23.
+    if actual_height and known_age_months is not None:
+        actual_haz_z = nutr_svc.compute_haz(sex, int(known_age_months), actual_height)
         if actual_haz_z is not None:
             actual_haz_status = _haz_status_from_z(actual_haz_z)
             actual_haz_z = round(actual_haz_z, 3)
-    if actual_height and actual_weight and dob:
-        actual_whz_z = nutr_svc.compute_whz(sex, age_months, actual_height, actual_weight)
+    if actual_height and actual_weight and known_age_months is not None:
+        actual_whz_z = nutr_svc.compute_whz(
+            sex, known_age_months, actual_height, actual_weight,
+        )
         if actual_whz_z is not None:
             actual_whz_status = _whz_status_from_z(actual_whz_z)
             actual_whz_z = round(actual_whz_z, 3)
@@ -578,13 +587,15 @@ def _process_child_image(
     pred_whz_z      = None
     pred_haz_status = None
     pred_whz_status = None
-    if pred_height and dob:
-        pred_haz_z = nutr_svc.compute_haz(sex, int(round(age_months)), pred_height)
+    if pred_height and known_age_months is not None:
+        pred_haz_z = nutr_svc.compute_haz(sex, int(known_age_months), pred_height)
         if pred_haz_z is not None:
             pred_haz_status = _haz_status_from_z(pred_haz_z)
             pred_haz_z = round(pred_haz_z, 3)
-    if pred_height and pred_weight_ml and dob:
-        pred_whz_z = nutr_svc.compute_whz(sex, age_months, pred_height, pred_weight_ml)
+    if pred_height and pred_weight_ml and known_age_months is not None:
+        pred_whz_z = nutr_svc.compute_whz(
+            sex, known_age_months, pred_height, pred_weight_ml,
+        )
         if pred_whz_z is not None:
             pred_whz_status = _whz_status_from_z(pred_whz_z)
             pred_whz_z = round(pred_whz_z, 3)

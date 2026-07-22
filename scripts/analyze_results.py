@@ -147,6 +147,30 @@ def _sam_detectability(rows: list[dict]) -> dict:
     }
 
 
+def _possible_sam_on_errored_row(r: dict) -> bool:
+    """True when an errored row shows any sign of SAM.
+
+    An errored row has no trustworthy age, so `_muac_status` correctly
+    declines to classify (WHO's MUAC cutoffs are undefined without an age)
+    and `actual_combined_status` comes back blank. That blank means
+    *indeterminate*, not negative — but counting only `== "SAM"` would read
+    it as negative and let the child vanish into a bare exclusion tally.
+
+    The raw tape reading and the oedema box survive on the row regardless,
+    and a 10.5 cm arm or a ticked oedema box is a child who must not
+    disappear from a malnutrition study because their date of birth was
+    written down badly. Deliberately errs toward flagging: the cost of a
+    false flag here is one manual record check, the cost of a miss is a
+    SAM child dropped from the denominator.
+    """
+    if (r.get("actual_combined_status") or "").strip() == "SAM":
+        return True
+    if (r.get("actual_oedema") or "").strip().lower() == "yes":
+        return True
+    muac = _f(r, "muac_cm")
+    return muac is not None and muac < 11.5
+
+
 def _analyze_block(rows: list[dict]) -> dict:
     """Metrics for one set of rows (whole study or one subgroup)."""
     out: dict = {}
@@ -208,6 +232,9 @@ def analyze(results: list[dict]) -> dict:
     out["errored_sam"] = sum(
         1 for r in errored
         if (r.get("actual_combined_status") or "").strip() == "SAM"
+    )
+    out["errored_possible_sam"] = sum(
+        1 for r in errored if _possible_sam_on_errored_row(r)
     )
     out["errored_sam_whz"] = sum(
         1 for r in errored if _collapse_whz(r.get("actual_whz_status")) == "SAM"
@@ -458,10 +485,14 @@ def render_report(analysis: dict, cov: dict) -> str:
         f"gold-standard SAM: {excl_a_sam}",
         f"- Excluded (row errored — unusable age, ragged ground truth, "
         f"pipeline exception): {analysis.get('errored', 0)} child(ren), of "
-        f"which gold-standard SAM: {analysis.get('errored_sam', 0)}",
-        f"- Worst-case sensitivity if every excluded gold-standard SAM "
+        f"which SAM or possibly SAM: "
+        f"{analysis.get('errored_possible_sam', 0)} (an errored row has no "
+        f"trustworthy age, so its gold standard is indeterminate rather "
+        f"than negative; counted here on the raw MUAC reading and oedema "
+        f"box, which survive the error)",
+        f"- Worst-case sensitivity if every excluded SAM/possibly-SAM "
         f"child were a miss: "
-        f"{_fmt_rate(_worst_case_sensitivity(sam, excl_a_sam + analysis.get('errored_sam', 0)))}",
+        f"{_fmt_rate(_worst_case_sensitivity(sam, excl_a_sam + analysis.get('errored_possible_sam', 0)))}",
         f"- Confusion: TP {sam['tp']}, FN {sam['fn']}, FP {sam['fp']}, "
         f"TN {sam['tn']}",
         f"- SAM sensitivity: {_fmt_rate(sam['sensitivity'])}",
@@ -488,6 +519,9 @@ def render_report(analysis: dict, cov: dict) -> str:
         f"- Excluded (row errored): {analysis.get('errored', 0)} child(ren), "
         f"of which gold-standard SAM by the WHZ arm: "
         f"{analysis.get('errored_sam_whz', 0)}",
+        f"- Worst-case sensitivity if every excluded gold-standard SAM "
+        f"child were a miss: "
+        f"{_fmt_rate(_worst_case_sensitivity(sam_whz, excl_b_sam + analysis.get('errored_sam_whz', 0)))}",
         f"- Confusion: TP {sam_whz['tp']}, FN {sam_whz['fn']}, "
         f"FP {sam_whz['fp']}, TN {sam_whz['tn']}",
         f"- SAM sensitivity: {_fmt_rate(sam_whz['sensitivity'])}",
