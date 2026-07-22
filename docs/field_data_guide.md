@@ -61,9 +61,18 @@ your confirmation in the QC report.
 - `sex`: `M` or `F`.
 - Dates: `YYYY-MM-DD`. `measurement_date` = the day height/weight/MUAC
   were taken (photos must be same-day — this drives the age used for
-  z-scores).
+  z-scores). A value that doesn't parse fails the row outright rather
+  than falling back to the run date: age selects the WHO reference table
+  and drives every z-score, so a wrong one produces a clean-looking but
+  wrong verdict. The results CSV records where each age came from in
+  `measurement_date_source` (`supplied` / `today_fallback` /
+  `unparseable`).
 - Height in cm, weight in kg, MUAC in cm. Decimal point, never a comma.
 - `oedema`: `yes` / `no` / blank if not checked.
+- `muac_cm`: WHO's MUAC cutoffs are defined for ages 6–59 months only.
+  Record the tape reading for younger infants anyway, but it is left out
+  of the gold standard rather than classified against cutoffs that don't
+  apply at that age.
 - Leave a value blank if it truly wasn't measured — never guess.
 - After typing everything in, re-check a random 10–15% of rows against
   the paper forms, and run the validator (Stage 3) before any assessment.

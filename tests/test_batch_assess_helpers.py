@@ -97,11 +97,43 @@ def test_age_defaults_to_today_when_no_measurement_date():
 
 
 def test_muac_thresholds_are_who_fixed():
-    assert _muac_status(11.4) == "SAM"
-    assert _muac_status(11.5) == "MAM"
-    assert _muac_status(12.4) == "MAM"
-    assert _muac_status(12.5) == "Normal"
-    assert _muac_status(None) is None
+    assert _muac_status(11.4, 24.0) == "SAM"
+    assert _muac_status(11.5, 24.0) == "MAM"
+    assert _muac_status(12.4, 24.0) == "MAM"
+    assert _muac_status(12.5, 24.0) == "Normal"
+    assert _muac_status(None, 24.0) is None
+
+
+def test_muac_undefined_outside_6_to_59_months():
+    """WHO's absolute MUAC cutoffs are defined for 6-59 months only. Below
+    6 months an 11.4 cm arm is normal infant anatomy, not wasting — so
+    classifying there would mint a gold-standard SAM label the app is then
+    scored against, inflating the false-negative count with no visible
+    signal. Outside the window the arm must read as unknown (None), never
+    as "Normal", so `_combine_status` drops it instead of counting it as a
+    negative."""
+    # Below the floor: the exact value that reads SAM at 24 months.
+    assert _muac_status(11.4, 3.0) is None
+    assert _muac_status(11.4, 5.9) is None
+    # Boundaries are inclusive, matching MUACService's 6.0 <= age <= 59.9.
+    assert _muac_status(11.4, 6.0) == "SAM"
+    assert _muac_status(11.4, 59.9) == "SAM"
+    # Above the ceiling.
+    assert _muac_status(11.4, 60.0) is None
+    # Unknown age is not a licence to classify.
+    assert _muac_status(11.4, None) is None
+
+
+def test_muac_age_window_matches_app_muac_service():
+    """The study's gold standard and the app's own classifier must not
+    drift apart on the age window. Vocabularies differ (batch_assess says
+    "MAM", MUACService says "At Risk (MAM)"), so compare definedness."""
+    from app.services.muac_service import MUACService
+
+    for age in (5.9, 6.0, 24.0, 59.9, 60.0):
+        in_range = 6.0 <= age <= 59.9
+        assert (_muac_status(11.4, age) is None) is (not in_range)
+        assert (MUACService._classify(11.4, in_range) is None) is (not in_range)
 
 
 def test_collapse_wasting():
@@ -178,15 +210,21 @@ def test_valid_dob_with_missing_height_weight_processes_normally():
     assert row["age_months"] is not None
 
 
-def test_invalid_measurement_date_warns_but_falls_back_to_today(capsys):
-    """A typo'd measurement_date (e.g. '2026-13-45') must not be silently
-    indistinguishable from 'not supplied' — it should print a clear warning
-    naming the child and the bad value, but still fall back to today's date
-    rather than failing the row. date_of_birth is pinned relative to
-    today (an offset, not a fixed calendar date) so the fallback-to-today
-    age this test exercises stays ~24 months regardless of which real day
-    it runs on - a fixed calendar dob would eventually cross the 60-month
-    ceiling and fail for a reason unrelated to what this test checks."""
+def test_invalid_measurement_date_errors_and_suppresses_verdict():
+    """A typo'd measurement_date (e.g. '2026-13-45') must be treated exactly
+    like an unparseable date_of_birth: error set, verdict suppressed.
+
+    Age selects the WFL (<24m) vs WFH (>=24m) LMS table and drives every
+    WHO z-score, so silently substituting today's date yields a
+    clean-looking verdict computed from an age wrong by however long
+    elapsed between the field visit and the batch run. This previously
+    printed a console WARN and left `error` empty — which on a 250-child
+    batch is a silent failure, and CLAUDE.md forbids those in the
+    assessment pipeline.
+
+    date_of_birth is pinned relative to today (an offset, not a fixed
+    calendar date) so this stays ~24 months regardless of the real run
+    date."""
     dob = date.today() - timedelta(days=730)
     row = _process_child_image(
         fname="child2.jpg",
@@ -195,7 +233,6 @@ def test_invalid_measurement_date_warns_but_falls_back_to_today(capsys):
             "date_of_birth": dob.isoformat(),
             "measurement_date": "2026-13-45",
             "sex": "F",
-            "child_name": "Child Two",
         },
         meas_svc=_FakeMeasService(),
         ml_svc=_FakeMLService(),
@@ -205,10 +242,35 @@ def test_invalid_measurement_date_warns_but_falls_back_to_today(capsys):
         child_id=None,
         verbose=False,
     )
-    captured = capsys.readouterr()
-    assert "Child Two" in captured.out
-    assert "2026-13-45" in captured.out
+    assert "2026-13-45" in row["error"]
+    assert "measurement_date" in row["error"]
+    assert row["pred_status_final"] is None, (
+        "a verdict must never be derived from a fabricated measurement date"
+    )
+    assert row["measurement_date_source"] == "unparseable"
+
+
+def test_blank_measurement_date_is_recorded_as_today_fallback():
+    """Blank stays permitted — the flat layout and --images-only mode
+    predate this column, and reviewer feedback was explicit that breaking
+    those callers is worse than the fallback. But it must be recorded, so
+    a reader of the results CSV can tell a real field-visit date from a
+    run-date substitution instead of having to assume one was supplied."""
+    dob = date.today() - timedelta(days=730)
+    row = _process_child_image(
+        fname="child3.jpg",
+        img_path=Path("child3.jpg"),
+        gt={"date_of_birth": dob.isoformat(), "measurement_date": "", "sex": "F"},
+        meas_svc=_FakeMeasService(),
+        ml_svc=_FakeMLService(),
+        nutr_svc=_FakeNutritionService(),
+        who_data=_FakeWHOData(),
+        side_image_bytes=None,
+        child_id=None,
+        verbose=False,
+    )
     assert row["error"] == ""
+    assert row["measurement_date_source"] == "today_fallback"
 
 
 def test_negative_age_from_swapped_dates_sets_error_and_suppresses_verdict():
@@ -599,3 +661,81 @@ def test_i3_child_name_column_in_master_csv_does_not_break_coverage_join():
     assert cov["unknown_ids"] == []
     assert cov["assessed"] == 2
     assert cov["missing_data"] == 0
+
+
+class _FakeNutritionServiceWithWHZ:
+    """NutritionService stand-in returning a fixed WHZ z-score."""
+
+    def __init__(self, whz_z: float):
+        self._whz_z = whz_z
+
+    def compute_haz(self, *args, **kwargs):
+        return None
+
+    def compute_whz(self, *args, **kwargs):
+        return self._whz_z
+
+
+def test_ml_normal_verdict_cannot_discard_a_predicted_whz_sam_flag():
+    """The app's verdict must combine its arms by worst-arm-wins, the same
+    rule the gold standard uses — not `ml if ml else whz`.
+
+    That old expression let a "Normal" ML classification silently discard a
+    predicted WHZ of -3.5, manufacturing a false negative in a system whose
+    stated hard rule is that false negatives endanger lives. The gold
+    standard on the adjacent lines already took the worst arm; the app side
+    did not, and the asymmetry was invisible in the output.
+    """
+    dob = date.today() - timedelta(days=730)
+    row = _process_child_image(
+        fname="child9.jpg",
+        img_path=Path("child9.jpg"),
+        gt={
+            "date_of_birth": dob.isoformat(),
+            "measurement_date": date.today().isoformat(),
+            "sex": "M",
+        },
+        meas_svc=_FakeMeasService(
+            predicted_height_cm=85.0, body_segments={"torso": 1.0},
+        ),
+        ml_svc=_FakeMLService(wasting_status="Normal"),
+        nutr_svc=_FakeNutritionServiceWithWHZ(-3.5),
+        who_data=_FakeWHOData(),
+        side_image_bytes=None,
+        child_id=None,
+        verbose=False,
+    )
+
+    assert row["pred_whz_status"] == "SAM", "precondition: WHZ arm reads SAM"
+    assert row["ml_wasting_status"] == "Normal", "precondition: ML reads Normal"
+    assert row["pred_status_final"] == "SAM", (
+        "worst arm must win: a Normal ML verdict cannot suppress a "
+        "predicted WHZ < -3"
+    )
+
+
+def test_app_verdict_takes_worst_arm_in_both_directions():
+    """Symmetry check: the rule is worst-arm-wins, not ML-loses. An ML SAM
+    with a Normal predicted WHZ must still surface as SAM."""
+    dob = date.today() - timedelta(days=730)
+    row = _process_child_image(
+        fname="child10.jpg",
+        img_path=Path("child10.jpg"),
+        gt={
+            "date_of_birth": dob.isoformat(),
+            "measurement_date": date.today().isoformat(),
+            "sex": "M",
+        },
+        meas_svc=_FakeMeasService(
+            predicted_height_cm=85.0, body_segments={"torso": 1.0},
+        ),
+        ml_svc=_FakeMLService(wasting_status="SAM"),
+        nutr_svc=_FakeNutritionServiceWithWHZ(0.0),
+        who_data=_FakeWHOData(),
+        side_image_bytes=None,
+        child_id=None,
+        verbose=False,
+    )
+
+    assert row["pred_whz_status"] == "Normal"
+    assert row["pred_status_final"] == "SAM"

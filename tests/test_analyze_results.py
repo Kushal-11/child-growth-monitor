@@ -495,3 +495,43 @@ def test_age_subgroups_exclude_over_59_month_rows():
     assert a["age_excluded_from_subgroups"] == 1
     # Whole-study statistics still include both rows.
     assert a["status_n"] == 2
+
+
+def test_errored_gold_standard_sam_child_is_counted_not_discarded():
+    """An errored row still carries its ground truth. Dropping it before the
+    exclusion accounting let a child with unambiguous gold-standard SAM
+    leave the sensitivity denominator entirely.
+
+    Cohort below: 3 gold-standard SAM children — one detected, one assessed
+    with no verdict, one errored on a garbled DOB. The headline figure is
+    still computed over paired rows only (that is correct), but the report
+    must now disclose BOTH excluded SAM children, so a reader can bound the
+    true value rather than reading 1.000 and stopping.
+    """
+    rows = [
+        _row(child_name="001", actual_combined_status="SAM",
+             pred_status_final="SAM"),                      # detected
+        _row(child_name="002", actual_combined_status="SAM",
+             pred_status_final=""),                         # no verdict
+        _row(child_name="003", actual_combined_status="SAM",
+             pred_status_final="", error="unparseable date_of_birth: 'xx'"),
+        _row(child_name="004"),                             # normal control
+    ]
+    a = analyze(rows)
+
+    assert a["errored"] == 1
+    assert a["errored_sam"] == 1, (
+        "an errored child with gold-standard SAM must not vanish silently"
+    )
+    assert a["excluded_unverdicted_sam"] == 1
+
+    # Headline stays paired-only, and still reads 1.000 on its own terms...
+    assert a["sam"]["tp"] == 1 and a["sam"]["fn"] == 0
+
+    # ...but the report must now surface both excluded SAM children and the
+    # worst-case bound, so 1.000 can't be read in isolation.
+    text = render_report(a, coverage([], [], rows))
+    assert "row errored" in text
+    assert "Worst-case sensitivity" in text
+    # tp=1 over denominator 1 paired + 1 unverdicted + 1 errored = 0.333
+    assert "0.333" in text

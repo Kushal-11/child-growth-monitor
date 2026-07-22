@@ -242,10 +242,32 @@ def _parse_dob(dob_str: str) -> tuple[Optional[date], Optional[str]]:
 
 _WASTING_SEVERITY = {"SAM": 2, "MAM": 1, "Normal": 0}
 
+# WHO MUAC cutoffs are defined for 6-59 months only. Mirrors
+# app/services/muac_service.py's `age_in_range` bounds exactly.
+MUAC_AGE_RANGE_MONTHS = (6.0, 59.9)
 
-def _muac_status(muac_cm: Optional[float]) -> Optional[str]:
-    """WHO fixed thresholds: <11.5 SAM, 11.5-12.5 MAM, >=12.5 Normal."""
-    if muac_cm is None:
+
+def _muac_status(
+    muac_cm: Optional[float], age_months: Optional[float]
+) -> Optional[str]:
+    """WHO fixed thresholds: <11.5 SAM, 11.5-12.5 MAM, >=12.5 Normal.
+
+    WHO defines these absolute cutoffs for 6-59 months ONLY; below 6 months
+    an 11.4 cm arm is normal infant anatomy, not wasting. Applying them
+    anyway would mint gold-standard SAM labels the app is then scored
+    against, inflating the apparent false-negative count with no visible
+    signal. Returns None outside the window (unknown, not "Normal") so
+    `_combine_status` drops the arm rather than treating it as a negative.
+
+    The window matches app/services/muac_service.py's `age_in_range`
+    (6.0-59.9) so the study's gold standard and the app's own classifier
+    cannot drift apart. `age_months` is None when age is unknown, which is
+    likewise not a licence to classify.
+    """
+    if muac_cm is None or age_months is None:
+        return None
+    lo, hi = MUAC_AGE_RANGE_MONTHS
+    if not (lo <= age_months <= hi):
         return None
     if muac_cm < 11.5:
         return "SAM"
@@ -428,18 +450,35 @@ def _process_child_image(
     dob_str = (gt.get("date_of_birth") or "").strip()
     mdate_str = (gt.get("measurement_date") or "").strip()
     meas_date = None
+    mdate_error = None
+    # Provenance of the date every z-score is ultimately computed against,
+    # persisted to the results CSV so a reader can tell a real measurement
+    # date from a fallback instead of having to trust that one was supplied.
+    measurement_date_source = "supplied"
     if mdate_str:
         try:
             meas_date = date.fromisoformat(mdate_str)
         except ValueError:
-            print(
-                f"    [WARN] {_display_label}: invalid measurement_date "
-                f"'{mdate_str}' - using today's date instead"
+            # Same treatment as an unparseable date_of_birth: age drives
+            # every WHO z-score AND selects the WFL (<24m) vs WFH (>=24m)
+            # LMS table, so silently substituting today's date yields a
+            # clean-looking verdict computed from an age that is wrong by
+            # however long elapsed between the field visit and this run.
+            # A console WARN is not a signal on a 250-child batch.
+            mdate_error = (
+                f"unparseable measurement_date: '{mdate_str}' - age and all "
+                "z-scores unavailable"
             )
+            measurement_date_source = "unparseable"
+    else:
+        # Blank remains permitted (the flat layout and --images-only mode
+        # predate this column), but it is recorded and counted rather than
+        # passing as if a date had been supplied.
+        measurement_date_source = "today_fallback"
 
     dob, dob_error = _parse_dob(dob_str)
     age_range_error = None
-    if dob is not None:
+    if dob is not None and mdate_error is None:
         age_months = _compute_age_months(dob, meas_date)
         lo, hi = AGE_RANGE_MONTHS
         if not (lo <= age_months <= hi):
@@ -466,9 +505,18 @@ def _process_child_image(
             )
     else:
         # Placeholder only, to keep the pose/ML pipeline running below;
-        # dob_error forces error + pred_status_final=None on the row so
-        # nothing derived from this fabricated age is presented as usable.
+        # dob_error/mdate_error forces error + pred_status_final=None on the
+        # row so nothing derived from this fabricated age is presented as
+        # usable.
         age_months = 24.0
+    # True age, or None when it could not be established. Distinct from the
+    # 24.0 placeholder above, which exists only to keep pose/ML running —
+    # anything that classifies against age must use this, never the
+    # placeholder.
+    known_age_months = (
+        age_months if (dob is not None and mdate_error is None and not age_range_error)
+        else None
+    )
     oedema_present = (gt.get("oedema") or "").strip().lower() == "yes"
 
     actual_height = _parse_float(gt.get("actual_height_cm"))
@@ -516,12 +564,12 @@ def _process_child_image(
     actual_whz_status = None
     if actual_height and dob:
         actual_haz_z = nutr_svc.compute_haz(sex, int(round(age_months)), actual_height)
-        if actual_haz_z:
+        if actual_haz_z is not None:
             actual_haz_status = _haz_status_from_z(actual_haz_z)
             actual_haz_z = round(actual_haz_z, 3)
     if actual_height and actual_weight and dob:
         actual_whz_z = nutr_svc.compute_whz(sex, age_months, actual_height, actual_weight)
-        if actual_whz_z:
+        if actual_whz_z is not None:
             actual_whz_status = _whz_status_from_z(actual_whz_z)
             actual_whz_z = round(actual_whz_z, 3)
 
@@ -532,12 +580,12 @@ def _process_child_image(
     pred_whz_status = None
     if pred_height and dob:
         pred_haz_z = nutr_svc.compute_haz(sex, int(round(age_months)), pred_height)
-        if pred_haz_z:
+        if pred_haz_z is not None:
             pred_haz_status = _haz_status_from_z(pred_haz_z)
             pred_haz_z = round(pred_haz_z, 3)
     if pred_height and pred_weight_ml and dob:
         pred_whz_z = nutr_svc.compute_whz(sex, age_months, pred_height, pred_weight_ml)
-        if pred_whz_z:
+        if pred_whz_z is not None:
             pred_whz_status = _whz_status_from_z(pred_whz_z)
             pred_whz_z = round(pred_whz_z, 3)
 
@@ -546,14 +594,26 @@ def _process_child_image(
     weight_error = round(pred_weight_ml - actual_weight, 2) if pred_weight_ml and actual_weight else None
 
     # --- WHO OR-rule statuses (gold standard vs app) ---
-    actual_muac_status = _muac_status(manual_muac)
+    actual_muac_status = _muac_status(manual_muac, known_age_months)
     actual_combined_status = _combine_status(
         actual_whz_status, actual_muac_status, oedema_present,
     )
-    pred_status_final = _collapse_wasting(
-        wasting_status_ml if wasting_status_ml else pred_whz_status
+    # The app's own verdict combines its two available arms by the same
+    # worst-arm-wins rule the gold standard uses above. The previous
+    # `ml if ml else whz` let a "Normal" ML verdict silently discard a
+    # predicted WHZ < -3 — a manufactured false negative in a system whose
+    # stated hard rule is that false negatives endanger lives. The app has
+    # no oedema input, so that arm is absent (not negative) on this side.
+    _pred_arms = [
+        s for s in (
+            _collapse_wasting(wasting_status_ml),
+            _collapse_wasting(pred_whz_status),
+        ) if s
+    ]
+    pred_status_final = (
+        max(_pred_arms, key=lambda s: _WASTING_SEVERITY[s]) if _pred_arms else None
     )
-    if dob_error or age_range_error:
+    if dob_error or age_range_error or mdate_error:
         # dob could not be parsed, or the resulting age is outside the
         # 0-60 month range WHO growth standards are defined for: never
         # present a verdict derived from a fabricated or impossible age.
@@ -565,6 +625,7 @@ def _process_child_image(
         "age_months":           round(age_months, 1),
         "sex":                  sex,
         "measurement_date":     mdate_str,
+        "measurement_date_source": measurement_date_source,
         # Ground truth
         "actual_height_cm":     actual_height,
         "actual_weight_kg":     actual_weight,
@@ -595,7 +656,7 @@ def _process_child_image(
         "estimation_method":    meas.estimation_method,
         "annotated_image":      meas.annotated_image_filename,
         "notes":                gt.get("notes", ""),
-        "error":                dob_error or age_range_error or "",
+        "error":                dob_error or age_range_error or mdate_error or "",
     }
 
     if ml_svc.is_available and meas.body_segments and effective_height:
@@ -787,6 +848,7 @@ def _write_results(output_csv: Path, results: list[dict]):
 
     fieldnames = [
         "image_file", "child_name", "age_months", "sex", "measurement_date",
+        "measurement_date_source",
         "actual_height_cm", "actual_weight_kg",
         "actual_haz_z", "actual_whz_z", "actual_haz_status", "actual_whz_status",
         "muac_cm", "actual_muac_status", "actual_oedema",
@@ -823,6 +885,20 @@ def _print_summary(results: list[dict]):
     print(f"\n{'='*60}")
     print(f"SUMMARY  |  {total} images  |  {errors} errors")
     print(f"{'='*60}")
+
+    # Surface the today-fallback count once per batch: individually these are
+    # silent, but in aggregate they say "N children's ages — and therefore
+    # every z-score derived from them — were computed against the run date
+    # rather than the field-visit date."
+    fallback = sum(
+        1 for r in results if r.get("measurement_date_source") == "today_fallback"
+    )
+    if fallback:
+        print(
+            f"  [WARN] {fallback} child(ren) had no measurement_date; age "
+            f"computed from today's date. Every z-score for those children "
+            f"is wrong by the time elapsed since their field visit."
+        )
 
     if with_height:
         errs = [abs(float(r["height_error_cm"])) for r in with_height]

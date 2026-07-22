@@ -21,6 +21,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scripts.study_stats import (  # noqa: E402
     bland_altman, binary_metrics, confusion_binary, weighted_kappa,
+    # Same (value, lo, hi) shape every other rate in this report carries, so
+    # the worst-case bound formats and reads identically to the headline.
+    _rate as rate_with_ci,
 )
 
 STATUS_CATS = ["SAM", "MAM", "Normal"]
@@ -191,7 +194,24 @@ def _analyze_block(rows: list[dict]) -> dict:
 def analyze(results: list[dict]) -> dict:
     """Pure analysis over assessed rows (rows with error are excluded)."""
     rows = [r for r in results if not (r.get("error") or "").strip()]
+    # Errored rows are dropped before `_analyze_block`, so they never reach
+    # the `excluded_unverdicted` accounting inside it. Counted here instead:
+    # an errored row still carries its ground truth, so a child with an
+    # unambiguous gold-standard SAM status (MUAC 10.5, say) whose DOB was
+    # garbled would otherwise leave the sensitivity denominator entirely and
+    # silently inflate the figure. Reported alongside the in-block
+    # exclusions so no sensitivity number can be read without also seeing
+    # every child who failed to reach it.
+    errored = [r for r in results if (r.get("error") or "").strip()]
     out = _analyze_block(rows)
+    out["errored"] = len(errored)
+    out["errored_sam"] = sum(
+        1 for r in errored
+        if (r.get("actual_combined_status") or "").strip() == "SAM"
+    )
+    out["errored_sam_whz"] = sum(
+        1 for r in errored if _collapse_whz(r.get("actual_whz_status")) == "SAM"
+    )
     out["subgroups"] = {}
 
     # Rows with a missing/unparseable age, or a genuine age below the
@@ -320,6 +340,28 @@ def _fmt_rate(r: Optional[tuple]) -> str:
     return f"{v:.3f} (95% CI {lo:.3f}-{hi:.3f})"
 
 
+def _worst_case_sensitivity(
+    sam: dict, excluded_sam: int
+) -> Optional[tuple]:
+    """Sensitivity if every excluded gold-standard SAM child were a miss.
+
+    The headline figure is computed only over children who got a verdict.
+    That is the right primary number, but on its own it lets exclusions
+    quietly bound the truth from above: 1 detected / 1 paired reads 1.000
+    whether 0 or 20 other SAM children never made it into the matrix. This
+    lower bound closes that gap by charging every excluded SAM case as a
+    false negative, so the true value is bracketed by the two.
+
+    Returns None when the bound is not computable (no SAM cases at all),
+    matching `_fmt_rate`'s zero-denominator handling.
+    """
+    tp, fn = sam.get("tp", 0), sam.get("fn", 0)
+    denom = tp + fn + excluded_sam
+    if denom == 0:
+        return None
+    return rate_with_ci(tp, denom)
+
+
 def _fmt_kappa(kappa: Optional[float]) -> str:
     return f"{kappa:.3f}" if kappa is not None else "n/a (needs ≥2 distinct actual categories)"
 
@@ -414,6 +456,12 @@ def render_report(analysis: dict, cov: dict) -> str:
         f"- Excluded (gold-standard status but no app verdict — pose/ML "
         f"step failed or was skipped): {excl_a} child(ren), of which "
         f"gold-standard SAM: {excl_a_sam}",
+        f"- Excluded (row errored — unusable age, ragged ground truth, "
+        f"pipeline exception): {analysis.get('errored', 0)} child(ren), of "
+        f"which gold-standard SAM: {analysis.get('errored_sam', 0)}",
+        f"- Worst-case sensitivity if every excluded gold-standard SAM "
+        f"child were a miss: "
+        f"{_fmt_rate(_worst_case_sensitivity(sam, excl_a_sam + analysis.get('errored_sam', 0)))}",
         f"- Confusion: TP {sam['tp']}, FN {sam['fn']}, FP {sam['fp']}, "
         f"TN {sam['tn']}",
         f"- SAM sensitivity: {_fmt_rate(sam['sensitivity'])}",
@@ -437,6 +485,9 @@ def render_report(analysis: dict, cov: dict) -> str:
         "of children this sensitivity figure is actually computed over",
         f"- Excluded (gold-standard WHZ status but no app verdict): "
         f"{excl_b} child(ren), of which gold-standard SAM: {excl_b_sam}",
+        f"- Excluded (row errored): {analysis.get('errored', 0)} child(ren), "
+        f"of which gold-standard SAM by the WHZ arm: "
+        f"{analysis.get('errored_sam_whz', 0)}",
         f"- Confusion: TP {sam_whz['tp']}, FN {sam_whz['fn']}, "
         f"FP {sam_whz['fp']}, TN {sam_whz['tn']}",
         f"- SAM sensitivity: {_fmt_rate(sam_whz['sensitivity'])}",
@@ -446,16 +497,22 @@ def render_report(analysis: dict, cov: dict) -> str:
 
     det = analysis["sam_detectability"]
     lines += [
-        "**Why these differ:** the app cannot in principle detect SAM "
-        "cases triggered only by oedema or only by MUAC, because it never "
-        "receives that data. Of the "
+        "**Why these differ:** this pipeline derives the app's verdict from "
+        "its photo-based WHZ estimate only. Oedema is a genuine structural "
+        "blind spot — it is a clinical sign with no photographic proxy and "
+        "no input anywhere in the app. MUAC is NOT: the app ships a "
+        "landmark-based MUAC estimator (app/services/muac_service.py) that "
+        "production assessment calls, but this study does not exercise it, "
+        "so MUAC-triggered SAM is unreachable here by omission rather than "
+        "by design. Of the "
         f"{det['total_actual_sam']} gold-standard SAM cases with a usable "
         "app verdict in this batch, "
         f"{det['whz_detectable']} were detectable in principle from the "
         f"WHZ arm and {det['muac_or_oedema_only']} were reachable only via "
-        "MUAC or oedema. A gap between Framing A and Framing B sensitivity "
-        "reflects this structural blind spot, not necessarily a defect in "
-        "the underlying model.",
+        "MUAC or oedema. Read the Framing A/B gap as the cost of the "
+        "WHZ-only configuration measured here — part inherent (oedema), "
+        "part an untested app capability (MUAC) — not as a settled defect "
+        "in the underlying model.",
         "",
     ]
     if excl_a_sam:
