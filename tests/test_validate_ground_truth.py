@@ -1,5 +1,7 @@
 """Tests for scripts/validate_ground_truth.py."""
-from scripts.validate_ground_truth import validate_rows
+from scripts.validate_ground_truth import (
+    ALL_COLS, check_header, load_csv, read_header, validate_rows,
+)
 
 
 def _good_row(**over) -> dict:
@@ -75,3 +77,60 @@ def test_missing_optional_measurements_warn_not_error():
     )
     assert errors == []
     assert len(warnings) == 3  # height, weight, muac missing
+
+
+# ---------------------------------------------------------------------------
+# I-1: a header typo (e.g. 'muac' for 'muac_cm') must hard-fail, not read as
+# "blank on every row" (a warning only). Without this check, a child with a
+# SAM-level MUAC and a normal WHZ silently loses the MUAC arm of the WHO
+# OR-rule and flips from SAM to Normal with zero errors printed.
+# ---------------------------------------------------------------------------
+
+def test_check_header_flags_missing_and_unknown_columns():
+    header = ["child_id", "sex", "date_of_birth", "measurement_date",
+              "actual_height_cm", "actual_weight_kg", "muac", "oedema", "notes"]
+    errors = check_header(header)
+    assert any("muac_cm" in e and "missing" in e for e in errors)
+    assert any("'muac'" in e for e in errors)
+
+
+def test_check_header_suggests_likely_intended_column():
+    header = ["child_id", "sex", "date_of_birth", "measurement_date",
+              "actual_height_cm", "actual_weight_kg", "muac", "oedema", "notes"]
+    errors = check_header(header)
+    assert any("did you mean 'muac_cm'" in e for e in errors)
+
+
+def test_check_header_passes_for_exact_all_cols():
+    assert check_header(ALL_COLS) == []
+
+
+def test_validate_rows_without_fieldnames_skips_header_check():
+    """Backward compatible: omitting `fieldnames` (existing callers/tests
+    that only ever had rows) must not suddenly start hard-failing."""
+    errors, _ = validate_rows([_good_row()])
+    assert errors == []
+
+
+def test_muac_header_typo_silently_flips_sam_to_normal_without_header_check(tmp_path):
+    """Reproduces the exact probe: header says 'muac' instead of 'muac_cm'
+    for a child with MUAC 10.9 cm (SAM) and a normal WHZ. Row-level checks
+    alone (no fieldnames passed) must NOT catch this - that is exactly the
+    bug. Only wiring the header into validate_rows catches it."""
+    bad_csv = tmp_path / "ground_truth.csv"
+    bad_csv.write_text(
+        "child_id,sex,date_of_birth,measurement_date,"
+        "actual_height_cm,actual_weight_kg,muac,oedema,notes\n"
+        "001,M,2023-04-12,2026-07-15,90.0,12.0,10.9,no,\n"
+    )
+    rows = load_csv(bad_csv)
+    fieldnames = read_header(bad_csv)
+
+    errors_without_header, _ = validate_rows(rows)
+    assert errors_without_header == [], (
+        "sanity check: row-level validation alone must not catch this typo"
+    )
+
+    errors, _ = validate_rows(rows, fieldnames=fieldnames)
+    assert errors != [], "the header-shape check must now hard-fail this CSV"
+    assert any("muac_cm" in e for e in errors)

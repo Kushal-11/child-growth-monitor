@@ -301,10 +301,14 @@ def coverage(
             "children even though this coverage report cannot account "
             "for them."
         )
-    if cov["assessed"] + cov["qc_failed"] + cov["missing_data"] != cov["total"]:
-        problems.append(
-            "BUCKET SUM MISMATCH — investigate before trusting this report"
-        )
+    # NOTE: there used to be an "assessed + qc_failed + missing_data == total"
+    # arithmetic guard here. It was structurally unreachable: missing_ids is
+    # defined above as total_ids - assessed_ids - qc_failed_ids, i.e. "every
+    # id in total_ids not already counted", over disjoint subsets of
+    # total_ids — so the three bucket sizes sum to len(total_ids) by
+    # construction, always. It never caught anything real; removed rather
+    # than kept as false reassurance. The reachable integrity checks above
+    # (unknown_ids, blank_child_id_rows) are the ones that can actually fire.
     cov["discrepancy"] = " ".join(problems)
     return cov
 

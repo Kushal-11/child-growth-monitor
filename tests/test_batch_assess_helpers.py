@@ -450,7 +450,11 @@ def test_master_gt_validation_gate_blocks_bad_master_csv(tmp_path, capsys):
 
     assert exc_info.value.code != 0
     captured = capsys.readouterr()
-    assert "validate_ground_truth.py" in captured.out
+    # Stream target updated for the stdout/stderr consistency minor fix:
+    # fatal/error output now goes to stderr (matching main()'s convention),
+    # not stdout. Same assertion, corrected stream - see final-review-fixes
+    # report for why this one existing assertion needed updating.
+    assert "validate_ground_truth.py" in captured.err
 
 
 def test_master_gt_validation_gate_allows_valid_csv(tmp_path):
@@ -471,6 +475,26 @@ def test_master_gt_validation_gate_allows_valid_csv(tmp_path):
     assert master_gt["child_a"]["sex"] == "M"
 
 
+def test_master_gt_validation_gate_blocks_header_typo(tmp_path, capsys):
+    """I-1: a header typo ('muac' instead of 'muac_cm') must be caught by
+    the real safety gate batch_assess.py runs before any child is assessed,
+    not just by validate_ground_truth.py in isolation. A child with MUAC
+    10.9 (SAM) and a normal WHZ must never sail through un-flagged."""
+    bad_csv = tmp_path / "master_ground_truth.csv"
+    bad_csv.write_text(
+        "child_id,sex,date_of_birth,measurement_date,"
+        "actual_height_cm,actual_weight_kg,muac,oedema,notes\n"
+        "child_x,M,2023-01-01,2024-06-01,90.0,12.0,10.9,no,\n"
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        _load_master_ground_truth(bad_csv)
+
+    assert exc_info.value.code != 0
+    captured = capsys.readouterr()
+    assert "muac_cm" in captured.err
+
+
 def test_template_csv_includes_measurement_date_muac_and_oedema():
     """The --template CSV must include measurement_date, muac_cm, and
     oedema, otherwise anyone starting from it can never fill in the columns
@@ -483,3 +507,95 @@ def test_template_csv_includes_measurement_date_muac_and_oedema():
     assert "oedema" in columns
     assert "image_file" in columns
     assert "child_id" not in columns
+
+
+# ---------------------------------------------------------------------------
+# I-3: no child names in these files, and the assessment stage must key the
+# child strictly on the folder id / image filename, never on an
+# operator-supplied name.
+# ---------------------------------------------------------------------------
+
+def test_template_csv_has_no_child_name_column_or_pii():
+    header = TEMPLATE_CSV.strip().splitlines()[0]
+    columns = [c.strip() for c in header.split(",")]
+    assert "child_name" not in columns
+    assert "Child 1" not in TEMPLATE_CSV
+    assert "Child 2" not in TEMPLATE_CSV
+
+
+def test_row_child_name_is_image_filename_not_operator_name_flat_layout():
+    """Even if a ground-truth row carries a 'child_name' column (against
+    the rules), the row's own persisted child_name field must be the image
+    filename, never the operator-supplied name — this is the field
+    analyze_results.coverage() joins against the intake manifest's
+    child_id, and a personal name there both breaks that join and violates
+    the no-PII-in-CSVs rule."""
+    row = _process_child_image(
+        fname="child1.jpg",
+        img_path=Path("child1.jpg"),
+        gt={"child_name": "Child 1", "date_of_birth": "2023-01-01",
+            "measurement_date": "2024-06-01", "sex": "M"},
+        meas_svc=_FakeMeasService(),
+        ml_svc=_FakeMLService(),
+        nutr_svc=_FakeNutritionService(),
+        who_data=_FakeWHOData(),
+        side_image_bytes=None,
+        child_id=None,
+        verbose=False,
+    )
+    assert row["child_name"] == "child1.jpg"
+
+
+def test_row_child_name_is_folder_id_not_operator_name_per_child_layout():
+    """Per-child layout: identity must be the folder id, even when the
+    master CSV row was mistakenly given a 'child_name' column with a
+    personal name — child_id must win."""
+    row = _process_child_image(
+        fname="front.jpg",
+        img_path=Path("front.jpg"),
+        gt={"child_name": "Child 1", "date_of_birth": "2023-01-01",
+            "measurement_date": "2024-06-01", "sex": "M"},
+        meas_svc=_FakeMeasService(),
+        ml_svc=_FakeMLService(),
+        nutr_svc=_FakeNutritionService(),
+        who_data=_FakeWHOData(),
+        side_image_bytes=None,
+        child_id="001",
+        verbose=False,
+    )
+    assert row["child_name"] == "001"
+
+
+def test_i3_child_name_column_in_master_csv_does_not_break_coverage_join():
+    """End-to-end regression for the exact I-3 probe: an operator who keeps
+    a 'child_name' column with literal personal names in their master
+    ground-truth CSV must not have that leak into the join key
+    analyze_results.coverage() uses — the folder id must win, so coverage
+    is not voided (previously: assessed 0, unknown_ids ['Child 1', 'Child 2'])."""
+    from scripts.analyze_results import coverage
+
+    master_gt = {
+        "001": {"child_name": "Child 1", "sex": "M",
+                "date_of_birth": "2023-01-01", "measurement_date": "2024-06-01"},
+        "002": {"child_name": "Child 2", "sex": "F",
+                "date_of_birth": "2023-06-01", "measurement_date": "2024-06-01"},
+    }
+    entries = [
+        ("001", Path("001_front.jpg"), None, {}),
+        ("002", Path("002_front.jpg"), None, {}),
+    ]
+    results = _run_per_child(
+        entries,
+        meas_svc=_FakeMeasService(), ml_svc=_FakeMLService(),
+        nutr_svc=_FakeNutritionService(), who_data=_FakeWHOData(),
+        verbose=False, master_gt=master_gt,
+    )
+    child_names = [r["child_name"] for r in results]
+    assert child_names == ["001", "002"]
+    assert "Child 1" not in child_names and "Child 2" not in child_names
+
+    intake = [{"child_id": "001"}, {"child_id": "002"}]
+    cov = coverage(intake, [], results)
+    assert cov["unknown_ids"] == []
+    assert cov["assessed"] == 2
+    assert cov["missing_data"] == 0

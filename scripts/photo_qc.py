@@ -40,6 +40,10 @@ MIN_UPRIGHT         = 0.75
 MIN_SHARPNESS       = 40.0   # Laplacian variance
 FRONT_RATIO         = 0.45   # shoulder-width / torso-height above this = front
 SIDE_RATIO          = 0.25   # below this = side; between = unknown
+COVERAGE_NORMALIZER = 0.80   # raw head-to-heel span (fraction of frame
+                              # height) that normalises to coverage == 1.0.
+                              # Shared with extract_best_frame.py — see the
+                              # import note there for why they must match.
 
 POSE_MODEL_PATH = (
     Path(__file__).resolve().parent.parent / "data" / "pose_landmarker_heavy.task"
@@ -90,7 +94,7 @@ def landmark_metrics(lms: Sequence) -> Optional[dict]:
     nose_y = y("nose")
     heel_y = max(y("left_heel"), y("right_heel"),
                  y("left_ankle"), y("right_ankle"))
-    coverage = min(max(0.0, heel_y - nose_y) / 0.80, 1.0)
+    coverage = min(max(0.0, heel_y - nose_y) / COVERAGE_NORMALIZER, 1.0)
 
     order_pairs = [
         ("nose", "left_shoulder"), ("nose", "right_shoulder"),
@@ -162,8 +166,12 @@ def score_photo(image_bgr: np.ndarray, landmarker) -> PhotoScore:
     )
 
 
-def build_landmarker():
-    """Real MediaPipe landmarker (IMAGE mode). Not used in unit tests."""
+def build_landmarker() -> object:
+    """Real MediaPipe landmarker (IMAGE mode). Not used in unit tests.
+
+    Return type is `object` (not the real MediaPipe type) so this
+    signature doesn't force importing mediapipe at module import time.
+    """
     import mediapipe as mp
 
     BaseOptions = mp.tasks.BaseOptions

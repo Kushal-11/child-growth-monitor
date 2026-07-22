@@ -172,18 +172,45 @@ def clean_child(
             "scores": _score_dict(front.score),
         }
     elif videos:
-        # Fallback: best frame from the first video that yields one.
-        # Imported here (not at module level) because extract_best_frame
+        # Fallback: best frame from the first video that yields a *usable*
+        # frame. Imported here (not at module level) because extract_best_frame
         # pulls in mediapipe/tensorflow, which are heavy and should stay
         # lazy for consumers that never hit the video-fallback path.
         from scripts.extract_best_frame import extract_best_frame
+        frame_path = out_dir / "front.jpg"
         for v in videos:
             try:
-                extract_best_frame(v, out_dir / "front.jpg", verbose=False)
-                prov["front"] = {"source": v.name, "via": "video_fallback"}
-                break
+                extract_best_frame(v, frame_path, verbose=False)
             except Exception as e:
                 fail_reasons.append(f"{v.name}: {e}")
+                continue
+            # extract_best_frame only checks landmark visibility (>= 0.4);
+            # it never applies MIN_COVERAGE/MIN_UPRIGHT/MIN_SHARPNESS/
+            # MIN_POSE_CONFIDENCE. Without this re-score, a frame with the
+            # child's feet cut off (or heavily blurred) would be promoted
+            # into the study with no QC signal at all — re-run it through
+            # the exact same gate a photo goes through.
+            frame_img = cv2.imread(str(frame_path))
+            if frame_img is None:
+                fail_reasons.append(f"{v.name}: extracted frame unreadable")
+                frame_path.unlink(missing_ok=True)
+                continue
+            try:
+                frame_score = score_photo(frame_img, landmarker)
+            except Exception as e:
+                fail_reasons.append(f"{v.name}: {e}")
+                frame_path.unlink(missing_ok=True)
+                continue
+            if not frame_score.usable:
+                fail_reasons.append(f"{v.name}: {frame_score.reason}")
+                frame_path.unlink(missing_ok=True)
+                continue
+            prov["front"] = {
+                "source": v.name,
+                "via": "video_fallback",
+                "scores": _score_dict(frame_score),
+            }
+            break
 
     if side is not None:
         shutil.copy2(side.path, out_dir / "side.jpg")

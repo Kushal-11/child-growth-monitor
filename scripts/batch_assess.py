@@ -56,8 +56,14 @@ Usage
 
 Ground-truth CSV columns (flat layout)
 --------------------------------------
-image_file         : filename (just the name) — must match a file in --images
-child_name         : child's name or ID
+image_file         : filename (just the name) — must match a file in --images.
+                      This is the ONLY identifier this layout uses. Do not
+                      add a child_name/ID column — no child names belong in
+                      folder names, filenames, or CSVs anywhere in this
+                      pipeline (see docs/field_data_guide.md). The results
+                      CSV's own "child_name" column is always populated from
+                      image_file (or the per-child folder id), never from
+                      an operator-supplied value.
 date_of_birth      : YYYY-MM-DD
 measurement_date   : YYYY-MM-DD, the date the photo/measurements were taken
                       (leave blank to fall back to today's date — but every
@@ -77,7 +83,7 @@ All other columns are ignored and preserved in the output.
 import argparse
 import csv
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -87,10 +93,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from scripts.validate_ground_truth import AGE_RANGE_MONTHS, validate_rows  # noqa: E402
 
 TEMPLATE_CSV = """\
-image_file,child_name,date_of_birth,measurement_date,sex,actual_height_cm,actual_weight_kg,muac_cm,oedema,notes
-child1.jpg,Child 1,2022-03-15,2024-03-20,M,85.0,11.2,14.5,no,
-child2.jpg,Child 2,2023-07-01,2024-03-20,F,78.5,,13.2,no,weight not available
-child3.jpg,Child 3,2021-11-20,2024-03-20,M,,,,,height and weight unknown
+image_file,date_of_birth,measurement_date,sex,actual_height_cm,actual_weight_kg,muac_cm,oedema,notes
+child1.jpg,2022-03-15,2024-03-20,M,85.0,11.2,14.5,no,
+child2.jpg,2023-07-01,2024-03-20,F,78.5,,13.2,no,weight not available
+child3.jpg,2021-11-20,2024-03-20,M,,,,,height and weight unknown
 """
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
@@ -203,7 +209,7 @@ def generate_template(out_path: Path = Path("data/ground_truth_template.csv")):
 def _compute_age_months(dob: date, at: Optional[date] = None) -> float:
     """Age in months at `at` (the measurement date). Falls back to today,
     which is only correct when assessment runs the same day as measurement."""
-    ref = at or datetime.utcnow().date()
+    ref = at or datetime.now(timezone.utc).date()
     return (ref - dob).days / 30.4375
 
 
@@ -386,7 +392,7 @@ def _run_flat(
             print(f"    [ERROR] {fname}: {e}")
             row = _error_row(
                 fname=fname,
-                child_name=gt.get("child_name", fname),
+                child_name=fname,  # I-3: identity, never an operator-supplied name
                 age_months=24.0,
                 sex=(gt.get("sex") or "M").strip().upper(),
                 actual_height=_parse_float(gt.get("actual_height_cm")),
@@ -407,7 +413,16 @@ def _process_child_image(
     verbose: bool,
 ) -> dict:
     """Run the full assessment pipeline for one image. Returns a result row."""
-    child_name = gt.get("child_name") or child_id or fname
+    # I-3: the child is keyed strictly on the folder id (per-child layout)
+    # or the image filename (flat layout) — never on an operator-supplied
+    # name. This is what ends up in the results CSV's "child_name" column,
+    # which analyze_results.coverage() uses as its join key against the
+    # intake manifest's child_id; a personal name there both violates the
+    # no-PII-in-CSVs rule and silently breaks that join (see final-review
+    # I-3). `_display_label` is a display-only convenience for the console
+    # warning below - it is never persisted to any file.
+    identity = child_id or fname
+    _display_label = gt.get("child_name") or identity
     sex = (gt.get("sex") or "M").strip().upper() or "M"
 
     dob_str = (gt.get("date_of_birth") or "").strip()
@@ -418,7 +433,7 @@ def _process_child_image(
             meas_date = date.fromisoformat(mdate_str)
         except ValueError:
             print(
-                f"    [WARN] {child_name}: invalid measurement_date "
+                f"    [WARN] {_display_label}: invalid measurement_date "
                 f"'{mdate_str}' - using today's date instead"
             )
 
@@ -546,7 +561,7 @@ def _process_child_image(
 
     row = {
         "image_file":           fname,
-        "child_name":           child_name,
+        "child_name":           identity,
         "age_months":           round(age_months, 1),
         "sex":                  sex,
         "measurement_date":     mdate_str,
@@ -667,19 +682,22 @@ def _load_master_ground_truth(ground_truth_csv: Path) -> dict[str, dict]:
     block.
     """
     with open(ground_truth_csv, newline="", encoding="utf-8") as f:
-        rows = list(csv.DictReader(f))
+        reader = csv.DictReader(f)
+        fieldnames = list(reader.fieldnames or [])
+        rows = list(reader)
 
-    errors, warnings = validate_rows(rows)
+    errors, warnings = validate_rows(rows, fieldnames=fieldnames)
     for w in warnings:
         print(f"  WARNING  {w}")
     if errors:
         for e in errors:
-            print(f"  ERROR    {e}")
+            print(f"  ERROR    {e}", file=sys.stderr)
         print(
             f"\n{ground_truth_csv}: {len(errors)} error(s) found in the "
             "master ground-truth CSV - refusing to assess any child.\n"
             "Fix the file and re-check it with:\n"
-            f"  PYTHONPATH=. .venv/bin/python scripts/validate_ground_truth.py {ground_truth_csv}"
+            f"  PYTHONPATH=. .venv/bin/python scripts/validate_ground_truth.py {ground_truth_csv}",
+            file=sys.stderr,
         )
         sys.exit(1)
 
@@ -752,7 +770,7 @@ def _run_per_child(
             print(f"    [ERROR] {child_id}: {e}")
             row = _error_row(
                 fname=front_path.name,
-                child_name=(values.get("child_name") or child_id),
+                child_name=child_id,  # I-3: identity, never an operator-supplied name
                 age_months=24.0,
                 sex=(values.get("sex") or "M"),
                 actual_height=_parse_float(values.get("actual_height_cm")),

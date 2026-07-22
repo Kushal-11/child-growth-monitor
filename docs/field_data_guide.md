@@ -67,6 +67,15 @@ your confirmation in the QC report.
 - Leave a value blank if it truly wasn't measured — never guess.
 - After typing everything in, re-check a random 10–15% of rows against
   the paper forms, and run the validator (Stage 3) before any assessment.
+- Never add a `child_name` (or any name/ID-beyond-`child_id`) column — this
+  is the only ground-truth CSV shape this pipeline reads. It is unrelated
+  to `data/ground_truth_template.csv` / `batch_assess.py --template`, which
+  is a separate, `image_file`-keyed template for standalone flat-layout use
+  of `batch_assess.py` outside `field_data/` — do not use that template as
+  your `field_data/ground_truth.csv`, and vice versa. `scripts/validate_
+  ground_truth.py` hard-fails on any column that doesn't match this shape
+  exactly, so using the wrong template here is caught immediately rather
+  than silently breaking coverage accounting.
 
 ## Rules
 

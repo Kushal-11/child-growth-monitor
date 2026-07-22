@@ -30,6 +30,21 @@ import cv2
 import mediapipe as mp
 import numpy as np
 
+# Needed so `from scripts.photo_qc import ...` below resolves when this file
+# is run directly (`python scripts/extract_best_frame.py ...`) without
+# PYTHONPATH set — matches the pattern used by clean_media.py etc.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+# Shared with photo_qc.py so the two independent scoring paths (this file's
+# own frame-extraction scoring, and clean_media.py's photo/video-fallback
+# re-score via photo_qc.score_photo) can never silently drift apart on
+# these two thresholds. Safe to import here: photo_qc.py only imports
+# mediapipe lazily inside its functions, never at module level, so this
+# import does not pull mediapipe/tensorflow in any earlier than this file
+# already does; there is no import back from photo_qc.py to this module,
+# so there is no circular import either.
+from scripts.photo_qc import COVERAGE_NORMALIZER, MIN_VISIBILITY  # noqa: E402
+
 # Key landmark indices used for scoring
 _KP = {
     "nose":           0,
@@ -93,7 +108,7 @@ def _score_frame(frame_rgb: np.ndarray, landmarker) -> tuple[float, list]:
 
     # 1. Check required landmarks are visible enough
     for req in _REQUIRED:
-        if vis(req) < 0.4:
+        if vis(req) < MIN_VISIBILITY:
             return 0.0, lms
 
     # 2. Pose confidence: mean visibility of key joints
@@ -107,7 +122,7 @@ def _score_frame(frame_rgb: np.ndarray, landmarker) -> tuple[float, list]:
     heel_y    = max(y("left_heel"), y("right_heel"),
                     y("left_ankle"), y("right_ankle"))
     coverage  = max(0.0, heel_y - nose_y)        # 0–1; want ~0.7–0.95
-    coverage_score = min(coverage / 0.80, 1.0)   # normalise: 0.80 coverage = 1.0
+    coverage_score = min(coverage / COVERAGE_NORMALIZER, 1.0)
 
     # 4. Upright score: key joints in correct vertical order
     order_pairs = [

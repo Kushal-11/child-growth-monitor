@@ -10,10 +10,11 @@ Usage:
 """
 import argparse
 import csv
+import difflib
 import sys
 from datetime import date
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Sequence
 
 DEFAULT_CSV = Path("field_data/ground_truth.csv")
 
@@ -61,10 +62,56 @@ def _check_range(
         errors.append(f"{tag}: {name} '{raw}' out of range {lo}-{hi}")
 
 
-def validate_rows(rows: list[dict]) -> tuple[list[str], list[str]]:
-    """Return (errors, warnings). Empty errors == safe to assess."""
+def check_header(fieldnames: Optional[Sequence[str]]) -> list[str]:
+    """Hard-fail when the CSV header doesn't exactly match ALL_COLS.
+
+    Row-level checks (`validate_rows` below) only ever do `row.get(col)`,
+    so a header typo (e.g. 'muac' instead of 'muac_cm') makes every row
+    read as "this value is blank" — which is only ever a WARNING, never an
+    ERROR. That silently drops an entire arm of the WHO OR-rule (e.g. the
+    MUAC arm) with no error printed, which can flip a child's gold-standard
+    status from SAM to Normal undetected. A header column outside ALL_COLS
+    is exactly that typo's signature, so both directions here are hard
+    errors, not warnings.
+    """
+    present = list(fieldnames or [])
+    present_set = set(present)
+    expected_set = set(ALL_COLS)
+    missing = sorted(expected_set - present_set)
+    unknown = sorted(present_set - expected_set)
+
+    errors: list[str] = []
+    for col in missing:
+        errors.append(f"header: required column '{col}' is missing")
+    for col in unknown:
+        candidates = (
+            difflib.get_close_matches(col, missing, n=1, cutoff=0.4)
+            or difflib.get_close_matches(col, ALL_COLS, n=1, cutoff=0.4)
+        )
+        if candidates:
+            errors.append(
+                f"header: unexpected column '{col}' "
+                f"(did you mean '{candidates[0]}'?)"
+            )
+        else:
+            errors.append(f"header: unexpected column '{col}'")
+    return errors
+
+
+def validate_rows(
+    rows: list[dict], fieldnames: Optional[Sequence[str]] = None,
+) -> tuple[list[str], list[str]]:
+    """Return (errors, warnings). Empty errors == safe to assess.
+
+    When `fieldnames` (the CSV header) is supplied, a header-shape check
+    runs first via `check_header` — see there for why this matters. Callers
+    that only have rows (no header) may omit it; the header check is then
+    simply skipped, preserving backward compatibility.
+    """
     errors: list[str] = []
     warnings: list[str] = []
+    if fieldnames is not None:
+        errors.extend(check_header(fieldnames))
     seen_ids: set[str] = set()
 
     for i, row in enumerate(rows, start=2):  # row 1 is the header
@@ -121,6 +168,13 @@ def load_csv(path: Path) -> list[dict]:
         return list(csv.DictReader(f))
 
 
+def read_header(path: Path) -> list[str]:
+    """Return the CSV's column names, for `check_header`/`validate_rows`."""
+    with open(path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        return list(reader.fieldnames or [])
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("csv_path", nargs="?", type=Path, default=DEFAULT_CSV)
@@ -143,7 +197,8 @@ def main() -> None:
         sys.exit(1)
 
     rows = load_csv(args.csv_path)
-    errors, warnings = validate_rows(rows)
+    fieldnames = read_header(args.csv_path)
+    errors, warnings = validate_rows(rows, fieldnames=fieldnames)
     for w in warnings:
         print(f"WARNING  {w}")
     for e in errors:

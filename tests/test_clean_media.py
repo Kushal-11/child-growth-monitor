@@ -239,6 +239,18 @@ def test_usable_no_side_reports_rejection_reason(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 
 def test_clean_child_video_fallback_success(tmp_path, monkeypatch):
+    # NOTE (I-2 fix): the extracted frame is now re-scored with score_photo
+    # through the exact same gate a photo goes through, so the mock must be
+    # able to tell the raw front.jpg (which must still fail QC, to force the
+    # fallback) apart from the extracted video frame (which must pass QC,
+    # to exercise the *success* path this test is named for). Previously
+    # score_photo was never called on the extracted frame at all, so a
+    # blanket "always unusable" mock and non-image placeholder bytes were
+    # harmless; post-fix they would make every video fallback register as
+    # QC-failed, which is a different test (see
+    # test_clean_child_video_fallback_frame_fails_qc below). Distinguishing
+    # by mean pixel value (black photo vs. white extracted frame) keeps
+    # every assertion below identical to before this fix.
     raw = tmp_path / "raw" / "004"
     raw.mkdir(parents=True)
     import cv2
@@ -246,16 +258,19 @@ def test_clean_child_video_fallback_success(tmp_path, monkeypatch):
     cv2.imwrite(str(raw / "front.jpg"), np.zeros((10, 10, 3), dtype=np.uint8))
     (raw / "clip.mp4").write_bytes(b"not a real video")
 
-    monkeypatch.setattr(
-        "scripts.clean_media.score_photo",
-        lambda *a, **k: _score(usable=False, reason="image too blurry"),
-    )
+    def fake_score_photo(image_bgr, landmarker):
+        if image_bgr.mean() < 10:            # the raw (black) front.jpg
+            return _score(usable=False, reason="image too blurry")
+        return _score()                       # the (white) extracted frame
+
+    monkeypatch.setattr("scripts.clean_media.score_photo", fake_score_photo)
 
     calls = []
 
     def fake_extract(video_path, output_path, verbose=False):
         calls.append((video_path, output_path))
-        Path(output_path).write_bytes(b"fake-jpg-bytes")
+        img = np.full((10, 10, 3), 255, dtype=np.uint8)
+        cv2.imwrite(str(output_path), img)
         return Path(output_path)
 
     # extract_best_frame is imported lazily (function-local, not module-level)
@@ -270,6 +285,89 @@ def test_clean_child_video_fallback_success(tmp_path, monkeypatch):
     prov = json.loads((tmp_path / "cleaned" / "004" / "provenance.json").read_text())
     assert prov["front"]["via"] == "video_fallback"
     assert (tmp_path / "cleaned" / "004" / "front.jpg").exists()
+
+
+# ---------------------------------------------------------------------------
+# I-2: extract_best_frame only checks landmark visibility (>= 0.4); it never
+# applies MIN_COVERAGE/MIN_UPRIGHT/MIN_SHARPNESS/MIN_POSE_CONFIDENCE. Without
+# a re-score, a frame with the child's feet cut off (or heavily blurred)
+# would be promoted into the study with no QC signal at all.
+# ---------------------------------------------------------------------------
+
+def test_clean_child_video_fallback_frame_fails_qc_reports_failed(tmp_path, monkeypatch):
+    """A frame that extract_best_frame is happy with but photo_qc.score_photo
+    rejects must produce verdict 'failed' with the specific QC reason —
+    exactly as a failing photo would — and must not leave a front.jpg
+    behind in the cleaned output."""
+    raw = tmp_path / "raw" / "006"
+    raw.mkdir(parents=True)
+    (raw / "clip.mp4").write_bytes(b"not a real video")
+
+    import cv2
+    import numpy as np
+
+    def fake_extract(video_path, output_path, verbose=False):
+        cv2.imwrite(str(output_path), np.full((10, 10, 3), 255, dtype=np.uint8))
+        return Path(output_path)
+
+    monkeypatch.setattr("scripts.extract_best_frame.extract_best_frame", fake_extract)
+    monkeypatch.setattr(
+        "scripts.clean_media.score_photo",
+        lambda *a, **k: _score(
+            usable=False, reason="body not fully in frame (head-to-feet)"
+        ),
+    )
+
+    row = clean_child(raw, tmp_path / "cleaned", landmarker=None, force=False)
+    assert row["verdict"] == "failed"
+    assert "body not fully in frame" in row["reason"]
+    assert not (tmp_path / "cleaned" / "006" / "front.jpg").exists()
+
+
+def test_clean_child_video_fallback_frame_passes_qc_records_scores(tmp_path, monkeypatch):
+    """When the extracted frame does pass the same QC gate a photo would,
+    provenance must carry its scores just like a photo's does — the QC
+    report must carry the same signal either way (never an empty `scores`)."""
+    raw = tmp_path / "raw" / "007"
+    raw.mkdir(parents=True)
+    (raw / "clip.mp4").write_bytes(b"not a real video")
+
+    import cv2
+    import numpy as np
+
+    def fake_extract(video_path, output_path, verbose=False):
+        cv2.imwrite(str(output_path), np.full((10, 10, 3), 255, dtype=np.uint8))
+        return Path(output_path)
+
+    monkeypatch.setattr("scripts.extract_best_frame.extract_best_frame", fake_extract)
+    monkeypatch.setattr("scripts.clean_media.score_photo", lambda *a, **k: _score())
+
+    row = clean_child(raw, tmp_path / "cleaned", landmarker=None, force=False)
+    assert row["verdict"] == "usable_no_side"
+    prov = json.loads((tmp_path / "cleaned" / "007" / "provenance.json").read_text())
+    assert prov["front"]["via"] == "video_fallback"
+    assert "scores" in prov["front"]
+    assert prov["front"]["scores"]["pose_confidence"] > 0
+
+
+def test_clean_child_video_fallback_unreadable_frame_reports_failed(tmp_path, monkeypatch):
+    """extract_best_frame can succeed (returns a path) while writing content
+    that isn't actually a decodable image; that must be treated as a QC
+    failure too, not silently promoted."""
+    raw = tmp_path / "raw" / "008"
+    raw.mkdir(parents=True)
+    (raw / "clip.mp4").write_bytes(b"not a real video")
+
+    def fake_extract(video_path, output_path, verbose=False):
+        Path(output_path).write_bytes(b"not-a-real-jpeg")
+        return Path(output_path)
+
+    monkeypatch.setattr("scripts.extract_best_frame.extract_best_frame", fake_extract)
+
+    row = clean_child(raw, tmp_path / "cleaned", landmarker=None, force=False)
+    assert row["verdict"] == "failed"
+    assert "unreadable" in row["reason"]
+    assert not (tmp_path / "cleaned" / "008" / "front.jpg").exists()
 
 
 def test_clean_child_video_fallback_raises_reports_failed(tmp_path, monkeypatch):
