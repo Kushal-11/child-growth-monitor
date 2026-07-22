@@ -105,6 +105,17 @@ def test_check_header_passes_for_exact_all_cols():
     assert check_header(ALL_COLS) == []
 
 
+def test_check_header_flags_duplicate_column():
+    """Probe from review: check_header compares column SETS, so a duplicate
+    column (e.g. 'muac_cm' twice, from an Excel copy-column) is invisible to
+    a set difference. csv.DictReader keeps the LAST duplicate's value, so a
+    blank second 'muac_cm' silently blanks MUAC on every row - the same
+    silent-data-loss failure mode the header check exists to catch."""
+    header = ALL_COLS + ["muac_cm"]
+    errors = check_header(header)
+    assert any("muac_cm" in e and "duplicate" in e.lower() for e in errors)
+
+
 def test_validate_rows_without_fieldnames_skips_header_check():
     """Backward compatible: omitting `fieldnames` (existing callers/tests
     that only ever had rows) must not suddenly start hard-failing."""
@@ -134,3 +145,23 @@ def test_muac_header_typo_silently_flips_sam_to_normal_without_header_check(tmp_
     errors, _ = validate_rows(rows, fieldnames=fieldnames)
     assert errors != [], "the header-shape check must now hard-fail this CSV"
     assert any("muac_cm" in e for e in errors)
+
+
+def test_duplicate_header_column_rejected_end_to_end(tmp_path):
+    """A CSV with 'muac_cm' appearing twice (Excel copy-column) must hard-fail
+    through validate_rows(rows, fieldnames=...), not just check_header in
+    isolation. csv.DictReader silently keeps the last duplicate's value, so
+    a blank second occurrence would otherwise blank MUAC on every row with
+    zero errors printed."""
+    dup_csv = tmp_path / "ground_truth.csv"
+    dup_csv.write_text(
+        "child_id,sex,date_of_birth,measurement_date,"
+        "actual_height_cm,actual_weight_kg,muac_cm,oedema,notes,muac_cm\n"
+        "001,M,2023-04-12,2026-07-15,90.0,12.0,10.9,no,,\n"
+    )
+    rows = load_csv(dup_csv)
+    fieldnames = read_header(dup_csv)
+
+    errors, _ = validate_rows(rows, fieldnames=fieldnames)
+    assert errors != [], "duplicate header column must hard-fail"
+    assert any("muac_cm" in e and "duplicate" in e.lower() for e in errors)

@@ -12,6 +12,7 @@ import argparse
 import csv
 import difflib
 import sys
+from collections import Counter
 from datetime import date
 from pathlib import Path
 from typing import Optional, Sequence
@@ -73,14 +74,25 @@ def check_header(fieldnames: Optional[Sequence[str]]) -> list[str]:
     status from SAM to Normal undetected. A header column outside ALL_COLS
     is exactly that typo's signature, so both directions here are hard
     errors, not warnings.
+
+    A duplicated column name (e.g. an Excel copy-column producing 'muac_cm'
+    twice) is invisible to a plain set comparison — `set(present)` collapses
+    the duplicate away. `csv.DictReader` keeps only the *last* occurrence's
+    value, so a blank second 'muac_cm' would silently blank MUAC on every
+    row with no error printed: the same silent-data-loss failure mode this
+    check exists to catch. Duplicates are therefore also a hard error.
     """
     present = list(fieldnames or [])
     present_set = set(present)
     expected_set = set(ALL_COLS)
     missing = sorted(expected_set - present_set)
     unknown = sorted(present_set - expected_set)
+    counts = Counter(present)
+    duplicates = sorted(col for col, n in counts.items() if n > 1)
 
     errors: list[str] = []
+    for col in duplicates:
+        errors.append(f"header: column '{col}' appears more than once (duplicate)")
     for col in missing:
         errors.append(f"header: required column '{col}' is missing")
     for col in unknown:
