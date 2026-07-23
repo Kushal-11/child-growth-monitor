@@ -66,7 +66,7 @@ jobs:
         run: flutter test
 
       - name: Build release APK
-        run: flutter build apk --release --dart-define=API_BASE_URL=${{ vars.API_BASE_URL || 'http://10.0.2.2:8000' }}
+        run: flutter build apk --release --dart-define=FIELD_OFFLINE_AUTH=true --dart-define=API_BASE_URL=${{ vars.API_BASE_URL || 'http://10.0.2.2:8000' }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

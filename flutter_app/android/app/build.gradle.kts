@@ -28,6 +28,24 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // tflite_flutter 0.12.1 / LiteRT 1.4.0 ships pre-compiled native .so
+        // files for these four ABIs. Keep every supported ABI in universal APKs.
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
+    }
+
+    // tflite_flutter uses dart:ffi DynamicLibrary.open() to load
+    // libtensorflowlite_jni.so at runtime. AGP 8.x release builds
+    // DEFLATE-compress AAR-sourced .so files when minSdk < 23 by default,
+    // making them unloadable via dlopen. useLegacyPackaging = false forces
+    // uncompressed storage regardless of minSdk, matching debug-build
+    // behaviour so extraction and direct-mmap both work.
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 
     buildTypes {

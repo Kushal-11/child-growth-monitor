@@ -32,7 +32,14 @@
       "WebFetch(domain:link.springer.com)",
       "WebFetch(domain:assets.amazon.science)",
       "WebFetch(domain:www.mdpi.com)",
-      "Bash(.venv/bin/python -c ' *)"
+      "Bash(.venv/bin/python -c ' *)",
+      "Bash(flutter --version)",
+      "Bash(sqlite3 *)",
+      "Bash(PYTHONPATH=. printf 'admin\\\\n')",
+      "Bash(.venv/bin/python scripts/create_user.py --username \"addressingmalnutrition.sneh@gmail.com\" --full-name \"SNEH Admin\" --role admin)",
+      "Bash(ip -4 addr show scope global)",
+      "Bash(ip route *)",
+      "Skill(deep-research)"
     ]
   },
   "hooks": {
