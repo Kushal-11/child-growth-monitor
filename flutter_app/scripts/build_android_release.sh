@@ -22,6 +22,6 @@ flutter analyze
 flutter test
 
 API_BASE_URL="${API_BASE_URL:-http://10.0.2.2:8000}"
-flutter build apk --release --dart-define=API_BASE_URL="$API_BASE_URL"
+flutter build apk --release --dart-define=FIELD_OFFLINE_AUTH=true --dart-define=API_BASE_URL="$API_BASE_URL"
 
 echo "APK built at: $APP_DIR/build/app/outputs/flutter-apk/app-release.apk"
