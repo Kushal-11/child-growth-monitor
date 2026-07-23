@@ -329,4 +329,21 @@ const Map<String, Map<String, String>> translations = {
   'storage_title': {'en': 'Storage', 'mr': 'स्टोरेज'},
   'storage_used': {'en': 'Used', 'mr': 'वापरले'},
   'storage_clear': {'en': 'Clear all images', 'mr': 'सर्व प्रतिमा हटवा'},
+  'settings_subtitle': {
+    'en': 'Keep the app ready for offline field work.',
+    'mr': 'क्षेत्रातील ऑफलाइन कामासाठी अ‍ॅप तयार ठेवा.',
+  },
+  'server_connection_help': {
+    'en': 'Set the clinic API endpoint before signing in or syncing visits.',
+    'mr': 'साइन इन किंवा भेटी सिंक करण्यापूर्वी क्लिनिक API endpoint सेट करा.',
+  },
+  'sync_status_help': {
+    'en': 'Queued assessments are uploaded when the server is reachable.',
+    'mr': 'सर्व्हर उपलब्ध झाल्यावर रांगेतील मूल्यांकन अपलोड होतात.',
+  },
+  'storage_help': {
+    'en': 'Captured images remain on device for offline review until cleared.',
+    'mr': 'हटवले जाईपर्यंत फोटो ऑफलाइन पाहणीसाठी उपकरणावर राहतात.',
+  },
 };
+  'configure_server': {'en': 'Configure server', 'mr': 'सर्व्हर कॉन्फिगर करा'},
