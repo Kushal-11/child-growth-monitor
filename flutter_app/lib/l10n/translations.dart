@@ -344,6 +344,62 @@ const Map<String, Map<String, String>> translations = {
   'storage_title': {'en': 'Storage', 'mr': 'स्टोरेज'},
   'storage_used': {'en': 'Used', 'mr': 'वापरले'},
   'storage_clear': {'en': 'Clear all images', 'mr': 'सर्व प्रतिमा हटवा'},
+  'step_child_details': {'en': 'Child details', 'mr': 'मुलाची माहिती'},
+  'step_photos_measurements': {
+    'en': 'Photos & measurements',
+    'mr': 'फोटो आणि मोजमाप',
+  },
+  'step_review': {'en': 'Review', 'mr': 'पुनरावलोकन'},
+  'who_are_we_assessing': {
+    'en': 'Who are we assessing?',
+    'mr': 'आपण कोणाचे मूल्यांकन करत आहोत?',
+  },
+  'child_details_help': {
+    'en': 'Select a registered child or enter details for a new profile.',
+    'mr': 'नोंदणीकृत मूल निवडा किंवा नवीन प्रोफाइलची माहिती भरा.',
+  },
+  'select_registered_child': {
+    'en': 'Select a registered child',
+    'mr': 'नोंदणीकृत मूल निवडा',
+  },
+  'or_enter_new_profile': {
+    'en': 'Or continue with a new profile',
+    'mr': 'किंवा नवीन प्रोफाइलसह पुढे जा',
+  },
+  'enter_new_child_details': {
+    'en': 'Enter the child details below',
+    'mr': 'खाली मुलाची माहिती भरा',
+  },
+  'capture_measurements_heading': {'en': 'Capture photos', 'mr': 'फोटो घ्या'},
+  'capture_measurements_help': {
+    'en':
+        'Keep the full body visible in good light. Manual measurements are optional.',
+    'mr':
+        'चांगल्या प्रकाशात संपूर्ण शरीर दिसू द्या. हस्तलिखित मोजमाप ऐच्छिक आहेत.',
+  },
+  'front_photo_compact_help': {
+    'en': 'Child upright, facing the camera, with head and feet visible.',
+    'mr': 'मूल सरळ, कॅमेऱ्याकडे तोंड करून, डोके आणि पाय दिसतील असे उभे करा.',
+  },
+  'manual_measurements_priority_note': {
+    'en':
+        'Add scale or tape values when available. These take priority over estimates.',
+    'mr':
+        'उपलब्ध असल्यास वजनकाटा किंवा टेपचे मोजमाप भरा. त्यांना अंदाजापेक्षा प्राधान्य दिले जाते.',
+  },
+  'review_assessment_heading': {
+    'en': 'Review assessment',
+    'mr': 'मूल्यांकन तपासा',
+  },
+  'review_assessment_help': {
+    'en': 'Confirm the details before processing the assessment.',
+    'mr': 'मूल्यांकन प्रक्रिया सुरू करण्यापूर्वी माहिती तपासा.',
+  },
+  'photos': {'en': 'Photos', 'mr': 'फोटो'},
+  'ready': {'en': 'Ready', 'mr': 'तयार'},
+  'not_provided': {'en': 'Not provided', 'mr': 'दिलेले नाही'},
+  'back': {'en': 'Back', 'mr': 'मागे'},
+  'continue': {'en': 'Continue', 'mr': 'पुढे जा'},
   'settings_subtitle': {
     'en': 'Keep the app ready for offline field work.',
     'mr': 'क्षेत्रातील ऑफलाइन कामासाठी अ‍ॅप तयार ठेवा.',
