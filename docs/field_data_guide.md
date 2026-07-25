@@ -11,12 +11,15 @@ pipeline can process them. Follow this while gathering; run the intake check
         001/
           front.jpg              <- frontal photo (best if named like this)
           side.jpg               <- side photo
+          back.jpg               <- rear view, kept for future body-shape work
+          arm.jpg                <- MUAC/upper-arm close-up, kept for arm model
           extra_01.jpg           <- any other photos: keep them, pipeline picks best
-          walk.mp4               <- optional video
+          rotate.mp4             <- optional rotating/standing video
         002/
           ...
       ground_truth.csv           <- one row per child, typed from the paper forms
       cleaned/                   <- pipeline output. Never edit by hand.
+      derived/                   <- pipeline output for video views/features.
       reports/                   <- pipeline output. Never edit by hand.
 
 ## Child IDs
@@ -34,12 +37,16 @@ Aim for, in order of importance:
 1. **One frontal photo** — child standing straight, facing the camera,
    full body visible head to feet, arms slightly away from the body.
 2. **One side photo** — child turned 90°, again full body.
-3. Optional: extra shots, video clips. Keep everything; the cleaner
-   scores all of them and picks the best automatically.
+3. Optional but useful: **arm/MUAC close-ups** named `arm...` or `muac...`.
+4. Optional: back shots, extra shots, rotating video clips. Keep everything;
+   the cleaner scores whole-body photos and preserves non-measurement views for
+   later model training.
 
 Name files `front...` / `side...` when you know which is which
-(`front.jpg`, `front_2.jpg`, `side_a.jpg`). If a photo is unnamed the
-pipeline guesses the orientation from the pose and flags the guess for
+(`front.jpg`, `front_2.jpg`, `side_a.jpg`). Name rear and arm photos
+`back...` / `rear...` and `arm...` / `muac...` so they are archived instead of
+mistaken for whole-body measurement photos. If a whole-body photo is unnamed
+the pipeline guesses the orientation from the pose and flags the guess for
 your confirmation in the QC report.
 
 ## Photo quality basics (saves recapture trips)
@@ -119,6 +126,9 @@ All commands from the project root.
 
     # 3. Clean: pick best front/side per child, get the recapture list
     PYTHONPATH=. .venv/bin/python scripts/clean_media.py
+
+    # 3b. Optional: split rotating videos into best front/side candidate frames
+    PYTHONPATH=. .venv/bin/python scripts/extract_scan_views.py
 
     # 4. Assess every cleaned child against ground truth
     PYTHONPATH=. .venv/bin/python scripts/batch_assess.py \

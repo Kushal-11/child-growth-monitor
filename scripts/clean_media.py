@@ -30,7 +30,8 @@ from scripts.intake_check import IMAGE_EXTENSIONS, VIDEO_EXTENSIONS  # noqa: E40
 
 QC_COLS = [
     "child_id", "verdict", "front_source", "front_via",
-    "side_source", "side_via", "needs_confirmation", "reason",
+    "side_source", "side_via", "n_archived_back", "n_archived_arm",
+    "needs_confirmation", "reason",
 ]
 
 
@@ -119,6 +120,31 @@ def _score_dict(s: PhotoScore) -> dict:
         "sharpness": round(s.sharpness, 1),
         "orientation": s.orientation,
     }
+
+
+def _copy_archived_media(
+    child_dir: Path, out_dir: Path, archived: dict[str, list[str]]
+) -> dict[str, list[str]]:
+    """Copy non-measurement views into cleaned/<id>/archive/<role>/.
+
+    Back and arm photos are intentionally excluded from whole-body pose
+    selection, but they are valuable training inputs for future scan-derived
+    MUAC/body-shape models.  Keep raw/ immutable and copy these assets into the
+    cleaned dataset so downstream scripts do not have to rescan raw folders.
+    """
+    copied: dict[str, list[str]] = {}
+    archive_root = out_dir / "archive"
+    for role, names in sorted(archived.items()):
+        role_dir = archive_root / role
+        for name in names:
+            src = child_dir / name
+            if not src.is_file():
+                continue
+            role_dir.mkdir(parents=True, exist_ok=True)
+            dest = role_dir / name
+            shutil.copy2(src, dest)
+            copied.setdefault(role, []).append(str(dest.relative_to(out_dir)))
+    return copied
 
 
 def clean_child(
@@ -267,6 +293,8 @@ def clean_child(
     else:
         prov["verdict"] = "ok"
 
+    prov["archived_copied"] = _copy_archived_media(child_dir, out_dir, archived)
+
     prov_path.write_text(json.dumps(prov, indent=2))
     return _report_row_from_provenance(prov)
 
@@ -279,6 +307,7 @@ def _report_row_from_provenance(prov: dict) -> dict:
     """
     front = prov.get("front") or {}
     side = prov.get("side") or {}
+    archived = prov.get("archived") or {}
     return {
         "child_id": prov.get("child_id", ""),
         "verdict": prov.get("verdict", "failed"),
@@ -286,6 +315,8 @@ def _report_row_from_provenance(prov: dict) -> dict:
         "front_via": front.get("via", ""),
         "side_source": side.get("source", ""),
         "side_via": side.get("via", ""),
+        "n_archived_back": len(archived.get("back") or []),
+        "n_archived_arm": len(archived.get("arm") or []),
         "needs_confirmation": prov.get("needs_confirmation", False),
         "reason": prov.get("reason", ""),
     }

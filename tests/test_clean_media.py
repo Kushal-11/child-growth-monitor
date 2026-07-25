@@ -5,6 +5,8 @@ score_photo is monkeypatched everywhere; no MediaPipe model is loaded.
 import json
 from pathlib import Path
 
+from pytest import MonkeyPatch
+
 from scripts.photo_qc import PhotoScore
 from scripts.clean_media import Candidate, select_best, clean_child, run_clean
 
@@ -445,3 +447,28 @@ def test_arm_photo_not_scored_or_blamed(tmp_path, monkeypatch):
         (tmp_path / "cleaned" / "001" / "provenance.json").read_text()
     )
     assert prov["archived"]["arm"] == ["arm.jpg"]
+    assert prov["archived_copied"]["arm"] == ["archive/arm/arm.jpg"]
+    assert (tmp_path / "cleaned" / "001" / "archive" / "arm" / "arm.jpg").exists()
+
+
+def test_back_and_arm_archives_are_counted_in_report(
+    tmp_path: Path, monkeypatch: MonkeyPatch,
+) -> None:
+    """The QC report should expose preserved non-measurement views."""
+    import cv2
+    import numpy as np
+
+    raw = tmp_path / "raw" / "001"
+    raw.mkdir(parents=True)
+    img = np.full((10, 10, 3), 255, dtype=np.uint8)
+    for name in ("front.jpg", "back.jpg", "arm.jpg"):
+        cv2.imwrite(str(raw / name), img)
+
+    monkeypatch.setattr("scripts.clean_media.score_photo", lambda *_: _score())
+
+    row = clean_child(raw, tmp_path / "cleaned", landmarker=None, force=False)
+
+    assert row["n_archived_back"] == 1
+    assert row["n_archived_arm"] == 1
+    assert (tmp_path / "cleaned" / "001" / "archive" / "back" / "back.jpg").exists()
+    assert (tmp_path / "cleaned" / "001" / "archive" / "arm" / "arm.jpg").exists()
