@@ -2,16 +2,62 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/providers/login_form_provider.dart';
+import '../../l10n/l10n_provider.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+
+class LoginScreen extends ConsumerWidget {
+  const LoginScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(loginFormProvider);
+    final notifier = ref.read(loginFormProvider.notifier);
     final theme = Theme.of(context);
-            const _LoginBackdrop(),
+
+    return Scaffold(
+      body: SafeArea(
+        child: Stack(
+          children: [
+            const Positioned.fill(
+              child: IgnorePointer(child: _LoginBackdrop()),
+            ),
+            Positioned(
+              top: AppSpacing.sm,
+              right: AppSpacing.md,
               child: _LoginActions(ref: ref),
-                  AppSpacing.lg,
+            ),
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xxl,
                   84,
-                  AppSpacing.lg,
+                  AppSpacing.xxl,
+                  AppSpacing.section,
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: AutofillGroup(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const _BrandMark(),
+                        const SizedBox(height: AppSpacing.xl),
+                        Text(
+                          t('app_title', ref),
+                          textAlign: TextAlign.center,
                           style: theme.textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          t('login_welcome', ref),
+                          textAlign: TextAlign.center,
                           style: theme.textTheme.bodyLarge?.copyWith(
                             color: AppColors.textSecondary,
                           ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
                         const _OfflineBadge(),
                         const SizedBox(height: AppSpacing.xxl),
                         Card(
@@ -19,10 +65,13 @@ import 'package:go_router/go_router.dart';
                             padding: const EdgeInsets.all(AppSpacing.lg),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
                                 Text(
                                   t('sign_in', ref),
                                   style: theme.textTheme.titleLarge,
+                                ),
                                 const SizedBox(height: AppSpacing.xs),
+                                Text(
                                   t('sign_in_help', ref),
                                   style: theme.textTheme.bodyMedium,
                                 ),
@@ -47,7 +96,8 @@ import 'package:go_router/go_router.dart';
                                     prefixIcon: const Icon(
                                       Icons.person_outline_rounded,
                                     ),
-                                    errorText: state.showValidationErrors &&
+                                    errorText:
+                                        state.showValidationErrors &&
                                             state.username.trim().isEmpty
                                         ? t('required_field', ref)
                                         : null,
@@ -63,7 +113,9 @@ import 'package:go_router/go_router.dart';
                                   textInputAction: TextInputAction.done,
                                   onChanged: notifier.updatePassword,
                                   onFieldSubmitted: (_) {
-                                    if (!state.isSubmitting) notifier.submit();
+                                    if (!state.isSubmitting) {
+                                      notifier.submit();
+                                    }
                                   },
                                   decoration: InputDecoration(
                                     labelText: t('password', ref),
@@ -83,8 +135,10 @@ import 'package:go_router/go_router.dart';
                                         state.passwordVisible
                                             ? Icons.visibility_off_outlined
                                             : Icons.visibility_outlined,
+                                      ),
                                     ),
-                                    errorText: state.showValidationErrors &&
+                                    errorText:
+                                        state.showValidationErrors &&
                                             state.password.isEmpty
                                         ? t('required_field', ref)
                                         : null,
@@ -113,7 +167,26 @@ import 'package:go_router/go_router.dart';
                                         ? t('signing_in', ref)
                                         : t('log_in', ref),
                                   ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
                         const _PrivacyNote(),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _LoginBackdrop extends StatelessWidget {
   const _LoginBackdrop();
 
@@ -175,6 +248,36 @@ class _LoginActions extends StatelessWidget {
           icon: const Icon(Icons.settings_outlined),
         ),
       ],
+    );
+  }
+}
+
+class _BrandMark extends StatelessWidget {
+  const _BrandMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.18),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.monitor_heart_rounded,
+          color: Colors.white,
+          size: 36,
+        ),
+      ),
     );
   }
 }
@@ -262,21 +365,40 @@ class _PrivacyNote extends ConsumerWidget {
   }
 }
 
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.dangerSurface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.dangerBorder),
+class _LoginError extends StatelessWidget {
+  const _LoginError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.dangerSurface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.dangerBorder),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              color: AppColors.dangerText,
+              size: 20,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: AppColors.dangerText),
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: AppColors.dangerText),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.dangerText,
-          ),
-        ],
+    );
+  }
+}

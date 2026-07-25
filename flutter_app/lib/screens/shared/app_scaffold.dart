@@ -39,12 +39,16 @@ class AppScaffold extends ConsumerWidget {
                         color: Colors.red,
                         shape: BoxShape.circle,
                       ),
-                      constraints:
-                          const BoxConstraints(minWidth: 16, minHeight: 16),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
                       child: Text(
                         '$pending',
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 10),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -58,9 +62,7 @@ class AppScaffold extends ConsumerWidget {
               ref.watch(localeProvider) == 'en'
                   ? t('lang_mr', ref)
                   : t('lang_en', ref),
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onPrimary,
-              ),
+              style: TextStyle(color: Theme.of(context).colorScheme.primary),
             ),
           ),
         ],

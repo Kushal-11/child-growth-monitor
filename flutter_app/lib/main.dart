@@ -5,15 +5,14 @@ import 'providers/api_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/sync_provider.dart';
 import 'router.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final savedUrl = await loadSavedBaseUrl();
   runApp(
     ProviderScope(
-      overrides: [
-        baseUrlProvider.overrideWith((ref) => savedUrl),
-      ],
+      overrides: [baseUrlProvider.overrideWith((ref) => savedUrl)],
       child: const ChildGrowthApp(),
     ),
   );
@@ -41,10 +40,7 @@ class _ChildGrowthAppState extends ConsumerState<ChildGrowthApp> {
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'SNEH Growth Monitor',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light(),
       routerConfig: router,
     );
   }

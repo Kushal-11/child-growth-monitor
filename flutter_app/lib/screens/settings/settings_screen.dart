@@ -12,7 +12,9 @@ import '../../services/image_storage_service.dart';
 import '../shared/app_scaffold.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.imageStorageService});
+
+  final ImageStorageService? imageStorageService;
 
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
@@ -20,6 +22,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _urlController = TextEditingController();
+  late final ImageStorageService _imageStorageService;
   bool _loading = false;
   bool? _healthy;
   String? _error;
@@ -29,6 +32,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    _imageStorageService = widget.imageStorageService ?? ImageStorageService();
     _loadUrl();
     _refreshStorage();
   }
@@ -87,7 +91,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _refreshStorage() async {
-    final used = await ImageStorageService().totalUsedBytes();
+    final used = await _imageStorageService.totalUsedBytes();
     if (!mounted) return;
     setState(() => _bytesUsed = used);
   }
@@ -102,7 +106,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _clearImages() async {
-    await ImageStorageService().clearAll();
+    await _imageStorageService.clearAll();
     await _refreshStorage();
   }
 
@@ -126,10 +130,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             style: theme.textTheme.headlineSmall,
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text(
-            t('settings_subtitle', ref),
-            style: theme.textTheme.bodyMedium,
-          ),
+          Text(t('settings_subtitle', ref), style: theme.textTheme.bodyMedium),
           const SizedBox(height: AppSpacing.xl),
 
           // Server Connection card
@@ -146,6 +147,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   TextFormField(
+                    key: const Key('settings_base_url'),
                     controller: _urlController,
                     decoration: InputDecoration(
                       labelText: t('api_base_url', ref),
@@ -196,12 +198,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     children: [
                       Expanded(
                         child: FilledButton(
+                          key: const Key('settings_save_test'),
                           onPressed: _loading ? null : _saveAndTest,
                           child: Text(t('save_and_test', ref)),
                         ),
                       ),
                       const SizedBox(width: 8),
                       TextButton(
+                        key: const Key('settings_reset_default'),
                         onPressed: _loading ? null : _resetToDefault,
                         child: Text(t('reset_default', ref)),
                       ),
@@ -226,17 +230,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     subtitle: t('sync_status_help', ref),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  Consumer(builder: (context, ref, _) {
-                    final pending =
-                        ref.watch(pendingSyncCountProvider).value ?? 0;
-                    return Text(
-                      pending == 0
-                          ? t('sync_all_synced', ref)
-                          : '${t('sync_pending', ref)}: $pending',
-                    );
-                  }),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final pending =
+                          ref.watch(pendingSyncCountProvider).value ?? 0;
+                      return Text(
+                        pending == 0
+                            ? t('sync_all_synced', ref)
+                            : '${t('sync_pending', ref)}: $pending',
+                      );
+                    },
+                  ),
                   const SizedBox(height: 12),
                   FilledButton.icon(
+                    key: const Key('settings_sync_now'),
                     onPressed: _syncing ? null : _syncNow,
                     icon: _syncing
                         ? const SizedBox(
@@ -273,6 +280,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
+                    key: const Key('settings_clear_images'),
                     onPressed: _clearImages,
                     icon: const Icon(Icons.delete_outline),
                     label: Text(t('storage_clear', ref)),
