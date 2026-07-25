@@ -1,7 +1,17 @@
 """MeasurementResult model storing assessment outputs."""
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import relationship
 
 from app.models.database import Base
@@ -18,6 +28,10 @@ class MeasurementResult(Base):
     predicted_weight_kg = Column(Float, nullable=True)  # estimated from WHO median
     manual_height_cm = Column(Float, nullable=True)  # if manually entered
     manual_weight_kg = Column(Float, nullable=True)  # if manually entered
+    effective_height_cm = Column(Float, nullable=True)
+    effective_weight_kg = Column(Float, nullable=True)
+    height_source = Column(String(50), nullable=True)
+    weight_source = Column(String(50), nullable=True)
 
     # Calibration info
     reference_object_detected = Column(String(10), default="false")
@@ -43,6 +57,9 @@ class MeasurementResult(Base):
     # ML wasting classifier output (5-class softmax)
     ml_estimated_weight_kg = Column(Float, nullable=True)
     ml_wasting_status = Column(String(50), nullable=True)
+    ml_model_version = Column(String(100), nullable=True)
+    ml_training_data = Column(String(200), nullable=True)
+    ml_non_clinical = Column(Boolean, nullable=True)
     sam_probability = Column(Float, nullable=True)
     mam_probability = Column(Float, nullable=True)
     normal_probability = Column(Float, nullable=True)
@@ -52,7 +69,15 @@ class MeasurementResult(Base):
     # MUAC
     muac_cm = Column(Float, nullable=True)
     muac_status = Column(String(50), nullable=True)
-    muac_method = Column(String(50), nullable=True)  # manual / estimated_from_whz
+    muac_method = Column(String(50), nullable=True)
+
+    # Canonical Poshan Setu v1 calculation and provenance
+    bmi = Column(Float, nullable=True)
+    bmi_status = Column(String(20), nullable=True)
+    poshan_status = Column(String(20), nullable=True)
+    poshan_triggered_by = Column(JSON, nullable=True)
+    classification_method = Column(String(50), nullable=True)
+    classification_rationale = Column(Text, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
 

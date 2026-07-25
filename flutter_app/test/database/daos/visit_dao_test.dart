@@ -23,14 +23,16 @@ void main() {
       name: 'Test',
       dateOfBirth: '2024-01-01',
       sex: 'M',
+      ownerUserId: 1,
     );
     final visitId = await visitDao.createWithMeasurement(
       childId: child.id,
       ageMonths: 16,
       imagePath: '/tmp/front.jpg',
+      ownerUserId: 1,
       measurement: const MeasurementsCompanion(),
     );
-    final row = await visitDao.getById(visitId);
+    final row = await visitDao.getById(visitId, ownerUserId: 1);
     expect(row, isNotNull);
     expect(row!.visit.localUuid.isNotEmpty, isTrue);
     expect(row.visit.localUuid.length, 36);
@@ -41,21 +43,58 @@ void main() {
       name: 'Test',
       dateOfBirth: '2024-01-01',
       sex: 'M',
+      ownerUserId: 1,
     );
     final v1 = await visitDao.createWithMeasurement(
       childId: child.id,
       ageMonths: 16,
       imagePath: '/tmp/a.jpg',
+      ownerUserId: 1,
       measurement: const MeasurementsCompanion(),
     );
     final v2 = await visitDao.createWithMeasurement(
       childId: child.id,
       ageMonths: 16,
       imagePath: '/tmp/b.jpg',
+      ownerUserId: 1,
       measurement: const MeasurementsCompanion(),
     );
-    final r1 = await visitDao.getById(v1);
-    final r2 = await visitDao.getById(v2);
+    final r1 = await visitDao.getById(v1, ownerUserId: 1);
+    final r2 = await visitDao.getById(v2, ownerUserId: 1);
     expect(r1!.visit.localUuid, isNot(equals(r2!.visit.localUuid)));
+  });
+
+  test('visit creation and reads reject a different owner', () async {
+    final child = await childDao.findOrCreate(
+      name: 'Owned',
+      dateOfBirth: '2024-01-01',
+      sex: 'F',
+      ownerUserId: 1,
+    );
+    await expectLater(
+      visitDao.createWithMeasurement(
+        childId: child.id,
+        ageMonths: 16,
+        imagePath: '/tmp/front.jpg',
+        ownerUserId: 2,
+        measurement: const MeasurementsCompanion(),
+      ),
+      throwsStateError,
+    );
+    final visitId = await visitDao.createWithMeasurement(
+      childId: child.id,
+      ageMonths: 16,
+      imagePath: '/tmp/front.jpg',
+      ownerUserId: 1,
+      measurement: const MeasurementsCompanion(),
+    );
+    expect(
+      await visitDao.getById(visitId, ownerUserId: 2),
+      isNull,
+    );
+    expect(
+      await visitDao.watchByChildId(child.id, ownerUserId: 2).first,
+      isEmpty,
+    );
   });
 }

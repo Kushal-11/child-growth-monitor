@@ -32,8 +32,7 @@ class ChildDetailScreen extends ConsumerWidget {
                     style: const TextStyle(color: Colors.red)),
                 const SizedBox(height: 8),
                 OutlinedButton(
-                  onPressed: () =>
-                      ref.invalidate(childDetailProvider(childId)),
+                  onPressed: () => ref.invalidate(childDetailProvider(childId)),
                   child: const Text('Retry'),
                 ),
               ],
@@ -85,8 +84,7 @@ class ChildDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _profileCard(
-      BuildContext context, WidgetRef ref, ChildDetail child) {
+  Widget _profileCard(BuildContext context, WidgetRef ref, ChildDetail child) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -99,11 +97,11 @@ class ChildDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             _profileRow(t('label_dob', ref), child.dateOfBirth),
-            _profileRow(t('label_sex', ref), child.sex == 'M' ? 'Male' : 'Female'),
+            _profileRow(
+                t('label_sex', ref), child.sex == 'M' ? 'Male' : 'Female'),
             _profileRow(t('label_guardian', ref), child.guardianName ?? '—'),
             _profileRow(t('label_location', ref), child.location ?? '—'),
-            _profileRow(
-                t('total_visits', ref), child.visits.length.toString()),
+            _profileRow(t('total_visits', ref), child.visits.length.toString()),
           ],
         ),
       ),
@@ -129,20 +127,19 @@ class ChildDetailScreen extends ConsumerWidget {
   bool _hasChartData(ChildDetail child) {
     int withData = 0;
     for (final v in child.visits) {
-      if (v.measurement?.predictedHeightCm != null ||
-          v.measurement?.predictedWeightKg != null) {
+      if (v.measurement?.displayHeightCm != null ||
+          v.measurement?.displayWeightKg != null) {
         withData++;
       }
     }
     return withData >= 2;
   }
 
-  Widget _growthChart(
-      BuildContext context, WidgetRef ref, ChildDetail child) {
+  Widget _growthChart(BuildContext context, WidgetRef ref, ChildDetail child) {
     final visitsWithData = child.visits
         .where((v) =>
-            v.measurement?.predictedHeightCm != null ||
-            v.measurement?.predictedWeightKg != null)
+            v.measurement?.displayHeightCm != null ||
+            v.measurement?.displayWeightKg != null)
         .toList()
       ..sort((a, b) => (a.ageMonths ?? 0).compareTo(b.ageMonths ?? 0));
 
@@ -151,8 +148,8 @@ class ChildDetailScreen extends ConsumerWidget {
 
     for (final v in visitsWithData) {
       final x = v.ageMonths ?? 0;
-      final h = v.measurement?.predictedHeightCm;
-      final w = v.measurement?.predictedWeightKg;
+      final h = v.measurement?.displayHeightCm;
+      final w = v.measurement?.displayWeightKg;
       if (h != null) heightSpots.add(FlSpot(x, h));
       if (w != null) weightSpots.add(FlSpot(x, w));
     }
@@ -208,24 +205,24 @@ class ChildDetailScreen extends ConsumerWidget {
                     leftTitles: AxisTitles(
                       axisNameWidget: Text(
                         t('chart_height_cm', ref),
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.blue),
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.blue),
                       ),
                       sideTitles: SideTitles(
                         showTitles: true,
                         reservedSize: 40,
                         getTitlesWidget: (value, meta) => Text(
                           value.toStringAsFixed(0),
-                          style: const TextStyle(
-                              fontSize: 10, color: Colors.blue),
+                          style:
+                              const TextStyle(fontSize: 10, color: Colors.blue),
                         ),
                       ),
                     ),
                     rightTitles: AxisTitles(
                       axisNameWidget: Text(
                         t('chart_weight_kg', ref),
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.orange),
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.orange),
                       ),
                       sideTitles: SideTitles(
                         showTitles: true,
@@ -250,8 +247,8 @@ class ChildDetailScreen extends ConsumerWidget {
                     touchTooltipData: LineTouchTooltipData(
                       getTooltipItems: (touchedSpots) {
                         return touchedSpots.map((spot) {
-                          final isHeight = spot.barIndex == 0 &&
-                              heightSpots.isNotEmpty;
+                          final isHeight =
+                              spot.barIndex == 0 && heightSpots.isNotEmpty;
                           return LineTooltipItem(
                             '${spot.y.toStringAsFixed(1)} ${isHeight ? 'cm' : 'kg'}',
                             TextStyle(
@@ -296,8 +293,7 @@ class ChildDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _visitHistory(
-      BuildContext context, WidgetRef ref, ChildDetail child) {
+  Widget _visitHistory(BuildContext context, WidgetRef ref, ChildDetail child) {
     final visits = child.visits.reversed.toList();
 
     return Card(
@@ -324,7 +320,7 @@ class ChildDetailScreen extends ConsumerWidget {
   Widget _visitRow(BuildContext context, WidgetRef ref, ChildVisit visit) {
     final m = visit.measurement;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -334,6 +330,16 @@ class ChildDetailScreen extends ConsumerWidget {
                 visit.visitDate ?? '—',
                 style: const TextStyle(fontWeight: FontWeight.w500),
               ),
+              if (visit.entryMethod != null) ...[
+                const SizedBox(width: 8),
+                Chip(
+                  visualDensity: VisualDensity.compact,
+                  label: Text(
+                    visit.entryMethod!,
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                ),
+              ],
               const Spacer(),
               Text(
                 '${visit.ageMonths?.toStringAsFixed(1) ?? '—'} ${t('months_unit', ref)}',
@@ -341,28 +347,96 @@ class ChildDetailScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 2),
-          if (m != null)
+          const SizedBox(height: 4),
+          if (m != null) ...[
+            Wrap(
+              spacing: 14,
+              runSpacing: 4,
+              children: [
+                Text(
+                  '${t('th_height_cm', ref)}: '
+                  '${m.displayHeightCm?.toStringAsFixed(1) ?? '—'} '
+                  '(${_sourceLabel(ref, m.heightSource)})',
+                  style: const TextStyle(fontSize: 13),
+                ),
+                Text(
+                  '${t('th_weight_kg', ref)}: '
+                  '${m.displayWeightKg?.toStringAsFixed(1) ?? '—'} '
+                  '(${_sourceLabel(ref, m.weightSource)})',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  'BMI ${m.bmi?.toStringAsFixed(2) ?? '—'}:',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                StatusBadge(status: m.bmiStatus ?? 'Indeterminate'),
+                Text(
+                  'MUAC ${m.muacCm?.toStringAsFixed(1) ?? '—'} '
+                  '(${_sourceLabel(ref, m.muacMethod)}):',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                StatusBadge(status: m.muacStatus ?? 'Indeterminate'),
+              ],
+            ),
+            const SizedBox(height: 6),
             Row(
               children: [
                 Text(
-                  '${t('th_height_cm', ref)}: ${m.predictedHeightCm?.toStringAsFixed(1) ?? '—'}',
-                  style: const TextStyle(fontSize: 13),
+                  '${t('poshan_final', ref)}: ',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(width: 12),
+                StatusBadge(status: m.poshanStatus ?? 'Indeterminate'),
+              ],
+            ),
+            if (m.poshanStatus == 'Indeterminate') ...[
+              const SizedBox(height: 4),
+              Text(
+                t('measurement_required', ref),
+                style: TextStyle(
+                  color: Colors.orange.shade900,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            if (m.classificationMethod != null ||
+                m.classificationRationale != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                [
+                  if (m.classificationMethod != null) m.classificationMethod!,
+                  if (m.poshanTriggeredBy.isNotEmpty)
+                    'triggered by ${m.poshanTriggeredBy.join(', ')}',
+                ].join(' · '),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              if (m.classificationRationale != null)
                 Text(
-                  '${t('th_weight_kg', ref)}: ${m.predictedWeightKg?.toStringAsFixed(1) ?? '—'}',
-                  style: const TextStyle(fontSize: 13),
+                  m.classificationRationale!,
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
-                const Spacer(),
-                if (m.hazStatus != null) ...[
-                  StatusBadge(status: m.hazStatus),
-                  const SizedBox(width: 4),
-                ],
+            ],
+            const SizedBox(height: 6),
+            Text(
+              t('secondary_screening', ref),
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                if (m.hazStatus != null) StatusBadge(status: m.hazStatus),
                 if (m.whzStatus != null) StatusBadge(status: m.whzStatus),
               ],
-            )
-          else
+            ),
+          ] else
             Text(
               t('no_measurement_data', ref),
               style: Theme.of(context).textTheme.bodySmall,
@@ -371,5 +445,25 @@ class ChildDetailScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  String _sourceLabel(WidgetRef ref, String? source) {
+    switch (source) {
+      case 'manual':
+      case 'tape':
+        return t('badge_manual', ref);
+      case 'reference_object':
+        return t('badge_reference_object', ref);
+      case 'ml_estimated':
+        return t('badge_ml_estimated', ref);
+      case 'who_statistical':
+      case 'who_median_estimated':
+        return t('badge_who_statistical', ref);
+      case 'whz_derived':
+      case 'estimated_from_whz':
+        return t('badge_whz_derived', ref);
+      default:
+        return t('badge_unavailable', ref);
+    }
   }
 }

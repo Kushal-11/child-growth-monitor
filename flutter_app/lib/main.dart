@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -29,6 +31,14 @@ class _ChildGrowthAppState extends ConsumerState<ChildGrowthApp> {
   @override
   void initState() {
     super.initState();
+    ref.listenManual<AuthState>(authProvider, (previous, next) {
+      if (next.status == AuthStatus.authenticated &&
+          previous?.status != AuthStatus.authenticated) {
+        // Drain this owner's offline queue after cached-session restore or
+        // interactive login. SyncService enforces owner scoping.
+        unawaited(ref.read(syncServiceProvider).runOnce());
+      }
+    });
     // Restore any cached auth session so the router gate resolves immediately.
     ref.read(authProvider.notifier).restore();
     // Start the connectivity-triggered sync listener.

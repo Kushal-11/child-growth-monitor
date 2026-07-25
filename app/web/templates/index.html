@@ -14,12 +14,14 @@
 
         <form action="/assess" method="post" enctype="multipart/form-data" id="assessForm"
               data-msg-age-required="{{ t.age_required_feedback | e }}"
+              data-msg-photo-or-measurements="{{ t.photo_or_measurements_required_feedback | e }}"
               data-label-processing="{{ t.processing | e }}">
 
             <!-- Photo Upload -->
             <div class="card mb-4">
                 <div class="card-header fw-semibold">
-                    {{ t.front_view_photo }} <span class="text-danger">{{ t.required_star }}</span>
+                    {{ t.front_view_photo }}
+                    <span class="text-muted fw-normal small ms-1">— {{ t.front_view_optional }}</span>
                 </div>
                 <div class="card-body">
                     <div class="photo-guidance mb-3">
@@ -35,7 +37,7 @@
                         <i class="bi bi-cloud-arrow-up dropzone-icon" aria-hidden="true"></i>
                         <p class="mb-0 dropzone-text">{{ t.dropzone_hint }}</p>
                         <input type="file" class="form-control dropzone-input" id="image" name="image"
-                               accept="image/*" capture="environment" required
+                               accept="image/*" capture="environment"
                                aria-label="{{ t.dropzone_hint | e }}">
                     </div>
                     <div id="imagePreview" class="text-center d-none mt-3">
@@ -194,14 +196,14 @@
                         <div class="col-md-4 mb-3">
                             <label for="weight_kg" class="form-label">{{ t.weight_kg }}</label>
                             <input type="number" class="form-control" id="weight_kg"
-                                   name="weight_kg" step="0.1" min="0.5" max="50"
+                                   name="weight_kg" step="0.1" min="0.5" max="40"
                                    placeholder="{{ t.weight_placeholder }}">
                             <div class="form-text">{{ t.weight_help }}</div>
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="muac_input" class="form-label">{{ t.muac_cm }}</label>
                             <input type="number" class="form-control" id="muac_input"
-                                   name="muac_cm" step="0.1" min="5" max="30"
+                                   name="muac_cm" step="0.1" min="5" max="25"
                                    placeholder="{{ t.muac_placeholder }}">
                             <div class="form-text">{{ t.muac_help }}</div>
                         </div>
@@ -209,7 +211,7 @@
                             <label for="height_value" class="form-label">{{ t.height }}</label>
                             <div class="input-group">
                                 <input type="number" class="form-control" id="height_value"
-                                       name="height_value" step="0.1" min="10" max="200"
+                                       name="height_value" step="0.1" min="30" max="130"
                                        placeholder="{{ t.height_placeholder }}">
                                 <select class="form-select" id="height_unit" name="height_unit"
                                         style="max-width:90px;">
@@ -220,6 +222,9 @@
                             <div class="form-text">{{ t.height_fallback }}</div>
                         </div>
                     </div>
+                    <div id="measurementModeFeedback"
+                         class="alert alert-danger py-2 d-none mt-2"
+                         role="alert"></div>
                     <div class="row">
                         <div class="col-md-6 mb-2">
                             <label for="guardian_name" class="form-label">{{ t.guardian_name }}</label>

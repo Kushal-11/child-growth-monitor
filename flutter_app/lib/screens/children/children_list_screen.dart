@@ -85,8 +85,7 @@ class _ChildrenListScreenState extends ConsumerState<ChildrenListScreen> {
                         );
                       }
                       if (!snapshot.hasData) {
-                        return const Center(
-                            child: CircularProgressIndicator());
+                        return const Center(child: CircularProgressIndicator());
                       }
 
                       final children = snapshot.data!;
@@ -118,9 +117,12 @@ class _ChildrenListScreenState extends ConsumerState<ChildrenListScreen> {
                                   color: Colors.white),
                             ),
                             confirmDismiss: (_) => _confirmArchive(c),
-                            onDismissed: (_) => ref
-                                .read(childDaoProvider)
-                                .setArchived(c.id, true),
+                            onDismissed: (_) =>
+                                ref.read(childDaoProvider).setArchived(
+                                      c.id,
+                                      true,
+                                      ownerUserId: userId,
+                                    ),
                             child: ListTile(
                               title: Text(c.name),
                               subtitle: Text(

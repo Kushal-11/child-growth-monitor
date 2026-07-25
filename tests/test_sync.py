@@ -47,7 +47,7 @@ def _payload():
         "child_name": "Test Child",
         "date_of_birth": "2024-01-01",
         "sex": "M",
-        "age_months": "16.0",
+        "age_months": "28.1",
         "visit_date": "2026-05-05T10:00:00",
         "predicted_height_cm": "78.0",
         "predicted_weight_kg": "9.5",
@@ -60,6 +60,9 @@ def _payload():
         "muac_method": "estimated_from_whz",
         "ml_wasting_status": "Normal",
         "ml_estimated_weight_kg": "9.4",
+        "ml_model_version": "mobile-test-v1",
+        "ml_training_data": "synthetic",
+        "ml_non_clinical": "true",
         "confidence_score": "0.85",
         "body_build": "average",
         "side_view_used": "false",
@@ -145,20 +148,26 @@ def test_sync_persists_all_mobile_fields():
         assert m.side_view_used is True
         assert m.chest_depth_cm == 8.1
         assert m.abd_depth_cm == 8.5
-        assert m.ml_wasting_status == "Normal"
-        assert m.muac_cm == 14.0
-        assert m.muac_status == "Normal"
-        assert m.muac_method == "estimated_from_whz"
-        assert m.sam_probability == 0.02
-        assert m.mam_probability == 0.10
-        assert m.normal_probability == 0.85
-        assert m.risk_probability == 0.02
-        assert m.overweight_probability == 0.01
+        assert m.ml_wasting_status is None
+        assert m.muac_cm is None
+        assert m.muac_status == "Indeterminate"
+        assert m.muac_method == "whz_derived"
+        assert m.poshan_status == "Indeterminate"
+        assert m.bmi_status == "Indeterminate"
+        assert m.classification_method == "poshan_setu_v1"
+        assert m.ml_model_version is None
+        assert m.ml_training_data == "client_sync_unverified_discarded"
+        assert m.ml_non_clinical is True
+        assert m.sam_probability is None
+        assert m.mam_probability is None
+        assert m.normal_probability is None
+        assert m.risk_probability is None
+        assert m.overweight_probability is None
         assert m.confidence_score == 0.85
         assert m.predicted_height_cm == 78.0
         assert m.predicted_weight_kg == 9.5
-        assert m.haz_zscore == -1.0
-        assert m.whz_zscore == -0.5
+        assert m.haz_zscore is None
+        assert m.whz_zscore is None
     finally:
         db.close()
 

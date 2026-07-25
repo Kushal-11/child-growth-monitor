@@ -39,6 +39,19 @@ _MIGRATIONS = [
     ("children", "is_archived", "BOOLEAN NOT NULL DEFAULT 0"),
     ("visits", "user_id", "INTEGER"),
     ("visits", "entry_method", "VARCHAR(20) NOT NULL DEFAULT 'assessment'"),
+    ("measurement_results", "effective_height_cm", "FLOAT"),
+    ("measurement_results", "effective_weight_kg", "FLOAT"),
+    ("measurement_results", "height_source", "VARCHAR(50)"),
+    ("measurement_results", "weight_source", "VARCHAR(50)"),
+    ("measurement_results", "bmi", "FLOAT"),
+    ("measurement_results", "bmi_status", "VARCHAR(20)"),
+    ("measurement_results", "poshan_status", "VARCHAR(20)"),
+    ("measurement_results", "poshan_triggered_by", "JSON"),
+    ("measurement_results", "classification_method", "VARCHAR(50)"),
+    ("measurement_results", "classification_rationale", "TEXT"),
+    ("measurement_results", "ml_model_version", "VARCHAR(100)"),
+    ("measurement_results", "ml_training_data", "VARCHAR(200)"),
+    ("measurement_results", "ml_non_clinical", "BOOLEAN"),
 ]
 
 # Indexes mirroring the index=True model columns, for the migration path.

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:child_growth_monitor_app/database/database.dart';
 import 'package:child_growth_monitor_app/providers/database_provider.dart';
@@ -9,6 +10,8 @@ import 'package:child_growth_monitor_app/services/auth_service.dart';
 import 'package:child_growth_monitor_app/screens/child_management/child_form_screen.dart';
 
 class _FakeAuth implements AuthService {
+  _FakeAuth([this.userId = 1]);
+  final int userId;
   @override
   String get baseUrl => 'http://t';
   @override
@@ -18,7 +21,7 @@ class _FakeAuth implements AuthService {
   Future<String?> readToken() async => 't';
   @override
   Future<AuthUser?> readUser() async =>
-      AuthUser(id: 1, username: 'a', fullName: 'A', role: 'worker');
+      AuthUser(id: userId, username: 'a', fullName: 'A', role: 'worker');
   @override
   Future<void> logout() async {}
 }
@@ -47,5 +50,43 @@ void main() {
     await tester.tap(find.byKey(const Key('child_save')));
     await tester.pumpAndSettle();
     expect(find.text('Name is required'), findsOneWidget);
+    expect(find.text('Sex is required'), findsOneWidget);
+  });
+
+  testWidgets('edit deep link cannot load another owner child', (tester) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    final ownerOneChild = await db.into(db.children).insert(
+          ChildrenCompanion.insert(
+            name: 'Private child',
+            dateOfBirth: '2024-01-01',
+            sex: 'F',
+            ownerUserId: const Value(1),
+          ),
+        );
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+      authServiceProvider.overrideWithValue(_FakeAuth(2)),
+    ]);
+    await container.read(authProvider.notifier).restore();
+    addTearDown(() {
+      container.dispose();
+      db.close();
+    });
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: ChildFormScreen(childId: ownerOneChild),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Child not found for the signed-in user.'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('child_name')), findsNothing);
   });
 }

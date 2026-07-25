@@ -10,6 +10,7 @@ Endpoints:
 import shutil
 import uuid
 from datetime import date
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -21,6 +22,8 @@ from app.services.auth_service import get_current_user
 from app.models.database import get_db
 from app.schemas.assessment import AssessmentResponse
 from app.services.assessment_service import AssessmentService
+from app.services.measurement_service import PoseRuntimeUnavailableError
+from app.services.poshan_setu_service import normalize_muac_method
 from config import UPLOAD_DIR
 
 
@@ -40,11 +43,12 @@ def health_check():
 
 @router.post("/assess", response_model=AssessmentResponse)
 async def assess_child(
-    image: UploadFile = File(...),
+    image: Optional[UploadFile] = File(None),
     image_side: Optional[UploadFile] = File(None),
     image_back: Optional[UploadFile] = File(None),
     child_name: str = Form(...),
     date_of_birth: str = Form(...),  # yyyy-mm-dd (HTML5 date input)
+    assessment_date: Optional[str] = Form(None),  # yyyy-mm-dd; defaults to today
     sex: str = Form(...),  # 'M' or 'F'
     weight_kg: float = Form(None),
     height_cm: float = Form(None),
@@ -68,36 +72,89 @@ async def assess_child(
     # Convert height if provided with unit
     final_height_cm = height_cm
     if height_value is not None and height_cm is None:
+        if height_unit not in ("cm", "inch"):
+            raise HTTPException(400, "height_unit must be 'cm' or 'inch'")
         if height_unit == "inch":
             final_height_cm = height_value * 2.54
         else:
             final_height_cm = height_value
 
-    # Save front image
-    UPLOAD_DIR.mkdir(exist_ok=True)
-    filename = f"{uuid.uuid4().hex}_{image.filename}"
-    file_path = UPLOAD_DIR / filename
-    with open(file_path, "wb") as f:
-        shutil.copyfileobj(image.file, f)
+    if assessment_date:
+        try:
+            assessed_on = date.fromisoformat(assessment_date)
+        except ValueError:
+            raise HTTPException(
+                400, "assessment_date must be ISO format (YYYY-MM-DD)"
+            )
+    else:
+        assessed_on = date.today()
+
+    if assessed_on < dob:
+        raise HTTPException(
+            400, "assessment_date must not be before date_of_birth"
+        )
+    if assessed_on > date.today():
+        raise HTTPException(400, "assessment_date must not be in the future")
+
+    if image is None and (final_height_cm is None or weight_kg is None):
+        raise HTTPException(
+            400,
+            "An image or both manual height_cm and weight_kg are required",
+        )
+
+    age_months = svc._compute_age_months(dob, assessed_on)
+    try:
+        svc._validate_inputs(
+            child_name=child_name,
+            sex=sex,
+            age_months=age_months,
+            weight_kg=weight_kg,
+            height_cm=final_height_cm,
+            muac_cm=muac_cm,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    # Save a front image only when one was supplied. Manual measurements can
+    # be assessed without loading the optional MediaPipe runtime.
+    file_path: Optional[Path] = None
+    if image is not None:
+        UPLOAD_DIR.mkdir(exist_ok=True)
+        filename = (
+            f"{uuid.uuid4().hex}_"
+            f"{Path(image.filename or 'image.jpg').name}"
+        )
+        file_path = UPLOAD_DIR / filename
+        with open(file_path, "wb") as f:
+            shutil.copyfileobj(image.file, f)
 
     # Read side image bytes (kept in memory; not saved to disk)
     side_image_bytes = None
     if image_side is not None:
         side_image_bytes = await image_side.read()
 
-    result = svc.assess(
-        db=db,
-        image_path=str(file_path),
-        child_name=child_name,
-        dob=dob,
-        sex=sex,
-        weight_kg=weight_kg,
-        height_cm=final_height_cm,
-        muac_cm=muac_cm,
-        guardian_name=guardian_name,
-        location=location,
-        side_image=side_image_bytes,
-    )
+    try:
+        result = svc.assess(
+            db=db,
+            image_path=str(file_path) if file_path is not None else None,
+            child_name=child_name,
+            dob=dob,
+            sex=sex,
+            weight_kg=weight_kg,
+            height_cm=final_height_cm,
+            muac_cm=muac_cm,
+            guardian_name=guardian_name,
+            location=location,
+            side_image=side_image_bytes,
+            assessment_date=assessed_on,
+        )
+    except PoseRuntimeUnavailableError as exc:
+        if file_path is not None:
+            file_path.unlink(missing_ok=True)
+        raise HTTPException(
+            503,
+            f"Pose measurement runtime is unavailable: {exc}",
+        ) from exc
     return result
 
 
@@ -152,14 +209,73 @@ def get_child(
         }
         if v.measurement:
             m = v.measurement
+            has_poshan_v1 = m.classification_method == "poshan_setu_v1"
+            authoritative_height = (
+                m.manual_height_cm is not None
+                or m.height_source in ("manual", "reference_object")
+            )
+            authoritative_weight = (
+                m.manual_weight_kg is not None
+                or m.weight_source in ("manual", "reference_object")
+            )
+            canonical_muac_method = normalize_muac_method(m.muac_method)
             visit_data["measurement"] = {
                 "predicted_height_cm": m.predicted_height_cm,
                 "predicted_weight_kg": m.predicted_weight_kg,
+                "manual_height_cm": m.manual_height_cm,
                 "manual_weight_kg": m.manual_weight_kg,
-                "haz_zscore": m.haz_zscore,
-                "whz_zscore": m.whz_zscore,
-                "haz_status": m.haz_status,
-                "whz_status": m.whz_status,
+                "effective_height_cm": m.effective_height_cm,
+                "effective_weight_kg": m.effective_weight_kg,
+                "height_source": m.height_source or "unavailable",
+                "weight_source": m.weight_source or "unavailable",
+                "haz_zscore": (
+                    m.haz_zscore if authoritative_height else None
+                ),
+                "whz_zscore": (
+                    m.whz_zscore
+                    if authoritative_height and authoritative_weight
+                    else None
+                ),
+                "haz_status": (
+                    m.haz_status if authoritative_height else None
+                ),
+                "whz_status": (
+                    m.whz_status
+                    if authoritative_height and authoritative_weight
+                    else None
+                ),
+                "muac_cm": (
+                    m.muac_cm
+                    if canonical_muac_method == "manual"
+                    else None
+                ),
+                "muac_status": (
+                    m.muac_status
+                    if has_poshan_v1 and canonical_muac_method == "manual"
+                    else "Indeterminate"
+                ),
+                "muac_method": (
+                    canonical_muac_method
+                    if canonical_muac_method == "manual"
+                    else "unavailable"
+                ),
+                "bmi": m.bmi,
+                "bmi_status": (
+                    m.bmi_status if has_poshan_v1 else "Indeterminate"
+                ),
+                "poshan_status": (
+                    m.poshan_status if has_poshan_v1 else "Indeterminate"
+                ),
+                "poshan_triggered_by": (
+                    (m.poshan_triggered_by or []) if has_poshan_v1 else []
+                ),
+                "classification_method": (
+                    m.classification_method or "unavailable"
+                ),
+                "classification_rationale": m.classification_rationale,
+                "ml_model_version": m.ml_model_version,
+                "ml_training_data": m.ml_training_data,
+                "ml_non_clinical": m.ml_non_clinical,
                 "confidence_score": m.confidence_score,
             }
         visits.append(visit_data)

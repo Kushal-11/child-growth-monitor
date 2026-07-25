@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../../constants/config.dart';
 import '../../constants/feature_flags.dart';
 import '../../database/database.dart';
 import '../../features/assessment/providers/assessment_form_provider.dart';
@@ -52,19 +53,19 @@ class AssessmentScreen extends ConsumerWidget {
                   duration: const Duration(milliseconds: 180),
                   child: switch (state.step) {
                     0 => _ChildDetailsStep(
-                      key: const ValueKey('child-details'),
-                      state: state,
-                    ),
+                        key: const ValueKey('child-details'),
+                        state: state,
+                      ),
                     1 => _PhotosStep(
-                      key: const ValueKey('photos'),
-                      state: state,
-                      onPickImage: (source, role) =>
-                          _pickImage(context, ref, source, role),
-                    ),
+                        key: const ValueKey('photos'),
+                        state: state,
+                        onPickImage: (source, role) =>
+                            _pickImage(context, ref, source, role),
+                      ),
                     _ => _ReviewStep(
-                      key: const ValueKey('review'),
-                      state: state,
-                    ),
+                        key: const ValueKey('review'),
+                        state: state,
+                      ),
                   },
                 ),
               ),
@@ -122,7 +123,12 @@ class _ChildDetailsStep extends ConsumerWidget {
         .firstOrNull;
 
     final dob = DateTime.tryParse(state.resolvedDateOfBirth);
-    final invalidDob = dob == null || dob.isAfter(DateTime.now());
+    final resolvedAge = state.resolvedAgeMonths;
+    final invalidDob = dob == null ||
+        dob.isAfter(DateTime.now()) ||
+        resolvedAge == null ||
+        resolvedAge < 0 ||
+        resolvedAge >= maxUnderFiveAgeMonths;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,7 +148,7 @@ class _ChildDetailsStep extends ConsumerWidget {
           subtitle: selected == null
               ? t('or_enter_new_profile', ref)
               : '${selected.sex == 'M' ? t('male', ref) : t('female', ref)} · '
-                    '${selected.dateOfBirth}',
+                  '${selected.dateOfBirth}',
           onTap: () => _showChildSelector(context, ref, children),
         ),
         const SizedBox(height: AppSpacing.xxl),
@@ -161,8 +167,8 @@ class _ChildDetailsStep extends ConsumerWidget {
             labelText: '${t('child_name', ref)} *',
             errorText:
                 state.showValidationErrors && state.childName.trim().isEmpty
-                ? t('required_field', ref)
-                : null,
+                    ? t('required_field', ref)
+                    : null,
           ),
         ),
         const SizedBox(height: AppSpacing.md),
@@ -175,11 +181,26 @@ class _ChildDetailsStep extends ConsumerWidget {
               ButtonSegment(value: 'M', label: Text(t('male', ref))),
               ButtonSegment(value: 'F', label: Text(t('female', ref))),
             ],
-            selected: {state.sex},
+            selected: state.sex.isEmpty ? const {} : {state.sex},
+            emptySelectionAllowed: true,
             onSelectionChanged: (selection) =>
-                notifier.updateSex(selection.first),
+                notifier.updateSex(selection.firstOrNull ?? ''),
           ),
         ),
+        if (state.showValidationErrors && state.sex.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                t('required_field', ref),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ),
         const SizedBox(height: AppSpacing.lg),
         SegmentedButton<bool>(
           segments: [
@@ -200,11 +221,18 @@ class _ChildDetailsStep extends ConsumerWidget {
               decoration: InputDecoration(
                 labelText: '${t('date_of_birth', ref)} *',
                 errorText: state.showValidationErrors && invalidDob
-                    ? t('err_invalid_date', ref)
+                    ? resolvedAge != null &&
+                            resolvedAge >= maxUnderFiveAgeMonths
+                        ? t('under_five_error', ref)
+                        : t('err_invalid_date', ref)
                     : null,
                 suffixIcon: const Icon(Icons.calendar_today_outlined),
               ),
-              child: Text(state.dateOfBirth),
+              child: Text(
+                state.dateOfBirth.isEmpty
+                    ? t('select_date_of_birth', ref)
+                    : state.dateOfBirth,
+              ),
             ),
           )
         else
@@ -216,10 +244,13 @@ class _ChildDetailsStep extends ConsumerWidget {
             decoration: InputDecoration(
               labelText: '${t('age_months', ref)} *',
               hintText: t('placeholder_age_months', ref),
-              errorText:
-                  state.showValidationErrors &&
+              errorText: state.showValidationErrors &&
                       (double.tryParse(state.ageMonths) == null ||
-                          (double.tryParse(state.ageMonths) ?? -1) < 0)
+                          !(double.tryParse(state.ageMonths)?.isFinite ??
+                              false) ||
+                          (double.tryParse(state.ageMonths) ?? -1) < 0 ||
+                          (double.tryParse(state.ageMonths) ?? 60) >=
+                              maxUnderFiveAgeMonths)
                   ? t('age_required_feedback', ref)
                   : null,
             ),
@@ -254,10 +285,10 @@ class _ChildDetailsStep extends ConsumerWidget {
     final now = DateTime.now();
     final selected = await showDatePicker(
       context: context,
-      initialDate:
-          DateTime.tryParse(state.dateOfBirth) ??
+      initialDate: DateTime.tryParse(state.dateOfBirth) ??
           DateTime(now.year - 3, now.month, now.day),
-      firstDate: DateTime(2000),
+      firstDate: DateTime(now.year - 5, now.month, now.day)
+          .add(const Duration(days: 1)),
       lastDate: now,
     );
     if (selected != null && context.mounted) {
@@ -458,7 +489,13 @@ class _MeasurementsCard extends ConsumerWidget {
               initialValue: state.weightKg,
               label: t('weight_kg', ref),
               hint: t('weight_placeholder', ref),
-              errorText: _positiveError(state.weightKg, ref),
+              errorText: _rangeError(
+                state.weightKg,
+                ref,
+                min: minPlausibleWeightKg,
+                max: maxPlausibleWeightKg,
+                unit: 'kg',
+              ),
               onChanged: notifier.updateWeight,
             ),
             const SizedBox(height: AppSpacing.md),
@@ -471,7 +508,14 @@ class _MeasurementsCard extends ConsumerWidget {
                     initialValue: state.heightValue,
                     label: t('height', ref),
                     hint: t('height_placeholder', ref),
-                    errorText: _positiveError(state.heightValue, ref),
+                    errorText: _rangeError(
+                      state.heightValue,
+                      ref,
+                      min: minPlausibleHeightCm,
+                      max: maxPlausibleHeightCm,
+                      unit: 'cm',
+                      multiplier: state.heightUnit == 'inch' ? 2.54 : 1,
+                    ),
                     onChanged: notifier.updateHeight,
                   ),
                 ),
@@ -500,7 +544,13 @@ class _MeasurementsCard extends ConsumerWidget {
               initialValue: state.muacCm,
               label: t('muac_cm', ref),
               hint: t('muac_placeholder', ref),
-              errorText: _positiveError(state.muacCm, ref),
+              errorText: _rangeError(
+                state.muacCm,
+                ref,
+                min: minPlausibleMuacCm,
+                max: maxPlausibleMuacCm,
+                unit: 'cm',
+              ),
               onChanged: notifier.updateMuac,
             ),
           ],
@@ -509,11 +559,22 @@ class _MeasurementsCard extends ConsumerWidget {
     );
   }
 
-  String? _positiveError(String value, WidgetRef ref) {
+  String? _rangeError(
+    String value,
+    WidgetRef ref, {
+    required double min,
+    required double max,
+    required String unit,
+    double multiplier = 1,
+  }) {
     if (!state.showValidationErrors || value.trim().isEmpty) return null;
     final parsed = double.tryParse(value.trim());
-    return parsed == null || parsed <= 0
-        ? t('positive_number_error', ref)
+    final canonical = parsed == null ? null : parsed * multiplier;
+    return canonical == null ||
+            !canonical.isFinite ||
+            canonical < min ||
+            canonical > max
+        ? '${t('measurement_range_prefix', ref)} $min–$max $unit'
         : null;
   }
 }
@@ -608,7 +669,7 @@ class _ReviewStep extends ConsumerWidget {
               t('back_view', ref),
               state.backImagePath == null
                   ? t('not_selected', ref)
-                  : t('ready', ref),
+                  : t('back_view_archived_only', ref),
             ),
           ],
         ),
@@ -706,8 +767,8 @@ class _ReviewCard extends StatelessWidget {
                         row.$2,
                         textAlign: TextAlign.end,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                     ),
                   ],
@@ -779,8 +840,8 @@ class _ActionBar extends ConsumerWidget {
                 state.isSubmitting
                     ? t('processing', ref)
                     : state.step == 2
-                    ? t('run_assessment', ref)
-                    : t('continue', ref),
+                        ? t('run_assessment', ref)
+                        : t('continue', ref),
               ),
             ),
           ),

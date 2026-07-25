@@ -10,7 +10,8 @@ import 'database_provider.dart';
 
 final syncServiceProvider = Provider<SyncService>((ref) {
   final baseUrl = ref.watch(baseUrlProvider);
-  final token = ref.watch(authProvider).token;
+  final auth = ref.watch(authProvider);
+  final token = auth.token;
   return SyncService(
     db: ref.watch(databaseProvider),
     visitDao: ref.watch(visitDaoProvider),
@@ -18,26 +19,28 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     syncDao: ref.watch(syncQueueDaoProvider),
     baseUrl: effectiveBaseUrl(baseUrl),
     authToken: token,
+    ownerUserId: auth.user?.id,
     onUnauthorized: () => ref.read(authProvider.notifier).onTokenRejected(),
   );
 });
 
 /// Live count of pending/failed visits awaiting sync.
 final pendingSyncCountProvider = StreamProvider<int>((ref) {
-  return ref.watch(syncQueueDaoProvider).watchPendingCount();
+  final ownerUserId = ref.watch(authProvider).user?.id;
+  if (ownerUserId == null) return Stream.value(0);
+  return ref.watch(syncQueueDaoProvider).watchPendingCount(ownerUserId);
 });
 
 /// Long-lived listener: triggers sync on connectivity changes.
 /// Started by main.dart via `ref.read(syncTriggerProvider)`.
 final syncTriggerProvider = Provider<StreamSubscription>((ref) {
-  final svc = ref.watch(syncServiceProvider);
   final sub = Connectivity().onConnectivityChanged.listen((results) {
     final online = results.any((r) =>
         r == ConnectivityResult.wifi ||
         r == ConnectivityResult.mobile ||
         r == ConnectivityResult.ethernet);
     if (online) {
-      svc.runOnce();
+      ref.read(syncServiceProvider).runOnce();
     }
   });
   ref.onDispose(sub.cancel);

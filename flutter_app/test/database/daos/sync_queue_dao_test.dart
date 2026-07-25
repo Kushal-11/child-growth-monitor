@@ -20,16 +20,25 @@ void main() {
   tearDown(() => db.close());
 
   Future<int> createVisit() async {
-    final child = await childDao.findOrCreate(name: 'Test', dateOfBirth: '2023-01-01', sex: 'M');
+    final child = await childDao.findOrCreate(
+      name: 'Test',
+      dateOfBirth: '2023-01-01',
+      sex: 'M',
+      ownerUserId: 1,
+    );
     return visitDao.createWithMeasurement(
-      childId: child.id, ageMonths: 24.0, imagePath: '/test/image.jpg',
-      measurement: const MeasurementsCompanion());
+      childId: child.id,
+      ageMonths: 24.0,
+      imagePath: '/test/image.jpg',
+      ownerUserId: 1,
+      measurement: const MeasurementsCompanion(),
+    );
   }
 
   test('enqueue creates pending entry', () async {
     final visitId = await createVisit();
     await syncDao.enqueue(visitId);
-    final pending = await syncDao.watchPending().first;
+    final pending = await syncDao.watchPending(1).first;
     expect(pending.length, 1);
     expect(pending.first.status, 'pending');
   });
@@ -37,18 +46,18 @@ void main() {
   test('markSynced updates status', () async {
     final visitId = await createVisit();
     await syncDao.enqueue(visitId);
-    final entries = await syncDao.watchPending().first;
+    final entries = await syncDao.watchPending(1).first;
     await syncDao.markSynced(entries.first.id, serverVisitId: 42);
-    final updated = await syncDao.watchPending().first;
+    final updated = await syncDao.watchPending(1).first;
     expect(updated, isEmpty);
   });
 
   test('markFailed increments retryCount', () async {
     final visitId = await createVisit();
     await syncDao.enqueue(visitId);
-    final entries = await syncDao.watchPending().first;
+    final entries = await syncDao.watchPending(1).first;
     await syncDao.markFailed(entries.first.id, 'Network error');
-    final updated = await syncDao.watchPending().first;
+    final updated = await syncDao.watchPending(1).first;
     expect(updated.first.retryCount, 1);
     expect(updated.first.errorMessage, 'Network error');
   });

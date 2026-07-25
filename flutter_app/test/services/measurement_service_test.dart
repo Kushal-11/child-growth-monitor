@@ -18,10 +18,10 @@ void main() {
 
   BodySegments segs({
     double totalHeightPx = 800,
-    double shoulderWidthPx = 160,
-    double hipWidthPx = 140,
-    double torsoLengthPx = 240,
-    double upperArmLengthPx = 120,
+    double? shoulderWidthPx = 160,
+    double? hipWidthPx = 140,
+    double? torsoLengthPx = 240,
+    double? upperArmLengthPx = 120,
   }) =>
       BodySegments(
         headHeightPx: 100,
@@ -78,6 +78,23 @@ void main() {
       poseConfidence: 0.9,
     );
     expect(m.shoulderWidthCm, closeTo(16.0, 0.01));
+  });
+
+  test('missing shoulder and arm segments use centimetre ratios once', () {
+    final m = measurement.compute(
+      segments: segs(
+        totalHeightPx: 800,
+        shoulderWidthPx: null,
+        upperArmLengthPx: null,
+      ),
+      ageMonths: 24,
+      sex: 'M',
+      manualHeightCm: 80,
+      poseConfidence: 0.9,
+    );
+
+    expect(m.shoulderWidthCm, closeTo(16.8, 0.01));
+    expect(m.upperArmLengthCm, closeTo(12.64, 0.01));
   });
 
   test('body build classified as slender below threshold', () {
@@ -138,5 +155,24 @@ void main() {
     expect(m.sideViewUsed, false);
     expect(m.chestDepthCm, isNull);
     expect(m.abdDepthCm, isNull);
+  });
+
+  test('side-view centimetre validation runs after effective-height scaling',
+      () {
+    final m = measurement.compute(
+      segments: segs(),
+      sideSegments: const SideViewSegments(
+        chestDepthPx: 1,
+        abdDepthPx: 600,
+        totalHeightPx: 800,
+      ),
+      ageMonths: 24,
+      sex: 'M',
+      manualHeightCm: 80,
+      poseConfidence: 0.9,
+    );
+    expect(m.chestDepthCm, isNull, reason: '0.1 cm is implausibly small');
+    expect(m.abdDepthCm, isNull, reason: '60 cm is implausibly large');
+    expect(m.sideViewUsed, false);
   });
 }

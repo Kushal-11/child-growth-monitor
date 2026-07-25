@@ -1,0 +1,10 @@
+{
+  "classes": [
+    "MAM",
+    "Normal",
+    "Overweight",
+    "Risk_Overweight",
+    "SAM"
+  ],
+  "model_version": "cgm-wasting-14f-synth-v1"
+}

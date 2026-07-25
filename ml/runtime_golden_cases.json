@@ -1,0 +1,124 @@
+{
+  "contract_version": 1,
+  "inference_cases": [
+    {
+      "name": "typical_24_month_boy",
+      "features": {
+        "age_months": 24.0,
+        "sex_binary": 1,
+        "height_cm": 87.1,
+        "shoulder_width_cm": 18.0,
+        "hip_width_cm": 15.5,
+        "torso_length_cm": 26.5,
+        "upper_arm_length_cm": 13.7,
+        "shoulder_height_ratio": 0.207,
+        "hip_height_ratio": 0.178,
+        "body_build_score": 0,
+        "chest_depth_cm": 8.1,
+        "abd_depth_cm": 7.75
+      },
+      "expected": {
+        "estimated_weight_kg": 11.93227767944336,
+        "probabilities": [
+          0.042103514075279236,
+          0.6190455555915833,
+          0.032152291387319565,
+          0.30117157101631165,
+          0.005527058150619268
+        ],
+        "wasting_status": "Normal"
+      }
+    },
+    {
+      "name": "slender_18_month_girl",
+      "features": {
+        "age_months": 18.0,
+        "sex_binary": 0,
+        "height_cm": 76.0,
+        "shoulder_width_cm": 13.2,
+        "hip_width_cm": 12.1,
+        "torso_length_cm": 22.8,
+        "upper_arm_length_cm": 10.5,
+        "shoulder_height_ratio": 0.174,
+        "hip_height_ratio": 0.159,
+        "body_build_score": -1,
+        "chest_depth_cm": 5.94,
+        "abd_depth_cm": 6.05
+      },
+      "expected": {
+        "estimated_weight_kg": 7.706826210021973,
+        "probabilities": [
+          0.3547031283378601,
+          0.1296173334121704,
+          0.00004823414928978309,
+          0.001542495796456933,
+          0.5140888094902039
+        ],
+        "wasting_status": "SAM"
+      }
+    }
+  ],
+  "postprocessing_cases": [
+    {
+      "name": "preserves_unrounded_valid_output",
+      "estimated_weight_kg": 9.87654321,
+      "probabilities": [
+        0.10000001,
+        0.2,
+        0.3,
+        0.15,
+        0.24999999
+      ],
+      "expected_status": "Overweight",
+      "valid": true
+    },
+    {
+      "name": "rejects_fabricated_low_weight",
+      "estimated_weight_kg": 0.49,
+      "probabilities": [
+        0.1,
+        0.2,
+        0.3,
+        0.15,
+        0.25
+      ],
+      "valid": false
+    },
+    {
+      "name": "rejects_implausible_high_weight",
+      "estimated_weight_kg": 40.01,
+      "probabilities": [
+        0.1,
+        0.2,
+        0.3,
+        0.15,
+        0.25
+      ],
+      "valid": false
+    },
+    {
+      "name": "rejects_negative_probability",
+      "estimated_weight_kg": 9.0,
+      "probabilities": [
+        -0.01,
+        0.21,
+        0.3,
+        0.15,
+        0.35
+      ],
+      "valid": false
+    },
+    {
+      "name": "rejects_probability_sum_drift",
+      "estimated_weight_kg": 9.0,
+      "probabilities": [
+        0.1,
+        0.2,
+        0.3,
+        0.15,
+        0.15
+      ],
+      "valid": false
+    }
+  ]
+}

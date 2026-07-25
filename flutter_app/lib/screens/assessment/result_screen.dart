@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../constants/config.dart';
 import '../../l10n/l10n_provider.dart';
 import '../../models/assessment_result.dart';
 import '../../providers/assessment_provider.dart';
+import '../../services/poshan_setu_service.dart';
 import '../shared/app_scaffold.dart';
 import '../shared/status_badge.dart';
 
@@ -44,14 +44,22 @@ class ResultScreen extends ConsumerWidget {
           children: [
             _statusBanner(context, ref, result),
             const SizedBox(height: 16),
+            _poshanSection(context, ref, result),
+            const SizedBox(height: 16),
             _photoSection(context, ref, result),
             const SizedBox(height: 16),
+            Text(
+              t('secondary_screening', ref),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
             _metricCards(context, ref, result),
             if (result.mlPrediction != null) ...[
               const SizedBox(height: 16),
               _mlSection(context, ref, result.mlPrediction!),
             ],
-            if (result.muac?.muacMethod == 'estimated_from_whz') ...[
+            if (result.muac?.muacMethod == 'whz_derived' ||
+                result.muac?.muacMethod == 'estimated_from_whz') ...[
               const SizedBox(height: 12),
               _muacNote(context, ref),
             ],
@@ -65,16 +73,9 @@ class ResultScreen extends ConsumerWidget {
 
   Widget _statusBanner(
       BuildContext context, WidgetRef ref, AssessmentResult result) {
-    final haz = result.nutrition.hazStatus;
-
-    // WHO CMAM OR-rule: banner severity reflects WHZ, MUAC, AND the ML wasting
-    // classifier together — not WHZ alone — so a tape-measured or ML-detected
-    // SAM/MAM child is never shown the green "Normal" banner.
-    final combined = combineNutritionStatus(
-      whzStatus: result.nutrition.whzStatus,
-      muacStatus: result.muac?.muacStatus,
-      mlStatus: result.mlPrediction?.wastingStatus,
-    );
+    // Poshan Setu is the clinical headline. WHO z-scores and the ML classifier
+    // remain visible below as secondary screening and cannot certify Normal.
+    final combined = result.poshan?.finalStatus ?? 'Indeterminate';
 
     String title;
     String message;
@@ -88,10 +89,6 @@ class ResultScreen extends ConsumerWidget {
       title = t('banner_mam_title', ref);
       message = t('banner_mam_msg', ref);
       color = Colors.orange;
-    } else if (haz != null && haz.toLowerCase().contains('stunted')) {
-      title = haz;
-      message = t('banner_stunted_msg', ref);
-      color = Colors.amber.shade700;
     } else if (combined == 'Normal') {
       title = t('banner_normal_title', ref);
       message = t('banner_normal_msg', ref);
@@ -127,7 +124,10 @@ class ResultScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(message),
-          if (result.mlPrediction == null) ...[
+          if (PoshanSetuService.normalizeSource(
+                result.measurement.weightSource ?? '',
+              ) ==
+              'who_statistical') ...[
             const SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -143,6 +143,91 @@ class ResultScreen extends ConsumerWidget {
           ],
         ],
       ),
+    );
+  }
+
+  Widget _poshanSection(
+      BuildContext context, WidgetRef ref, AssessmentResult result) {
+    final poshan = result.poshan;
+    if (poshan == null) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Text(t('measurement_required', ref)),
+        ),
+      );
+    }
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              t('poshan_title', ref),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 10),
+            _statusLine(
+              context,
+              '${t('poshan_bmi', ref)}'
+              '${poshan.bmi == null ? '' : ' · ${poshan.bmi!.toStringAsFixed(2)}'}',
+              poshan.bmiStatus,
+            ),
+            const SizedBox(height: 6),
+            _statusLine(context, t('poshan_muac', ref), poshan.muacStatus),
+            const Divider(height: 20),
+            _statusLine(context, t('poshan_final', ref), poshan.finalStatus),
+            const SizedBox(height: 8),
+            Text(
+              '${t('poshan_method', ref)}: ${poshan.classificationMethod}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            Text(
+              '${t('poshan_provenance', ref)}: '
+              'height ${_sourceLabel(ref, result.measurement.heightSource)}, '
+              'weight ${_sourceLabel(ref, result.measurement.weightSource)}, '
+              'MUAC ${_sourceLabel(ref, result.muac?.muacMethod)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            if (poshan.triggeredBy.isNotEmpty)
+              Text(
+                'Triggered by: ${poshan.triggeredBy.join(', ')}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            const SizedBox(height: 6),
+            Text(poshan.rationale),
+            if (poshan.finalStatus == 'Indeterminate') ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade300),
+                ),
+                child: Text(
+                  t('measurement_required', ref),
+                  style: TextStyle(
+                    color: Colors.orange.shade900,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statusLine(BuildContext context, String label, String status) {
+    return Row(
+      children: [
+        Expanded(child: Text(label)),
+        StatusBadge(status: status),
+      ],
     );
   }
 
@@ -178,6 +263,11 @@ class ResultScreen extends ConsumerWidget {
                 'Method: $annotatedImage',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
+            const SizedBox(height: 4),
+            Text(
+              t('back_view_archived_only', ref),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ],
         ),
       ),
@@ -192,14 +282,15 @@ class ResultScreen extends ConsumerWidget {
           context,
           ref,
           title: t('metric_height', ref),
-          value: result.measurement.predictedHeightCm ??
+          value: result.measurement.effectiveHeightCm ??
+              result.measurement.predictedHeightCm ??
               result.measurement.manualHeightCm,
           unit: 'cm',
-          source: result.measurement.manualHeightCm != null
-              ? t('badge_manual', ref)
-              : result.measurement.predictedHeightCm != null
-                  ? t('badge_image', ref)
-                  : t('badge_undetected', ref),
+          source: _sourceLabel(
+            ref,
+            result.measurement.heightSource ??
+                result.measurement.estimationMethod,
+          ),
           zscore: result.nutrition.hazZscore,
           status: result.nutrition.hazStatus,
         ),
@@ -208,14 +299,11 @@ class ResultScreen extends ConsumerWidget {
           context,
           ref,
           title: t('metric_weight', ref),
-          value: result.measurement.predictedWeightKg ??
+          value: result.measurement.effectiveWeightKg ??
+              result.measurement.predictedWeightKg ??
               result.measurement.manualWeightKg,
           unit: 'kg',
-          source: result.measurement.manualWeightKg != null
-              ? t('badge_manual', ref)
-              : result.measurement.predictedWeightKg != null
-                  ? t('badge_image', ref)
-                  : t('badge_undetected', ref),
+          source: _sourceLabel(ref, result.measurement.weightSource),
           zscore: result.nutrition.whzZscore,
           status: result.nutrition.whzStatus,
           extras: _weightExtras(context, ref, result.measurement),
@@ -226,8 +314,7 @@ class ResultScreen extends ConsumerWidget {
     );
   }
 
-  Widget? _weightExtras(
-      BuildContext context, WidgetRef ref, Measurement m) {
+  Widget? _weightExtras(BuildContext context, WidgetRef ref, Measurement m) {
     if (!m.sideViewUsed) return null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,16 +367,14 @@ class ResultScreen extends ConsumerWidget {
                           color: Colors.grey.shade200,
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(source,
-                            style: const TextStyle(fontSize: 11)),
+                        child:
+                            Text(source, style: const TextStyle(fontSize: 11)),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    value != null
-                        ? '${value.toStringAsFixed(1)} $unit'
-                        : '—',
+                    value != null ? '${value.toStringAsFixed(1)} $unit' : '—',
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   if (zscore != null)
@@ -324,9 +409,7 @@ class ResultScreen extends ConsumerWidget {
         status: null,
       );
     }
-    final source = muac.muacMethod == 'manual'
-        ? t('badge_tape', ref)
-        : t('badge_est', ref);
+    final source = _sourceLabel(ref, muac.muacMethod);
     return _metricCard(
       context,
       ref,
@@ -339,8 +422,7 @@ class ResultScreen extends ConsumerWidget {
     );
   }
 
-  Widget _mlSection(
-      BuildContext context, WidgetRef ref, MlPrediction ml) {
+  Widget _mlSection(BuildContext context, WidgetRef ref, MlPrediction ml) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -362,8 +444,8 @@ class ResultScreen extends ConsumerWidget {
             _probabilityBar(
                 t('mam_probability', ref), ml.mamProbability, Colors.orange),
             const SizedBox(height: 4),
-            _probabilityBar(t('normal_probability', ref),
-                ml.normalProbability, Colors.green),
+            _probabilityBar(t('normal_probability', ref), ml.normalProbability,
+                Colors.green),
             if (ml.estimatedWeightKg != null) ...[
               const SizedBox(height: 8),
               Text(
@@ -371,6 +453,17 @@ class ResultScreen extends ConsumerWidget {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
+            if (ml.modelVersion != null)
+              Text(
+                'Model: ${ml.modelVersion}'
+                '${ml.nonClinical == true ? ' · non-clinical screening' : ''}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            if (ml.trainingData != null)
+              Text(
+                'Training data: ${ml.trainingData}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
           ],
         ),
       ),
@@ -381,7 +474,9 @@ class ResultScreen extends ConsumerWidget {
     final pct = value ?? 0;
     return Row(
       children: [
-        SizedBox(width: 120, child: Text(label, style: const TextStyle(fontSize: 12))),
+        SizedBox(
+            width: 120,
+            child: Text(label, style: const TextStyle(fontSize: 12))),
         Expanded(
           child: LinearProgressIndicator(
             value: pct,
@@ -412,7 +507,8 @@ class ResultScreen extends ConsumerWidget {
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: DefaultTextStyle.of(context).style.copyWith(fontSize: 13),
+                style:
+                    DefaultTextStyle.of(context).style.copyWith(fontSize: 13),
                 children: [
                   TextSpan(
                     text: '${t('muac_note_strong', ref)} ',
@@ -426,6 +522,26 @@ class ResultScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  String _sourceLabel(WidgetRef ref, String? source) {
+    switch (source?.trim().toLowerCase()) {
+      case 'manual':
+      case 'tape':
+        return t('badge_manual', ref);
+      case 'reference_object':
+        return t('badge_reference_object', ref);
+      case 'ml_estimated':
+        return t('badge_ml_estimated', ref);
+      case 'who_statistical':
+      case 'who_median_estimated':
+        return t('badge_who_statistical', ref);
+      case 'whz_derived':
+      case 'estimated_from_whz':
+        return t('badge_whz_derived', ref);
+      default:
+        return t('badge_unavailable', ref);
+    }
   }
 
   Widget _actionButtons(BuildContext context, WidgetRef ref) {

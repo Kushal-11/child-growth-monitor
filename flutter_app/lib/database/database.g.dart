@@ -1281,6 +1281,86 @@ class $MeasurementsTable extends Measurements
   late final GeneratedColumn<String> muacMethod = GeneratedColumn<String>(
       'muac_method', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _effectiveHeightCmMeta =
+      const VerificationMeta('effectiveHeightCm');
+  @override
+  late final GeneratedColumn<double> effectiveHeightCm =
+      GeneratedColumn<double>('effective_height_cm', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _effectiveWeightKgMeta =
+      const VerificationMeta('effectiveWeightKg');
+  @override
+  late final GeneratedColumn<double> effectiveWeightKg =
+      GeneratedColumn<double>('effective_weight_kg', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _heightSourceMeta =
+      const VerificationMeta('heightSource');
+  @override
+  late final GeneratedColumn<String> heightSource = GeneratedColumn<String>(
+      'height_source', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _weightSourceMeta =
+      const VerificationMeta('weightSource');
+  @override
+  late final GeneratedColumn<String> weightSource = GeneratedColumn<String>(
+      'weight_source', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _bmiMeta = const VerificationMeta('bmi');
+  @override
+  late final GeneratedColumn<double> bmi = GeneratedColumn<double>(
+      'bmi', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _bmiStatusMeta =
+      const VerificationMeta('bmiStatus');
+  @override
+  late final GeneratedColumn<String> bmiStatus = GeneratedColumn<String>(
+      'bmi_status', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _poshanStatusMeta =
+      const VerificationMeta('poshanStatus');
+  @override
+  late final GeneratedColumn<String> poshanStatus = GeneratedColumn<String>(
+      'poshan_status', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _poshanTriggeredByMeta =
+      const VerificationMeta('poshanTriggeredBy');
+  @override
+  late final GeneratedColumn<String> poshanTriggeredBy =
+      GeneratedColumn<String>('poshan_triggered_by', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _classificationMethodMeta =
+      const VerificationMeta('classificationMethod');
+  @override
+  late final GeneratedColumn<String> classificationMethod =
+      GeneratedColumn<String>('classification_method', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _classificationRationaleMeta =
+      const VerificationMeta('classificationRationale');
+  @override
+  late final GeneratedColumn<String> classificationRationale =
+      GeneratedColumn<String>('classification_rationale', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _mlModelVersionMeta =
+      const VerificationMeta('mlModelVersion');
+  @override
+  late final GeneratedColumn<String> mlModelVersion = GeneratedColumn<String>(
+      'ml_model_version', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _mlNonClinicalMeta =
+      const VerificationMeta('mlNonClinical');
+  @override
+  late final GeneratedColumn<bool> mlNonClinical = GeneratedColumn<bool>(
+      'ml_non_clinical', aliasedName, true,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("ml_non_clinical" IN (0, 1))'));
+  static const VerificationMeta _mlTrainingDataMeta =
+      const VerificationMeta('mlTrainingData');
+  @override
+  late final GeneratedColumn<String> mlTrainingData = GeneratedColumn<String>(
+      'ml_training_data', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -1308,7 +1388,20 @@ class $MeasurementsTable extends Measurements
         wastingStatus,
         muacCm,
         muacStatus,
-        muacMethod
+        muacMethod,
+        effectiveHeightCm,
+        effectiveWeightKg,
+        heightSource,
+        weightSource,
+        bmi,
+        bmiStatus,
+        poshanStatus,
+        poshanTriggeredBy,
+        classificationMethod,
+        classificationRationale,
+        mlModelVersion,
+        mlNonClinical,
+        mlTrainingData
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1462,6 +1555,80 @@ class $MeasurementsTable extends Measurements
           muacMethod.isAcceptableOrUnknown(
               data['muac_method']!, _muacMethodMeta));
     }
+    if (data.containsKey('effective_height_cm')) {
+      context.handle(
+          _effectiveHeightCmMeta,
+          effectiveHeightCm.isAcceptableOrUnknown(
+              data['effective_height_cm']!, _effectiveHeightCmMeta));
+    }
+    if (data.containsKey('effective_weight_kg')) {
+      context.handle(
+          _effectiveWeightKgMeta,
+          effectiveWeightKg.isAcceptableOrUnknown(
+              data['effective_weight_kg']!, _effectiveWeightKgMeta));
+    }
+    if (data.containsKey('height_source')) {
+      context.handle(
+          _heightSourceMeta,
+          heightSource.isAcceptableOrUnknown(
+              data['height_source']!, _heightSourceMeta));
+    }
+    if (data.containsKey('weight_source')) {
+      context.handle(
+          _weightSourceMeta,
+          weightSource.isAcceptableOrUnknown(
+              data['weight_source']!, _weightSourceMeta));
+    }
+    if (data.containsKey('bmi')) {
+      context.handle(
+          _bmiMeta, bmi.isAcceptableOrUnknown(data['bmi']!, _bmiMeta));
+    }
+    if (data.containsKey('bmi_status')) {
+      context.handle(_bmiStatusMeta,
+          bmiStatus.isAcceptableOrUnknown(data['bmi_status']!, _bmiStatusMeta));
+    }
+    if (data.containsKey('poshan_status')) {
+      context.handle(
+          _poshanStatusMeta,
+          poshanStatus.isAcceptableOrUnknown(
+              data['poshan_status']!, _poshanStatusMeta));
+    }
+    if (data.containsKey('poshan_triggered_by')) {
+      context.handle(
+          _poshanTriggeredByMeta,
+          poshanTriggeredBy.isAcceptableOrUnknown(
+              data['poshan_triggered_by']!, _poshanTriggeredByMeta));
+    }
+    if (data.containsKey('classification_method')) {
+      context.handle(
+          _classificationMethodMeta,
+          classificationMethod.isAcceptableOrUnknown(
+              data['classification_method']!, _classificationMethodMeta));
+    }
+    if (data.containsKey('classification_rationale')) {
+      context.handle(
+          _classificationRationaleMeta,
+          classificationRationale.isAcceptableOrUnknown(
+              data['classification_rationale']!, _classificationRationaleMeta));
+    }
+    if (data.containsKey('ml_model_version')) {
+      context.handle(
+          _mlModelVersionMeta,
+          mlModelVersion.isAcceptableOrUnknown(
+              data['ml_model_version']!, _mlModelVersionMeta));
+    }
+    if (data.containsKey('ml_non_clinical')) {
+      context.handle(
+          _mlNonClinicalMeta,
+          mlNonClinical.isAcceptableOrUnknown(
+              data['ml_non_clinical']!, _mlNonClinicalMeta));
+    }
+    if (data.containsKey('ml_training_data')) {
+      context.handle(
+          _mlTrainingDataMeta,
+          mlTrainingData.isAcceptableOrUnknown(
+              data['ml_training_data']!, _mlTrainingDataMeta));
+    }
     return context;
   }
 
@@ -1526,6 +1693,33 @@ class $MeasurementsTable extends Measurements
           .read(DriftSqlType.string, data['${effectivePrefix}muac_status']),
       muacMethod: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}muac_method']),
+      effectiveHeightCm: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}effective_height_cm']),
+      effectiveWeightKg: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}effective_weight_kg']),
+      heightSource: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}height_source']),
+      weightSource: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}weight_source']),
+      bmi: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}bmi']),
+      bmiStatus: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}bmi_status']),
+      poshanStatus: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}poshan_status']),
+      poshanTriggeredBy: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}poshan_triggered_by']),
+      classificationMethod: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}classification_method']),
+      classificationRationale: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}classification_rationale']),
+      mlModelVersion: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}ml_model_version']),
+      mlNonClinical: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}ml_non_clinical']),
+      mlTrainingData: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}ml_training_data']),
     );
   }
 
@@ -1562,6 +1756,19 @@ class Measurement extends DataClass implements Insertable<Measurement> {
   final double? muacCm;
   final String? muacStatus;
   final String? muacMethod;
+  final double? effectiveHeightCm;
+  final double? effectiveWeightKg;
+  final String? heightSource;
+  final String? weightSource;
+  final double? bmi;
+  final String? bmiStatus;
+  final String? poshanStatus;
+  final String? poshanTriggeredBy;
+  final String? classificationMethod;
+  final String? classificationRationale;
+  final String? mlModelVersion;
+  final bool? mlNonClinical;
+  final String? mlTrainingData;
   const Measurement(
       {required this.id,
       required this.visitId,
@@ -1588,7 +1795,20 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       this.wastingStatus,
       this.muacCm,
       this.muacStatus,
-      this.muacMethod});
+      this.muacMethod,
+      this.effectiveHeightCm,
+      this.effectiveWeightKg,
+      this.heightSource,
+      this.weightSource,
+      this.bmi,
+      this.bmiStatus,
+      this.poshanStatus,
+      this.poshanTriggeredBy,
+      this.classificationMethod,
+      this.classificationRationale,
+      this.mlModelVersion,
+      this.mlNonClinical,
+      this.mlTrainingData});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1664,6 +1884,46 @@ class Measurement extends DataClass implements Insertable<Measurement> {
     }
     if (!nullToAbsent || muacMethod != null) {
       map['muac_method'] = Variable<String>(muacMethod);
+    }
+    if (!nullToAbsent || effectiveHeightCm != null) {
+      map['effective_height_cm'] = Variable<double>(effectiveHeightCm);
+    }
+    if (!nullToAbsent || effectiveWeightKg != null) {
+      map['effective_weight_kg'] = Variable<double>(effectiveWeightKg);
+    }
+    if (!nullToAbsent || heightSource != null) {
+      map['height_source'] = Variable<String>(heightSource);
+    }
+    if (!nullToAbsent || weightSource != null) {
+      map['weight_source'] = Variable<String>(weightSource);
+    }
+    if (!nullToAbsent || bmi != null) {
+      map['bmi'] = Variable<double>(bmi);
+    }
+    if (!nullToAbsent || bmiStatus != null) {
+      map['bmi_status'] = Variable<String>(bmiStatus);
+    }
+    if (!nullToAbsent || poshanStatus != null) {
+      map['poshan_status'] = Variable<String>(poshanStatus);
+    }
+    if (!nullToAbsent || poshanTriggeredBy != null) {
+      map['poshan_triggered_by'] = Variable<String>(poshanTriggeredBy);
+    }
+    if (!nullToAbsent || classificationMethod != null) {
+      map['classification_method'] = Variable<String>(classificationMethod);
+    }
+    if (!nullToAbsent || classificationRationale != null) {
+      map['classification_rationale'] =
+          Variable<String>(classificationRationale);
+    }
+    if (!nullToAbsent || mlModelVersion != null) {
+      map['ml_model_version'] = Variable<String>(mlModelVersion);
+    }
+    if (!nullToAbsent || mlNonClinical != null) {
+      map['ml_non_clinical'] = Variable<bool>(mlNonClinical);
+    }
+    if (!nullToAbsent || mlTrainingData != null) {
+      map['ml_training_data'] = Variable<String>(mlTrainingData);
     }
     return map;
   }
@@ -1742,6 +2002,43 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       muacMethod: muacMethod == null && nullToAbsent
           ? const Value.absent()
           : Value(muacMethod),
+      effectiveHeightCm: effectiveHeightCm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(effectiveHeightCm),
+      effectiveWeightKg: effectiveWeightKg == null && nullToAbsent
+          ? const Value.absent()
+          : Value(effectiveWeightKg),
+      heightSource: heightSource == null && nullToAbsent
+          ? const Value.absent()
+          : Value(heightSource),
+      weightSource: weightSource == null && nullToAbsent
+          ? const Value.absent()
+          : Value(weightSource),
+      bmi: bmi == null && nullToAbsent ? const Value.absent() : Value(bmi),
+      bmiStatus: bmiStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bmiStatus),
+      poshanStatus: poshanStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(poshanStatus),
+      poshanTriggeredBy: poshanTriggeredBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(poshanTriggeredBy),
+      classificationMethod: classificationMethod == null && nullToAbsent
+          ? const Value.absent()
+          : Value(classificationMethod),
+      classificationRationale: classificationRationale == null && nullToAbsent
+          ? const Value.absent()
+          : Value(classificationRationale),
+      mlModelVersion: mlModelVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mlModelVersion),
+      mlNonClinical: mlNonClinical == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mlNonClinical),
+      mlTrainingData: mlTrainingData == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mlTrainingData),
     );
   }
 
@@ -1781,6 +2078,24 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       muacCm: serializer.fromJson<double?>(json['muacCm']),
       muacStatus: serializer.fromJson<String?>(json['muacStatus']),
       muacMethod: serializer.fromJson<String?>(json['muacMethod']),
+      effectiveHeightCm:
+          serializer.fromJson<double?>(json['effectiveHeightCm']),
+      effectiveWeightKg:
+          serializer.fromJson<double?>(json['effectiveWeightKg']),
+      heightSource: serializer.fromJson<String?>(json['heightSource']),
+      weightSource: serializer.fromJson<String?>(json['weightSource']),
+      bmi: serializer.fromJson<double?>(json['bmi']),
+      bmiStatus: serializer.fromJson<String?>(json['bmiStatus']),
+      poshanStatus: serializer.fromJson<String?>(json['poshanStatus']),
+      poshanTriggeredBy:
+          serializer.fromJson<String?>(json['poshanTriggeredBy']),
+      classificationMethod:
+          serializer.fromJson<String?>(json['classificationMethod']),
+      classificationRationale:
+          serializer.fromJson<String?>(json['classificationRationale']),
+      mlModelVersion: serializer.fromJson<String?>(json['mlModelVersion']),
+      mlNonClinical: serializer.fromJson<bool?>(json['mlNonClinical']),
+      mlTrainingData: serializer.fromJson<String?>(json['mlTrainingData']),
     );
   }
   @override
@@ -1815,6 +2130,20 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       'muacCm': serializer.toJson<double?>(muacCm),
       'muacStatus': serializer.toJson<String?>(muacStatus),
       'muacMethod': serializer.toJson<String?>(muacMethod),
+      'effectiveHeightCm': serializer.toJson<double?>(effectiveHeightCm),
+      'effectiveWeightKg': serializer.toJson<double?>(effectiveWeightKg),
+      'heightSource': serializer.toJson<String?>(heightSource),
+      'weightSource': serializer.toJson<String?>(weightSource),
+      'bmi': serializer.toJson<double?>(bmi),
+      'bmiStatus': serializer.toJson<String?>(bmiStatus),
+      'poshanStatus': serializer.toJson<String?>(poshanStatus),
+      'poshanTriggeredBy': serializer.toJson<String?>(poshanTriggeredBy),
+      'classificationMethod': serializer.toJson<String?>(classificationMethod),
+      'classificationRationale':
+          serializer.toJson<String?>(classificationRationale),
+      'mlModelVersion': serializer.toJson<String?>(mlModelVersion),
+      'mlNonClinical': serializer.toJson<bool?>(mlNonClinical),
+      'mlTrainingData': serializer.toJson<String?>(mlTrainingData),
     };
   }
 
@@ -1844,7 +2173,20 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           Value<String?> wastingStatus = const Value.absent(),
           Value<double?> muacCm = const Value.absent(),
           Value<String?> muacStatus = const Value.absent(),
-          Value<String?> muacMethod = const Value.absent()}) =>
+          Value<String?> muacMethod = const Value.absent(),
+          Value<double?> effectiveHeightCm = const Value.absent(),
+          Value<double?> effectiveWeightKg = const Value.absent(),
+          Value<String?> heightSource = const Value.absent(),
+          Value<String?> weightSource = const Value.absent(),
+          Value<double?> bmi = const Value.absent(),
+          Value<String?> bmiStatus = const Value.absent(),
+          Value<String?> poshanStatus = const Value.absent(),
+          Value<String?> poshanTriggeredBy = const Value.absent(),
+          Value<String?> classificationMethod = const Value.absent(),
+          Value<String?> classificationRationale = const Value.absent(),
+          Value<String?> mlModelVersion = const Value.absent(),
+          Value<bool?> mlNonClinical = const Value.absent(),
+          Value<String?> mlTrainingData = const Value.absent()}) =>
       Measurement(
         id: id ?? this.id,
         visitId: visitId ?? this.visitId,
@@ -1894,6 +2236,35 @@ class Measurement extends DataClass implements Insertable<Measurement> {
         muacCm: muacCm.present ? muacCm.value : this.muacCm,
         muacStatus: muacStatus.present ? muacStatus.value : this.muacStatus,
         muacMethod: muacMethod.present ? muacMethod.value : this.muacMethod,
+        effectiveHeightCm: effectiveHeightCm.present
+            ? effectiveHeightCm.value
+            : this.effectiveHeightCm,
+        effectiveWeightKg: effectiveWeightKg.present
+            ? effectiveWeightKg.value
+            : this.effectiveWeightKg,
+        heightSource:
+            heightSource.present ? heightSource.value : this.heightSource,
+        weightSource:
+            weightSource.present ? weightSource.value : this.weightSource,
+        bmi: bmi.present ? bmi.value : this.bmi,
+        bmiStatus: bmiStatus.present ? bmiStatus.value : this.bmiStatus,
+        poshanStatus:
+            poshanStatus.present ? poshanStatus.value : this.poshanStatus,
+        poshanTriggeredBy: poshanTriggeredBy.present
+            ? poshanTriggeredBy.value
+            : this.poshanTriggeredBy,
+        classificationMethod: classificationMethod.present
+            ? classificationMethod.value
+            : this.classificationMethod,
+        classificationRationale: classificationRationale.present
+            ? classificationRationale.value
+            : this.classificationRationale,
+        mlModelVersion:
+            mlModelVersion.present ? mlModelVersion.value : this.mlModelVersion,
+        mlNonClinical:
+            mlNonClinical.present ? mlNonClinical.value : this.mlNonClinical,
+        mlTrainingData:
+            mlTrainingData.present ? mlTrainingData.value : this.mlTrainingData,
       );
   Measurement copyWithCompanion(MeasurementsCompanion data) {
     return Measurement(
@@ -1956,6 +2327,41 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           data.muacStatus.present ? data.muacStatus.value : this.muacStatus,
       muacMethod:
           data.muacMethod.present ? data.muacMethod.value : this.muacMethod,
+      effectiveHeightCm: data.effectiveHeightCm.present
+          ? data.effectiveHeightCm.value
+          : this.effectiveHeightCm,
+      effectiveWeightKg: data.effectiveWeightKg.present
+          ? data.effectiveWeightKg.value
+          : this.effectiveWeightKg,
+      heightSource: data.heightSource.present
+          ? data.heightSource.value
+          : this.heightSource,
+      weightSource: data.weightSource.present
+          ? data.weightSource.value
+          : this.weightSource,
+      bmi: data.bmi.present ? data.bmi.value : this.bmi,
+      bmiStatus: data.bmiStatus.present ? data.bmiStatus.value : this.bmiStatus,
+      poshanStatus: data.poshanStatus.present
+          ? data.poshanStatus.value
+          : this.poshanStatus,
+      poshanTriggeredBy: data.poshanTriggeredBy.present
+          ? data.poshanTriggeredBy.value
+          : this.poshanTriggeredBy,
+      classificationMethod: data.classificationMethod.present
+          ? data.classificationMethod.value
+          : this.classificationMethod,
+      classificationRationale: data.classificationRationale.present
+          ? data.classificationRationale.value
+          : this.classificationRationale,
+      mlModelVersion: data.mlModelVersion.present
+          ? data.mlModelVersion.value
+          : this.mlModelVersion,
+      mlNonClinical: data.mlNonClinical.present
+          ? data.mlNonClinical.value
+          : this.mlNonClinical,
+      mlTrainingData: data.mlTrainingData.present
+          ? data.mlTrainingData.value
+          : this.mlTrainingData,
     );
   }
 
@@ -1987,7 +2393,20 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           ..write('wastingStatus: $wastingStatus, ')
           ..write('muacCm: $muacCm, ')
           ..write('muacStatus: $muacStatus, ')
-          ..write('muacMethod: $muacMethod')
+          ..write('muacMethod: $muacMethod, ')
+          ..write('effectiveHeightCm: $effectiveHeightCm, ')
+          ..write('effectiveWeightKg: $effectiveWeightKg, ')
+          ..write('heightSource: $heightSource, ')
+          ..write('weightSource: $weightSource, ')
+          ..write('bmi: $bmi, ')
+          ..write('bmiStatus: $bmiStatus, ')
+          ..write('poshanStatus: $poshanStatus, ')
+          ..write('poshanTriggeredBy: $poshanTriggeredBy, ')
+          ..write('classificationMethod: $classificationMethod, ')
+          ..write('classificationRationale: $classificationRationale, ')
+          ..write('mlModelVersion: $mlModelVersion, ')
+          ..write('mlNonClinical: $mlNonClinical, ')
+          ..write('mlTrainingData: $mlTrainingData')
           ..write(')'))
         .toString();
   }
@@ -2019,7 +2438,20 @@ class Measurement extends DataClass implements Insertable<Measurement> {
         wastingStatus,
         muacCm,
         muacStatus,
-        muacMethod
+        muacMethod,
+        effectiveHeightCm,
+        effectiveWeightKg,
+        heightSource,
+        weightSource,
+        bmi,
+        bmiStatus,
+        poshanStatus,
+        poshanTriggeredBy,
+        classificationMethod,
+        classificationRationale,
+        mlModelVersion,
+        mlNonClinical,
+        mlTrainingData
       ]);
   @override
   bool operator ==(Object other) =>
@@ -2050,7 +2482,20 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           other.wastingStatus == this.wastingStatus &&
           other.muacCm == this.muacCm &&
           other.muacStatus == this.muacStatus &&
-          other.muacMethod == this.muacMethod);
+          other.muacMethod == this.muacMethod &&
+          other.effectiveHeightCm == this.effectiveHeightCm &&
+          other.effectiveWeightKg == this.effectiveWeightKg &&
+          other.heightSource == this.heightSource &&
+          other.weightSource == this.weightSource &&
+          other.bmi == this.bmi &&
+          other.bmiStatus == this.bmiStatus &&
+          other.poshanStatus == this.poshanStatus &&
+          other.poshanTriggeredBy == this.poshanTriggeredBy &&
+          other.classificationMethod == this.classificationMethod &&
+          other.classificationRationale == this.classificationRationale &&
+          other.mlModelVersion == this.mlModelVersion &&
+          other.mlNonClinical == this.mlNonClinical &&
+          other.mlTrainingData == this.mlTrainingData);
 }
 
 class MeasurementsCompanion extends UpdateCompanion<Measurement> {
@@ -2080,6 +2525,19 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
   final Value<double?> muacCm;
   final Value<String?> muacStatus;
   final Value<String?> muacMethod;
+  final Value<double?> effectiveHeightCm;
+  final Value<double?> effectiveWeightKg;
+  final Value<String?> heightSource;
+  final Value<String?> weightSource;
+  final Value<double?> bmi;
+  final Value<String?> bmiStatus;
+  final Value<String?> poshanStatus;
+  final Value<String?> poshanTriggeredBy;
+  final Value<String?> classificationMethod;
+  final Value<String?> classificationRationale;
+  final Value<String?> mlModelVersion;
+  final Value<bool?> mlNonClinical;
+  final Value<String?> mlTrainingData;
   const MeasurementsCompanion({
     this.id = const Value.absent(),
     this.visitId = const Value.absent(),
@@ -2107,6 +2565,19 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     this.muacCm = const Value.absent(),
     this.muacStatus = const Value.absent(),
     this.muacMethod = const Value.absent(),
+    this.effectiveHeightCm = const Value.absent(),
+    this.effectiveWeightKg = const Value.absent(),
+    this.heightSource = const Value.absent(),
+    this.weightSource = const Value.absent(),
+    this.bmi = const Value.absent(),
+    this.bmiStatus = const Value.absent(),
+    this.poshanStatus = const Value.absent(),
+    this.poshanTriggeredBy = const Value.absent(),
+    this.classificationMethod = const Value.absent(),
+    this.classificationRationale = const Value.absent(),
+    this.mlModelVersion = const Value.absent(),
+    this.mlNonClinical = const Value.absent(),
+    this.mlTrainingData = const Value.absent(),
   });
   MeasurementsCompanion.insert({
     this.id = const Value.absent(),
@@ -2135,6 +2606,19 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     this.muacCm = const Value.absent(),
     this.muacStatus = const Value.absent(),
     this.muacMethod = const Value.absent(),
+    this.effectiveHeightCm = const Value.absent(),
+    this.effectiveWeightKg = const Value.absent(),
+    this.heightSource = const Value.absent(),
+    this.weightSource = const Value.absent(),
+    this.bmi = const Value.absent(),
+    this.bmiStatus = const Value.absent(),
+    this.poshanStatus = const Value.absent(),
+    this.poshanTriggeredBy = const Value.absent(),
+    this.classificationMethod = const Value.absent(),
+    this.classificationRationale = const Value.absent(),
+    this.mlModelVersion = const Value.absent(),
+    this.mlNonClinical = const Value.absent(),
+    this.mlTrainingData = const Value.absent(),
   }) : visitId = Value(visitId);
   static Insertable<Measurement> custom({
     Expression<int>? id,
@@ -2163,6 +2647,19 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     Expression<double>? muacCm,
     Expression<String>? muacStatus,
     Expression<String>? muacMethod,
+    Expression<double>? effectiveHeightCm,
+    Expression<double>? effectiveWeightKg,
+    Expression<String>? heightSource,
+    Expression<String>? weightSource,
+    Expression<double>? bmi,
+    Expression<String>? bmiStatus,
+    Expression<String>? poshanStatus,
+    Expression<String>? poshanTriggeredBy,
+    Expression<String>? classificationMethod,
+    Expression<String>? classificationRationale,
+    Expression<String>? mlModelVersion,
+    Expression<bool>? mlNonClinical,
+    Expression<String>? mlTrainingData,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2194,6 +2691,21 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
       if (muacCm != null) 'muac_cm': muacCm,
       if (muacStatus != null) 'muac_status': muacStatus,
       if (muacMethod != null) 'muac_method': muacMethod,
+      if (effectiveHeightCm != null) 'effective_height_cm': effectiveHeightCm,
+      if (effectiveWeightKg != null) 'effective_weight_kg': effectiveWeightKg,
+      if (heightSource != null) 'height_source': heightSource,
+      if (weightSource != null) 'weight_source': weightSource,
+      if (bmi != null) 'bmi': bmi,
+      if (bmiStatus != null) 'bmi_status': bmiStatus,
+      if (poshanStatus != null) 'poshan_status': poshanStatus,
+      if (poshanTriggeredBy != null) 'poshan_triggered_by': poshanTriggeredBy,
+      if (classificationMethod != null)
+        'classification_method': classificationMethod,
+      if (classificationRationale != null)
+        'classification_rationale': classificationRationale,
+      if (mlModelVersion != null) 'ml_model_version': mlModelVersion,
+      if (mlNonClinical != null) 'ml_non_clinical': mlNonClinical,
+      if (mlTrainingData != null) 'ml_training_data': mlTrainingData,
     });
   }
 
@@ -2223,7 +2735,20 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
       Value<String?>? wastingStatus,
       Value<double?>? muacCm,
       Value<String?>? muacStatus,
-      Value<String?>? muacMethod}) {
+      Value<String?>? muacMethod,
+      Value<double?>? effectiveHeightCm,
+      Value<double?>? effectiveWeightKg,
+      Value<String?>? heightSource,
+      Value<String?>? weightSource,
+      Value<double?>? bmi,
+      Value<String?>? bmiStatus,
+      Value<String?>? poshanStatus,
+      Value<String?>? poshanTriggeredBy,
+      Value<String?>? classificationMethod,
+      Value<String?>? classificationRationale,
+      Value<String?>? mlModelVersion,
+      Value<bool?>? mlNonClinical,
+      Value<String?>? mlTrainingData}) {
     return MeasurementsCompanion(
       id: id ?? this.id,
       visitId: visitId ?? this.visitId,
@@ -2253,6 +2778,20 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
       muacCm: muacCm ?? this.muacCm,
       muacStatus: muacStatus ?? this.muacStatus,
       muacMethod: muacMethod ?? this.muacMethod,
+      effectiveHeightCm: effectiveHeightCm ?? this.effectiveHeightCm,
+      effectiveWeightKg: effectiveWeightKg ?? this.effectiveWeightKg,
+      heightSource: heightSource ?? this.heightSource,
+      weightSource: weightSource ?? this.weightSource,
+      bmi: bmi ?? this.bmi,
+      bmiStatus: bmiStatus ?? this.bmiStatus,
+      poshanStatus: poshanStatus ?? this.poshanStatus,
+      poshanTriggeredBy: poshanTriggeredBy ?? this.poshanTriggeredBy,
+      classificationMethod: classificationMethod ?? this.classificationMethod,
+      classificationRationale:
+          classificationRationale ?? this.classificationRationale,
+      mlModelVersion: mlModelVersion ?? this.mlModelVersion,
+      mlNonClinical: mlNonClinical ?? this.mlNonClinical,
+      mlTrainingData: mlTrainingData ?? this.mlTrainingData,
     );
   }
 
@@ -2340,6 +2879,47 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     if (muacMethod.present) {
       map['muac_method'] = Variable<String>(muacMethod.value);
     }
+    if (effectiveHeightCm.present) {
+      map['effective_height_cm'] = Variable<double>(effectiveHeightCm.value);
+    }
+    if (effectiveWeightKg.present) {
+      map['effective_weight_kg'] = Variable<double>(effectiveWeightKg.value);
+    }
+    if (heightSource.present) {
+      map['height_source'] = Variable<String>(heightSource.value);
+    }
+    if (weightSource.present) {
+      map['weight_source'] = Variable<String>(weightSource.value);
+    }
+    if (bmi.present) {
+      map['bmi'] = Variable<double>(bmi.value);
+    }
+    if (bmiStatus.present) {
+      map['bmi_status'] = Variable<String>(bmiStatus.value);
+    }
+    if (poshanStatus.present) {
+      map['poshan_status'] = Variable<String>(poshanStatus.value);
+    }
+    if (poshanTriggeredBy.present) {
+      map['poshan_triggered_by'] = Variable<String>(poshanTriggeredBy.value);
+    }
+    if (classificationMethod.present) {
+      map['classification_method'] =
+          Variable<String>(classificationMethod.value);
+    }
+    if (classificationRationale.present) {
+      map['classification_rationale'] =
+          Variable<String>(classificationRationale.value);
+    }
+    if (mlModelVersion.present) {
+      map['ml_model_version'] = Variable<String>(mlModelVersion.value);
+    }
+    if (mlNonClinical.present) {
+      map['ml_non_clinical'] = Variable<bool>(mlNonClinical.value);
+    }
+    if (mlTrainingData.present) {
+      map['ml_training_data'] = Variable<String>(mlTrainingData.value);
+    }
     return map;
   }
 
@@ -2371,7 +2951,20 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
           ..write('wastingStatus: $wastingStatus, ')
           ..write('muacCm: $muacCm, ')
           ..write('muacStatus: $muacStatus, ')
-          ..write('muacMethod: $muacMethod')
+          ..write('muacMethod: $muacMethod, ')
+          ..write('effectiveHeightCm: $effectiveHeightCm, ')
+          ..write('effectiveWeightKg: $effectiveWeightKg, ')
+          ..write('heightSource: $heightSource, ')
+          ..write('weightSource: $weightSource, ')
+          ..write('bmi: $bmi, ')
+          ..write('bmiStatus: $bmiStatus, ')
+          ..write('poshanStatus: $poshanStatus, ')
+          ..write('poshanTriggeredBy: $poshanTriggeredBy, ')
+          ..write('classificationMethod: $classificationMethod, ')
+          ..write('classificationRationale: $classificationRationale, ')
+          ..write('mlModelVersion: $mlModelVersion, ')
+          ..write('mlNonClinical: $mlNonClinical, ')
+          ..write('mlTrainingData: $mlTrainingData')
           ..write(')'))
         .toString();
   }
@@ -3695,6 +4288,19 @@ typedef $$MeasurementsTableCreateCompanionBuilder = MeasurementsCompanion
   Value<double?> muacCm,
   Value<String?> muacStatus,
   Value<String?> muacMethod,
+  Value<double?> effectiveHeightCm,
+  Value<double?> effectiveWeightKg,
+  Value<String?> heightSource,
+  Value<String?> weightSource,
+  Value<double?> bmi,
+  Value<String?> bmiStatus,
+  Value<String?> poshanStatus,
+  Value<String?> poshanTriggeredBy,
+  Value<String?> classificationMethod,
+  Value<String?> classificationRationale,
+  Value<String?> mlModelVersion,
+  Value<bool?> mlNonClinical,
+  Value<String?> mlTrainingData,
 });
 typedef $$MeasurementsTableUpdateCompanionBuilder = MeasurementsCompanion
     Function({
@@ -3724,6 +4330,19 @@ typedef $$MeasurementsTableUpdateCompanionBuilder = MeasurementsCompanion
   Value<double?> muacCm,
   Value<String?> muacStatus,
   Value<String?> muacMethod,
+  Value<double?> effectiveHeightCm,
+  Value<double?> effectiveWeightKg,
+  Value<String?> heightSource,
+  Value<String?> weightSource,
+  Value<double?> bmi,
+  Value<String?> bmiStatus,
+  Value<String?> poshanStatus,
+  Value<String?> poshanTriggeredBy,
+  Value<String?> classificationMethod,
+  Value<String?> classificationRationale,
+  Value<String?> mlModelVersion,
+  Value<bool?> mlNonClinical,
+  Value<String?> mlTrainingData,
 });
 
 final class $$MeasurementsTableReferences
@@ -3840,6 +4459,52 @@ class $$MeasurementsTableFilterComposer
 
   ColumnFilters<String> get muacMethod => $composableBuilder(
       column: $table.muacMethod, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get effectiveHeightCm => $composableBuilder(
+      column: $table.effectiveHeightCm,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get effectiveWeightKg => $composableBuilder(
+      column: $table.effectiveWeightKg,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get heightSource => $composableBuilder(
+      column: $table.heightSource, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get weightSource => $composableBuilder(
+      column: $table.weightSource, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get bmi => $composableBuilder(
+      column: $table.bmi, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get bmiStatus => $composableBuilder(
+      column: $table.bmiStatus, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get poshanStatus => $composableBuilder(
+      column: $table.poshanStatus, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get poshanTriggeredBy => $composableBuilder(
+      column: $table.poshanTriggeredBy,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get classificationMethod => $composableBuilder(
+      column: $table.classificationMethod,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get classificationRationale => $composableBuilder(
+      column: $table.classificationRationale,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get mlModelVersion => $composableBuilder(
+      column: $table.mlModelVersion,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get mlNonClinical => $composableBuilder(
+      column: $table.mlNonClinical, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get mlTrainingData => $composableBuilder(
+      column: $table.mlTrainingData,
+      builder: (column) => ColumnFilters(column));
 
   $$VisitsTableFilterComposer get visitId {
     final $$VisitsTableFilterComposer composer = $composerBuilder(
@@ -3961,6 +4626,56 @@ class $$MeasurementsTableOrderingComposer
   ColumnOrderings<String> get muacMethod => $composableBuilder(
       column: $table.muacMethod, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<double> get effectiveHeightCm => $composableBuilder(
+      column: $table.effectiveHeightCm,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get effectiveWeightKg => $composableBuilder(
+      column: $table.effectiveWeightKg,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get heightSource => $composableBuilder(
+      column: $table.heightSource,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get weightSource => $composableBuilder(
+      column: $table.weightSource,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get bmi => $composableBuilder(
+      column: $table.bmi, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get bmiStatus => $composableBuilder(
+      column: $table.bmiStatus, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get poshanStatus => $composableBuilder(
+      column: $table.poshanStatus,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get poshanTriggeredBy => $composableBuilder(
+      column: $table.poshanTriggeredBy,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get classificationMethod => $composableBuilder(
+      column: $table.classificationMethod,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get classificationRationale => $composableBuilder(
+      column: $table.classificationRationale,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get mlModelVersion => $composableBuilder(
+      column: $table.mlModelVersion,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get mlNonClinical => $composableBuilder(
+      column: $table.mlNonClinical,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get mlTrainingData => $composableBuilder(
+      column: $table.mlTrainingData,
+      builder: (column) => ColumnOrderings(column));
+
   $$VisitsTableOrderingComposer get visitId {
     final $$VisitsTableOrderingComposer composer = $composerBuilder(
         composer: this,
@@ -4066,6 +4781,45 @@ class $$MeasurementsTableAnnotationComposer
   GeneratedColumn<String> get muacMethod => $composableBuilder(
       column: $table.muacMethod, builder: (column) => column);
 
+  GeneratedColumn<double> get effectiveHeightCm => $composableBuilder(
+      column: $table.effectiveHeightCm, builder: (column) => column);
+
+  GeneratedColumn<double> get effectiveWeightKg => $composableBuilder(
+      column: $table.effectiveWeightKg, builder: (column) => column);
+
+  GeneratedColumn<String> get heightSource => $composableBuilder(
+      column: $table.heightSource, builder: (column) => column);
+
+  GeneratedColumn<String> get weightSource => $composableBuilder(
+      column: $table.weightSource, builder: (column) => column);
+
+  GeneratedColumn<double> get bmi =>
+      $composableBuilder(column: $table.bmi, builder: (column) => column);
+
+  GeneratedColumn<String> get bmiStatus =>
+      $composableBuilder(column: $table.bmiStatus, builder: (column) => column);
+
+  GeneratedColumn<String> get poshanStatus => $composableBuilder(
+      column: $table.poshanStatus, builder: (column) => column);
+
+  GeneratedColumn<String> get poshanTriggeredBy => $composableBuilder(
+      column: $table.poshanTriggeredBy, builder: (column) => column);
+
+  GeneratedColumn<String> get classificationMethod => $composableBuilder(
+      column: $table.classificationMethod, builder: (column) => column);
+
+  GeneratedColumn<String> get classificationRationale => $composableBuilder(
+      column: $table.classificationRationale, builder: (column) => column);
+
+  GeneratedColumn<String> get mlModelVersion => $composableBuilder(
+      column: $table.mlModelVersion, builder: (column) => column);
+
+  GeneratedColumn<bool> get mlNonClinical => $composableBuilder(
+      column: $table.mlNonClinical, builder: (column) => column);
+
+  GeneratedColumn<String> get mlTrainingData => $composableBuilder(
+      column: $table.mlTrainingData, builder: (column) => column);
+
   $$VisitsTableAnnotationComposer get visitId {
     final $$VisitsTableAnnotationComposer composer = $composerBuilder(
         composer: this,
@@ -4136,6 +4890,19 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             Value<double?> muacCm = const Value.absent(),
             Value<String?> muacStatus = const Value.absent(),
             Value<String?> muacMethod = const Value.absent(),
+            Value<double?> effectiveHeightCm = const Value.absent(),
+            Value<double?> effectiveWeightKg = const Value.absent(),
+            Value<String?> heightSource = const Value.absent(),
+            Value<String?> weightSource = const Value.absent(),
+            Value<double?> bmi = const Value.absent(),
+            Value<String?> bmiStatus = const Value.absent(),
+            Value<String?> poshanStatus = const Value.absent(),
+            Value<String?> poshanTriggeredBy = const Value.absent(),
+            Value<String?> classificationMethod = const Value.absent(),
+            Value<String?> classificationRationale = const Value.absent(),
+            Value<String?> mlModelVersion = const Value.absent(),
+            Value<bool?> mlNonClinical = const Value.absent(),
+            Value<String?> mlTrainingData = const Value.absent(),
           }) =>
               MeasurementsCompanion(
             id: id,
@@ -4164,6 +4931,19 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             muacCm: muacCm,
             muacStatus: muacStatus,
             muacMethod: muacMethod,
+            effectiveHeightCm: effectiveHeightCm,
+            effectiveWeightKg: effectiveWeightKg,
+            heightSource: heightSource,
+            weightSource: weightSource,
+            bmi: bmi,
+            bmiStatus: bmiStatus,
+            poshanStatus: poshanStatus,
+            poshanTriggeredBy: poshanTriggeredBy,
+            classificationMethod: classificationMethod,
+            classificationRationale: classificationRationale,
+            mlModelVersion: mlModelVersion,
+            mlNonClinical: mlNonClinical,
+            mlTrainingData: mlTrainingData,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -4192,6 +4972,19 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             Value<double?> muacCm = const Value.absent(),
             Value<String?> muacStatus = const Value.absent(),
             Value<String?> muacMethod = const Value.absent(),
+            Value<double?> effectiveHeightCm = const Value.absent(),
+            Value<double?> effectiveWeightKg = const Value.absent(),
+            Value<String?> heightSource = const Value.absent(),
+            Value<String?> weightSource = const Value.absent(),
+            Value<double?> bmi = const Value.absent(),
+            Value<String?> bmiStatus = const Value.absent(),
+            Value<String?> poshanStatus = const Value.absent(),
+            Value<String?> poshanTriggeredBy = const Value.absent(),
+            Value<String?> classificationMethod = const Value.absent(),
+            Value<String?> classificationRationale = const Value.absent(),
+            Value<String?> mlModelVersion = const Value.absent(),
+            Value<bool?> mlNonClinical = const Value.absent(),
+            Value<String?> mlTrainingData = const Value.absent(),
           }) =>
               MeasurementsCompanion.insert(
             id: id,
@@ -4220,6 +5013,19 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             muacCm: muacCm,
             muacStatus: muacStatus,
             muacMethod: muacMethod,
+            effectiveHeightCm: effectiveHeightCm,
+            effectiveWeightKg: effectiveWeightKg,
+            heightSource: heightSource,
+            weightSource: weightSource,
+            bmi: bmi,
+            bmiStatus: bmiStatus,
+            poshanStatus: poshanStatus,
+            poshanTriggeredBy: poshanTriggeredBy,
+            classificationMethod: classificationMethod,
+            classificationRationale: classificationRationale,
+            mlModelVersion: mlModelVersion,
+            mlNonClinical: mlNonClinical,
+            mlTrainingData: mlTrainingData,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (

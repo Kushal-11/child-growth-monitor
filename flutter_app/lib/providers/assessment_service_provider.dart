@@ -28,7 +28,20 @@ final poseSourceProvider = Provider<PoseSource>(
 final mlInferenceServiceProvider =
     FutureProvider<MlInferenceService>((ref) async {
   final svc = MlInferenceService();
-  await svc.load();
+  try {
+    await svc.load();
+  } catch (error, stackTrace) {
+    // The ML models are secondary screening aids. A missing, corrupt, or
+    // unsupported TFLite asset must not block manual measurements, WHO
+    // calculations, or the deterministic Poshan Setu classifier. Returning
+    // the unloaded service lets AssessmentService's guarded predict() call
+    // fall back while still surfacing diagnostics for support.
+    // ignore: avoid_print
+    print(
+      'ML runtime unavailable; continuing without ML screening. '
+      '$error\n$stackTrace',
+    );
+  }
   ref.onDispose(svc.dispose);
   return svc;
 });

@@ -18,6 +18,14 @@ def _legacy_engine():
             "visit_date DATETIME, age_months FLOAT, image_path VARCHAR, "
             "side_image_path VARCHAR, back_image_path VARCHAR, notes TEXT, local_uuid VARCHAR)"
         ))
+        conn.execute(text(
+            "CREATE TABLE measurement_results (id INTEGER PRIMARY KEY, "
+            "visit_id INTEGER, predicted_height_cm FLOAT, predicted_weight_kg FLOAT, "
+            "manual_height_cm FLOAT, manual_weight_kg FLOAT, "
+            "reference_object_detected VARCHAR, scale_factor FLOAT, "
+            "haz_zscore FLOAT, whz_zscore FLOAT, haz_status VARCHAR, "
+            "whz_status VARCHAR, confidence_score FLOAT, created_at DATETIME)"
+        ))
     return engine
 
 
@@ -27,8 +35,26 @@ def test_migration_adds_missing_columns():
     insp = inspect(engine)
     child_cols = {c["name"] for c in insp.get_columns("children")}
     visit_cols = {c["name"] for c in insp.get_columns("visits")}
+    measurement_cols = {
+        c["name"] for c in insp.get_columns("measurement_results")
+    }
     assert {"user_id", "photo_path", "is_archived"} <= child_cols
     assert {"user_id", "entry_method"} <= visit_cols
+    assert {
+        "effective_height_cm",
+        "effective_weight_kg",
+        "height_source",
+        "weight_source",
+        "bmi",
+        "bmi_status",
+        "poshan_status",
+        "poshan_triggered_by",
+        "classification_method",
+        "classification_rationale",
+        "ml_model_version",
+        "ml_training_data",
+        "ml_non_clinical",
+    } <= measurement_cols
 
 
 def test_migration_is_idempotent():
@@ -37,6 +63,9 @@ def test_migration_is_idempotent():
     dbmod.run_migrations(engine)  # second run must not raise
     insp = inspect(engine)
     assert "user_id" in {c["name"] for c in insp.get_columns("children")}
+    assert "poshan_status" in {
+        c["name"] for c in insp.get_columns("measurement_results")
+    }
 
 
 def test_migration_noop_when_table_absent():
@@ -75,3 +104,27 @@ def test_migration_matches_create_all_for_new_columns_and_indexes():
         assert user_id_indexes, f"expected a user_id index on {table} in fresh schema"
         assert user_id_indexes <= legacy_idx, (
             f"migration missing index(es) {user_id_indexes - legacy_idx} on {table}")
+
+    fresh_measurement_cols = {
+        c["name"] for c in fresh_insp.get_columns("measurement_results")
+    }
+    legacy_measurement_cols = {
+        c["name"] for c in legacy_insp.get_columns("measurement_results")
+    }
+    for new_col in (
+        "effective_height_cm",
+        "effective_weight_kg",
+        "height_source",
+        "weight_source",
+        "bmi",
+        "bmi_status",
+        "poshan_status",
+        "poshan_triggered_by",
+        "classification_method",
+        "classification_rationale",
+        "ml_model_version",
+        "ml_training_data",
+        "ml_non_clinical",
+    ):
+        assert new_col in fresh_measurement_cols
+        assert new_col in legacy_measurement_cols

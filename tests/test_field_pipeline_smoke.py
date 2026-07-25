@@ -1,7 +1,10 @@
 """End-to-end smoke: real MediaPipe on one sample child, then full chain
 with a stubbed cleaner so the chain runs even where the model is absent."""
 import csv
+import os
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -12,6 +15,8 @@ from scripts.analyze_results import analyze, coverage, render_report
 
 SAMPLE_DIR = Path("sample images")
 POSE_MODEL = Path("data/pose_landmarker_heavy.task")
+RUN_REAL_POSE_ENV = "CGM_RUN_REAL_MEDIAPIPE_TEST"
+REAL_POSE_TIMEOUT_SECONDS = 45
 
 GT_HEADER = ("child_id,sex,date_of_birth,measurement_date,"
              "actual_height_cm,actual_weight_kg,muac_cm,oedema,notes\n")
@@ -47,16 +52,36 @@ def test_intake_and_ground_truth_chain(tmp_path):
     assert manifest.exists()
 
 
+@pytest.mark.skipif(
+    os.environ.get(RUN_REAL_POSE_ENV) != "1",
+    reason=(
+        "opt-in real MediaPipe test; run "
+        "CGM_RUN_REAL_MEDIAPIPE_TEST=1 pytest "
+        "tests/test_field_pipeline_smoke.py::test_clean_media_with_real_model"
+    ),
+)
 def test_clean_media_with_real_model(tmp_path):
-    """Slow: loads the real MediaPipe heavy model. Skips when absent."""
+    """Run real MediaPipe out-of-process with a hard timeout."""
     if not POSE_MODEL.exists():
         pytest.skip("pose model not downloaded")
     raw = _build_raw(tmp_path)
-    from scripts.clean_media import run_clean
     report = tmp_path / "field_data" / "reports" / "qc_report.csv"
-    rows = run_clean(raw, tmp_path / "field_data" / "cleaned", report, False)
-    assert len(rows) == 1
-    assert rows[0]["verdict"] in ("ok", "usable_no_side", "failed")
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(Path(__file__).resolve()),
+            "--run-real-clean",
+            str(raw),
+            str(tmp_path / "field_data" / "cleaned"),
+            str(report),
+        ],
+        cwd=Path(__file__).resolve().parent.parent,
+        capture_output=True,
+        text=True,
+        timeout=REAL_POSE_TIMEOUT_SECONDS,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr or completed.stdout
     assert report.exists()
 
 
@@ -74,3 +99,26 @@ def test_analysis_chain_from_synthetic_results():
                  [{"child_id": "001", "verdict": "ok"}], results),
     )
     assert "## Status agreement" in text
+
+
+def _run_real_clean(raw: Path, cleaned: Path, report: Path) -> int:
+    from scripts.clean_media import run_clean
+
+    rows = run_clean(raw, cleaned, report, False)
+    if len(rows) != 1:
+        raise RuntimeError(f"Expected one child QC row, got {len(rows)}")
+    if rows[0]["verdict"] not in ("ok", "usable_no_side", "failed"):
+        raise RuntimeError(f"Unexpected QC verdict: {rows[0]['verdict']}")
+    return 0
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 5 and sys.argv[1] == "--run-real-clean":
+        raise SystemExit(
+            _run_real_clean(
+                Path(sys.argv[2]),
+                Path(sys.argv[3]),
+                Path(sys.argv[4]),
+            )
+        )
+    raise SystemExit("Use pytest, or --run-real-clean RAW CLEANED REPORT")

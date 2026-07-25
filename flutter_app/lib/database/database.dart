@@ -19,7 +19,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -48,6 +48,29 @@ class AppDatabase extends _$AppDatabase {
               await migrator.addColumn(visits, visits.ownerUserId);
               await migrator.addColumn(visits, visits.entryMethod);
             }
+          }
+          if (from >= 2 && from < 4) {
+            // v1 recreates Measurements from the current schema above. v2/v3
+            // retain existing assessment rows, so add the nullable provenance
+            // and Poshan columns in-place without fabricating old results.
+            await migrator.addColumn(
+                measurements, measurements.effectiveHeightCm);
+            await migrator.addColumn(
+                measurements, measurements.effectiveWeightKg);
+            await migrator.addColumn(measurements, measurements.heightSource);
+            await migrator.addColumn(measurements, measurements.weightSource);
+            await migrator.addColumn(measurements, measurements.bmi);
+            await migrator.addColumn(measurements, measurements.bmiStatus);
+            await migrator.addColumn(measurements, measurements.poshanStatus);
+            await migrator.addColumn(
+                measurements, measurements.poshanTriggeredBy);
+            await migrator.addColumn(
+                measurements, measurements.classificationMethod);
+            await migrator.addColumn(
+                measurements, measurements.classificationRationale);
+            await migrator.addColumn(measurements, measurements.mlModelVersion);
+            await migrator.addColumn(measurements, measurements.mlNonClinical);
+            await migrator.addColumn(measurements, measurements.mlTrainingData);
           }
         },
       );

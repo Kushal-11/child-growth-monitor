@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
+
+import '../../services/poshan_setu_service.dart';
 import '../database.dart';
 
 /// Creates a manually-entered visit (no image, no ML) with its measurement and
@@ -15,7 +19,7 @@ class ManualVisitDao {
 
   Future<int> createManualVisit({
     required int childId,
-    required int? ownerUserId,
+    required int ownerUserId,
     required double ageMonths,
     required DateTime visitDate,
     required double heightCm,
@@ -25,10 +29,32 @@ class ManualVisitDao {
     double? whzZscore,
     String? hazStatus,
     String? whzStatus,
-    String? muacStatus,
+    String? muacMethod,
     String? notes,
   }) {
     return _db.transaction(() async {
+      final resolvedMuacMethod =
+          muacMethod ?? (muacCm == null ? 'unavailable' : 'manual');
+      final child = await (_db.select(_db.children)
+            ..where((candidate) =>
+                candidate.id.equals(childId) &
+                candidate.ownerUserId.equals(ownerUserId)))
+          .getSingleOrNull();
+      if (child == null) {
+        throw StateError(
+          'Child $childId was not found for the signed-in user.',
+        );
+      }
+      final poshan = const PoshanSetuService().classify(
+        sex: child.sex,
+        ageMonths: ageMonths,
+        heightCm: heightCm,
+        heightSource: 'manual',
+        weightKg: weightKg,
+        weightSource: 'manual',
+        muacCm: muacCm,
+        muacSource: resolvedMuacMethod,
+      );
       final visitId = await _db.into(_db.visits).insert(
             VisitsCompanion.insert(
               childId: childId,
@@ -50,11 +76,23 @@ class ManualVisitDao {
               hazStatus: Value(hazStatus),
               whzStatus: Value(whzStatus),
               muacCm: Value(muacCm),
-              muacStatus: Value(muacStatus),
-              muacMethod: const Value('manual'),
+              muacStatus: Value(poshan.muacStatus),
+              muacMethod: Value(resolvedMuacMethod),
+              effectiveHeightCm: Value(heightCm),
+              effectiveWeightKg: Value(weightKg),
+              heightSource: const Value('manual'),
+              weightSource: const Value('manual'),
+              bmi: Value(poshan.bmi),
+              bmiStatus: Value(poshan.bmiStatus),
+              poshanStatus: Value(poshan.finalStatus),
+              poshanTriggeredBy: Value(jsonEncode(poshan.triggeredBy)),
+              classificationMethod: Value(poshan.classificationMethod),
+              classificationRationale: Value(poshan.rationale),
             ),
           );
-      await _db.into(_db.syncQueue).insert(SyncQueueCompanion.insert(visitId: visitId));
+      await _db
+          .into(_db.syncQueue)
+          .insert(SyncQueueCompanion.insert(visitId: visitId));
       return visitId;
     });
   }

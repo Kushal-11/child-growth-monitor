@@ -28,7 +28,7 @@ class MeasurementService {
 
     final shoulderCm = segments.shoulderWidthPx != null
         ? segments.shoulderWidthPx! * scale
-        : _imputeShoulderPx(effectiveHeightCm, ageMonths) * scale;
+        : _imputeShoulderCm(effectiveHeightCm, ageMonths);
     // Snyder ratio: hip width ≈ 0.88 × shoulder width.
     final hipCm = segments.hipWidthPx != null
         ? segments.hipWidthPx! * scale
@@ -39,7 +39,7 @@ class MeasurementService {
         : effectiveHeightCm * 0.30;
     final armCm = segments.upperArmLengthPx != null
         ? segments.upperArmLengthPx! * scale
-        : _imputeArmPx(effectiveHeightCm, ageMonths) * scale;
+        : _imputeArmCm(effectiveHeightCm, ageMonths);
 
     double? chestCm;
     double? abdCm;
@@ -47,10 +47,12 @@ class MeasurementService {
     if (sideSegments != null && sideSegments.totalHeightPx != null) {
       final sideScale = effectiveHeightCm / sideSegments.totalHeightPx!;
       if (sideSegments.chestDepthPx != null) {
-        chestCm = sideSegments.chestDepthPx! * sideScale;
+        final scaled = sideSegments.chestDepthPx! * sideScale;
+        if (scaled >= 2.0 && scaled <= 50.0) chestCm = scaled;
       }
       if (sideSegments.abdDepthPx != null) {
-        abdCm = sideSegments.abdDepthPx! * sideScale;
+        final scaled = sideSegments.abdDepthPx! * sideScale;
+        if (scaled >= 2.0 && scaled <= 50.0) abdCm = scaled;
       }
       sideUsed = chestCm != null || abdCm != null;
     }
@@ -92,10 +94,12 @@ class MeasurementService {
     required String sex,
   }) {
     if (manualHeightCm != null && manualHeightCm > 0) return manualHeightCm;
-    final median = _who.getMedianHeightForAge(sex, ageMonths.round());
+    final median = _who.getMedianHeightForAge(sex, ageMonths.floor());
     if (median != null) return median;
-    // Final fallback: WHO 24-month median to avoid /0; surfaces as low confidence upstream.
-    return 87.1;
+    throw StateError(
+      'WHO height-for-age median is unavailable for this child. '
+      'Enter a measured height to continue.',
+    );
   }
 
   double _scale(BodySegments segments, double heightCm) {
@@ -104,13 +108,13 @@ class MeasurementService {
     return 1.0;
   }
 
-  double _imputeShoulderPx(double heightCm, double ageMonths) {
+  double _imputeShoulderCm(double heightCm, double ageMonths) {
     if (ageMonths < 24) return heightCm * 0.200;
     if (ageMonths < 48) return heightCm * 0.210;
     return heightCm * 0.218;
   }
 
-  double _imputeArmPx(double heightCm, double ageMonths) {
+  double _imputeArmCm(double heightCm, double ageMonths) {
     if (ageMonths < 24) return heightCm * 0.150;
     if (ageMonths < 48) return heightCm * 0.158;
     return heightCm * 0.165;

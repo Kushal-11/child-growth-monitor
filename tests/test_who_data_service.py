@@ -82,6 +82,30 @@ class TestMedianWeight:
         w = who_data.get_median_weight_for_height("F", 200.0)
         assert w is None
 
+    def test_missing_excel_lms_fails_closed_without_csv_fallback(self):
+        """The known-defective quick-reference CSV must never supply weight."""
+        import pandas as pd
+
+        service = WHODataService()
+        service._wfl_lms = None
+        service._wfh_lms = None
+        service._whz_reference = pd.DataFrame(
+            [{"sex": "M", "height_cm": 60, "median_kg": 99.0}]
+        )
+
+        assert (
+            service.get_median_weight_for_height(
+                "M", 60.0, age_months=6.0
+            )
+            is None
+        )
+        assert (
+            service.get_median_weight_for_height(
+                "M", 85.0, age_months=36.0
+            )
+            is None
+        )
+
 
 class TestMedianHeight:
     """Tests for the new get_median_height_for_age method."""

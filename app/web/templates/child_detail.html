@@ -52,10 +52,14 @@
                         <td>{{ visit.visit_date.strftime('%Y-%m-%d') if visit.visit_date else "-" }}</td>
                         <td>{{ "%.1f"|format(visit.age_months) }}</td>
                         {% if visit.measurement %}
-                            <td>{% if visit.measurement.predicted_height_cm %}{{ "%.1f"|format(visit.measurement.predicted_height_cm) }}{% elif visit.measurement.manual_height_cm %}{{ "%.1f"|format(visit.measurement.manual_height_cm) }}{% else %}-{% endif %}</td>
-                            <td>{{ "%.1f"|format(visit.measurement.manual_weight_kg or visit.measurement.predicted_weight_kg or 0) if (visit.measurement.manual_weight_kg or visit.measurement.predicted_weight_kg) else "-" }}</td>
+                            {% set display_height = visit.measurement.manual_height_cm if visit.measurement.manual_height_cm is not none else (visit.measurement.effective_height_cm if visit.measurement.effective_height_cm is not none else visit.measurement.predicted_height_cm) %}
+                            {% set display_weight = visit.measurement.manual_weight_kg if visit.measurement.manual_weight_kg is not none else (visit.measurement.effective_weight_kg if visit.measurement.effective_weight_kg is not none else visit.measurement.predicted_weight_kg) %}
+                            {% set haz_eligible = visit.measurement.manual_height_cm is not none or visit.measurement.height_source in ["manual", "reference_object"] %}
+                            {% set whz_eligible = haz_eligible and (visit.measurement.manual_weight_kg is not none or visit.measurement.weight_source in ["manual", "reference_object"]) %}
+                            <td>{{ "%.1f"|format(display_height) if display_height is not none else "-" }}</td>
+                            <td>{{ "%.1f"|format(display_weight) if display_weight is not none else "-" }}</td>
                             <td>
-                                {% set haz = visit.measurement.haz_status %}
+                                {% set haz = visit.measurement.haz_status if haz_eligible else none %}
                                 {% if haz %}
                                 <span class="badge
                                     {% if haz == 'Normal' %}bg-success
@@ -70,7 +74,7 @@
                                 {% else %}-{% endif %}
                             </td>
                             <td>
-                                {% set whz = visit.measurement.whz_status %}
+                                {% set whz = visit.measurement.whz_status if whz_eligible else none %}
                                 {% if whz %}
                                 <span class="badge
                                     {% if 'Normal' in whz %}bg-success

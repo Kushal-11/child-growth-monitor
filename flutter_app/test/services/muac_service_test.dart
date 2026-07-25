@@ -3,27 +3,52 @@ import 'package:child_growth_monitor_app/services/muac_service.dart';
 
 void main() {
   test('manual MUAC takes priority', () {
-    final r = MuacService.estimate(ageMonths: 24, sex: 'M', whz: -1.0, manualMuacCm: 13.5);
+    final r = MuacService.estimate(
+        ageMonths: 24, sex: 'M', whz: -1.0, manualMuacCm: 13.5);
     expect(r.muacCm, 13.5);
     expect(r.muacMethod, 'manual');
     expect(r.muacStatus, 'Normal');
+  });
+
+  test('manual MUAC keeps full precision across clinical boundaries', () {
+    final sam = MuacService.estimate(
+      ageMonths: 24,
+      sex: 'F',
+      whz: 0,
+      manualMuacCm: 11.49,
+    );
+    final mam = MuacService.estimate(
+      ageMonths: 24,
+      sex: 'F',
+      whz: 0,
+      manualMuacCm: 12.49,
+    );
+
+    expect(sam.muacCm, 11.49);
+    expect(sam.muacStatus, 'SAM');
+    expect(mam.muacCm, 12.49);
+    expect(mam.muacStatus, 'At Risk (MAM)');
   });
 
   test('estimates from WHZ for boy age 24', () {
     final r = MuacService.estimate(ageMonths: 24, sex: 'M', whz: 0.0);
     expect(r.muacCm!, closeTo(15.7, 0.1));
     expect(r.muacStatus, 'Normal');
+    expect(r.muacMethod, 'whz_derived');
   });
 
   test('age out of range returns null status', () {
     final r = MuacService.estimate(ageMonths: 3, sex: 'M', whz: 0.0);
     expect(r.ageInRange, false);
+    expect(r.muacCm, isNull);
     expect(r.muacStatus, isNull);
+    expect(r.muacMethod, 'unavailable');
   });
 
   test('null whz returns null muac', () {
     final r = MuacService.estimate(ageMonths: 24, sex: 'M', whz: null);
     expect(r.muacCm, isNull);
+    expect(r.muacMethod, 'unavailable');
   });
 
   test('median interpolates between table entries', () {

@@ -5,8 +5,9 @@ Loads CSV and Excel WHO growth standard files into normalized DataFrames.
 Provides lookup methods for Z-score computation.
 
 Data source priority:
-  - Excel files (L-M-S parameters) are preferred for WFH/WFL (0-2y and 2-5y)
-  - CSV files are used for HAZ (0-59 months) and as fallback for WHZ
+  - Excel files (L-M-S parameters) are authoritative for WFH/WFL
+    (0-2y and 2-5y)
+  - CSV files are used for HAZ (0-59 months) and non-authoritative display data
   - The who_wfh_0_59m.csv has a defect (positive z-scores mirror negatives),
     so Excel L-M-S files are the authoritative source for weight-for-height.
 """
@@ -99,6 +100,8 @@ class WHODataService:
         Returns (L, M, S) tuple or None if out of range.
         """
         df = self._wfl_lms if age_months < 24 else self._wfh_lms
+        if df is None or df.empty:
+            return None
         subset = df[df["sex"] == sex].sort_values("index_value")
 
         if subset.empty:
@@ -144,18 +147,14 @@ class WHODataService:
         Returns:
             Median weight in kg, or None if height is out of range.
         """
-        # Use LMS data for accurate median (M parameter = median)
+        # Fail closed when the authoritative LMS workbook data is unavailable.
+        # The CSV quick-reference table is intentionally not a fallback: it is
+        # known to contain defective mirrored positive z-score columns.
         lms = self.get_wfh_lms(sex, height_cm, age_months)
         if lms is not None:
-            L, M, S = lms
+            _, M, _ = lms
             return round(M, 2)
-        
-        # Fallback to CSV reference if LMS not available
-        ref = self._whz_reference
-        row = ref[(ref["sex"] == sex) & (ref["height_cm"] == round(height_cm))]
-        if row.empty:
-            return None
-        return float(row.iloc[0]["median_kg"])
+        return None
 
     def get_median_height_for_age(
         self, sex: str, age_months: int

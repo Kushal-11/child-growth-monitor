@@ -19,6 +19,7 @@ class SyncService {
     required String baseUrl,
     http.Client? httpClient,
     String? authToken,
+    int? ownerUserId,
     void Function()? onUnauthorized,
   })  : _db = db,
         _visitDao = visitDao,
@@ -26,6 +27,7 @@ class SyncService {
         _syncDao = syncDao,
         _baseUrl = baseUrl,
         _authToken = authToken,
+        _ownerUserId = ownerUserId,
         _onUnauthorized = onUnauthorized,
         _client = httpClient ?? http.Client();
 
@@ -36,45 +38,79 @@ class SyncService {
   final String _baseUrl;
   final http.Client _client;
   final String? _authToken;
+  final int? _ownerUserId;
   final void Function()? _onUnauthorized;
 
   static const _maxRetries = 5;
 
   Future<void> runOnce() async {
-    await _recoverStuck();
+    // Never upload or mutate retry state without an authenticated owner.
+    // Offline assessments remain queued and are drained after login/restore.
+    final ownerUserId = _ownerUserId;
+    if (_authToken == null || ownerUserId == null) return;
+    await _recoverStuck(ownerUserId);
 
-    final entries = await (_db.select(_db.syncQueue)
-          ..where((s) =>
-              (s.status.equals('pending') | s.status.equals('failed')) &
-              s.retryCount.isSmallerThanValue(_maxRetries))
-          ..orderBy([(s) => OrderingTerm.asc(s.createdAt)]))
-        .get();
+    final queueQuery = _db.select(_db.syncQueue).join([
+      innerJoin(
+        _db.visits,
+        _db.visits.id.equalsExp(_db.syncQueue.visitId),
+      ),
+    ])
+      ..where(
+        (_db.syncQueue.status.equals('pending') |
+                _db.syncQueue.status.equals('failed')) &
+            _db.syncQueue.retryCount.isSmallerThanValue(_maxRetries),
+      )
+      ..orderBy([OrderingTerm.asc(_db.syncQueue.createdAt)]);
+    queueQuery.where(_db.visits.ownerUserId.equals(ownerUserId));
+    final entries = (await queueQuery.get())
+        .map((row) => row.readTable(_db.syncQueue))
+        .toList(growable: false);
 
     for (final entry in entries) {
-      await _syncOne(entry);
+      await _syncOne(entry, ownerUserId);
     }
   }
 
   /// Resets any entries stuck in 'syncing' state back to 'pending'.
   /// Defends against app crashes (SIGKILL, OOM, force-stop) that left
   /// entries mid-flight.
-  Future<void> _recoverStuck() async {
+  Future<void> _recoverStuck(int ownerUserId) async {
+    final ownedVisitIds = await (_db.selectOnly(_db.visits)
+          ..addColumns([_db.visits.id])
+          ..where(_db.visits.ownerUserId.equals(ownerUserId)))
+        .map((row) => row.read(_db.visits.id)!)
+        .get();
+    if (ownedVisitIds.isEmpty) return;
     await (_db.update(_db.syncQueue)
-          ..where((s) => s.status.equals('syncing')))
+          ..where((s) =>
+              s.status.equals('syncing') & s.visitId.isIn(ownedVisitIds)))
         .write(const SyncQueueCompanion(status: Value('pending')));
   }
 
-  Future<void> _syncOne(SyncQueueData entry) async {
+  Future<void> _syncOne(SyncQueueData entry, int ownerUserId) async {
     await _syncDao.markSyncing(entry.id);
     try {
-      final pair = await _visitDao.getById(entry.visitId);
+      final pair = await _visitDao.getById(
+        entry.visitId,
+        ownerUserId: ownerUserId,
+      );
       if (pair == null) {
-        await _syncDao.markFailed(entry.id, 'Visit not found');
+        await _syncDao.markFailed(
+          entry.id,
+          'Visit not found for the signed-in user',
+        );
         return;
       }
-      final child = await _childDao.getById(pair.visit.childId);
+      final child = await _childDao.getById(
+        pair.visit.childId,
+        ownerUserId: ownerUserId,
+      );
       if (child == null) {
-        await _syncDao.markFailed(entry.id, 'Child not found');
+        await _syncDao.markFailed(
+          entry.id,
+          'Child not found for the signed-in user',
+        );
         return;
       }
       final m = pair.measurement;
@@ -130,14 +166,32 @@ class SyncService {
         if (m?.muacCm != null) 'muac_cm': m!.muacCm.toString(),
         if (m?.muacStatus != null) 'muac_status': m!.muacStatus!,
         if (m?.muacMethod != null) 'muac_method': m!.muacMethod!,
+        if (m?.effectiveHeightCm != null)
+          'effective_height_cm': m!.effectiveHeightCm.toString(),
+        if (m?.effectiveWeightKg != null)
+          'effective_weight_kg': m!.effectiveWeightKg.toString(),
+        if (m?.heightSource != null) 'height_source': m!.heightSource!,
+        if (m?.weightSource != null) 'weight_source': m!.weightSource!,
+        if (m?.bmi != null) 'bmi': m!.bmi.toString(),
+        if (m?.bmiStatus != null) 'bmi_status': m!.bmiStatus!,
+        if (m?.poshanStatus != null) 'poshan_status': m!.poshanStatus!,
+        if (m?.poshanTriggeredBy != null)
+          'poshan_triggered_by': m!.poshanTriggeredBy!,
+        if (m?.classificationMethod != null)
+          'classification_method': m!.classificationMethod!,
+        if (m?.classificationRationale != null)
+          'classification_rationale': m!.classificationRationale!,
+        if (m?.mlModelVersion != null) 'ml_model_version': m!.mlModelVersion!,
+        if (m?.mlNonClinical != null)
+          'ml_non_clinical': m!.mlNonClinical.toString(),
+        if (m?.mlTrainingData != null) 'ml_training_data': m!.mlTrainingData!,
         if (child.guardianName != null) 'guardian_name': child.guardianName!,
         if (child.location != null) 'location': child.location!,
       });
 
       final imagePath = pair.visit.imagePath;
       if (imagePath != null && await File(imagePath).exists()) {
-        req.files.add(
-            await http.MultipartFile.fromPath('image', imagePath));
+        req.files.add(await http.MultipartFile.fromPath('image', imagePath));
       }
       if (pair.visit.sideImagePath != null &&
           await File(pair.visit.sideImagePath!).exists()) {
@@ -150,7 +204,8 @@ class SyncService {
             'image_back', pair.visit.backImagePath!));
       }
       if (child.photoPath != null && await File(child.photoPath!).exists()) {
-        req.files.add(await http.MultipartFile.fromPath('photo', child.photoPath!));
+        req.files
+            .add(await http.MultipartFile.fromPath('photo', child.photoPath!));
       }
 
       final streamed =

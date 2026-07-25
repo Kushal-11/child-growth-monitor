@@ -21,22 +21,25 @@ class MuacService {
     required double? whz,
     double? manualMuacCm,
   }) {
-    final ageInRange = ageMonths >= 6.0 && ageMonths <= 59.9;
+    final ageInRange = ageMonths >= 6.0 && ageMonths < 60.0;
 
     if (manualMuacCm != null && manualMuacCm > 0) {
       return MuacResult(
-        muacCm: double.parse(manualMuacCm.toStringAsFixed(1)),
+        // Preserve the tape reading exactly for clinical thresholding and
+        // persistence. Any display rounding belongs in the UI; rounding here
+        // can move 11.49 from SAM to MAM or 12.49 from MAM to Normal.
+        muacCm: manualMuacCm,
         muacStatus: classifyMuac(manualMuacCm, ageInRange),
         muacMethod: 'manual',
         ageInRange: ageInRange,
       );
     }
 
-    if (whz == null) {
+    if (whz == null || !ageInRange) {
       return MuacResult(
         muacCm: null,
         muacStatus: null,
-        muacMethod: 'estimated_from_whz',
+        muacMethod: 'unavailable',
         ageInRange: ageInRange,
       );
     }
@@ -49,7 +52,7 @@ class MuacService {
     return MuacResult(
       muacCm: muacCm,
       muacStatus: classifyMuac(muacCm, ageInRange),
-      muacMethod: 'estimated_from_whz',
+      muacMethod: 'whz_derived',
       ageInRange: ageInRange,
     );
   }

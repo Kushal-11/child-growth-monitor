@@ -1,0 +1,156 @@
+[
+  {
+    "name": "male_bmi_below_sam_boundary",
+    "sex": "M",
+    "age_months": 36.0,
+    "weight_kg": 12.999,
+    "height_cm": 100.0,
+    "muac_cm": 12.5,
+    "expected_bmi_status": "SAM",
+    "expected_muac_status": "Normal",
+    "expected_final_status": "SAM"
+  },
+  {
+    "name": "male_bmi_exact_mam_boundary",
+    "sex": "M",
+    "age_months": 36.0,
+    "weight_kg": 13.0,
+    "height_cm": 100.0,
+    "muac_cm": 12.5,
+    "expected_bmi_status": "MAM",
+    "expected_muac_status": "Normal",
+    "expected_final_status": "MAM"
+  },
+  {
+    "name": "male_bmi_exact_normal_boundary",
+    "sex": "M",
+    "age_months": 36.0,
+    "weight_kg": 13.7,
+    "height_cm": 100.0,
+    "muac_cm": 12.5,
+    "expected_bmi_status": "Normal",
+    "expected_muac_status": "Normal",
+    "expected_final_status": "Normal"
+  },
+  {
+    "name": "female_bmi_below_sam_boundary",
+    "sex": "F",
+    "age_months": 36.0,
+    "weight_kg": 12.799,
+    "height_cm": 100.0,
+    "muac_cm": 12.5,
+    "expected_bmi_status": "SAM",
+    "expected_muac_status": "Normal",
+    "expected_final_status": "SAM"
+  },
+  {
+    "name": "female_bmi_exact_mam_boundary",
+    "sex": "F",
+    "age_months": 36.0,
+    "weight_kg": 12.8,
+    "height_cm": 100.0,
+    "muac_cm": 12.5,
+    "expected_bmi_status": "MAM",
+    "expected_muac_status": "Normal",
+    "expected_final_status": "MAM"
+  },
+  {
+    "name": "female_bmi_exact_normal_boundary",
+    "sex": "F",
+    "age_months": 36.0,
+    "weight_kg": 13.5,
+    "height_cm": 100.0,
+    "muac_cm": 12.5,
+    "expected_bmi_status": "Normal",
+    "expected_muac_status": "Normal",
+    "expected_final_status": "Normal"
+  },
+  {
+    "name": "muac_below_sam_boundary",
+    "sex": "M",
+    "age_months": 36.0,
+    "weight_kg": 14.0,
+    "height_cm": 100.0,
+    "muac_cm": 11.499,
+    "expected_bmi_status": "Normal",
+    "expected_muac_status": "SAM",
+    "expected_final_status": "SAM"
+  },
+  {
+    "name": "muac_exact_mam_boundary",
+    "sex": "F",
+    "age_months": 36.0,
+    "weight_kg": 13.5,
+    "height_cm": 100.0,
+    "muac_cm": 11.5,
+    "expected_bmi_status": "Normal",
+    "expected_muac_status": "MAM",
+    "expected_final_status": "MAM"
+  },
+  {
+    "name": "muac_exact_normal_boundary",
+    "sex": "F",
+    "age_months": 36.0,
+    "weight_kg": 13.5,
+    "height_cm": 100.0,
+    "muac_cm": 12.5,
+    "expected_bmi_status": "Normal",
+    "expected_muac_status": "Normal",
+    "expected_final_status": "Normal"
+  },
+  {
+    "name": "sam_signal_survives_missing_muac",
+    "sex": "M",
+    "age_months": 36.0,
+    "weight_kg": 12.9,
+    "height_cm": 100.0,
+    "muac_cm": null,
+    "expected_bmi_status": "SAM",
+    "expected_muac_status": "Indeterminate",
+    "expected_final_status": "SAM"
+  },
+  {
+    "name": "normal_bmi_cannot_hide_missing_muac",
+    "sex": "M",
+    "age_months": 36.0,
+    "weight_kg": 14.0,
+    "height_cm": 100.0,
+    "muac_cm": null,
+    "expected_bmi_status": "Normal",
+    "expected_muac_status": "Indeterminate",
+    "expected_final_status": "Indeterminate"
+  },
+  {
+    "name": "estimated_inputs_cannot_certify_normal",
+    "sex": "F",
+    "age_months": 36.0,
+    "weight_kg": null,
+    "height_cm": null,
+    "muac_cm": null,
+    "expected_bmi_status": "Indeterminate",
+    "expected_muac_status": "Indeterminate",
+    "expected_final_status": "Indeterminate"
+  },
+  {
+    "name": "muac_sam_remains_eligible_until_fifth_birthday",
+    "sex": "F",
+    "age_months": 59.999,
+    "weight_kg": 13.5,
+    "height_cm": 100.0,
+    "muac_cm": 11.0,
+    "expected_bmi_status": "Normal",
+    "expected_muac_status": "SAM",
+    "expected_final_status": "SAM"
+  },
+  {
+    "name": "muac_becomes_ineligible_at_fifth_birthday",
+    "sex": "F",
+    "age_months": 60.0,
+    "weight_kg": 13.5,
+    "height_cm": 100.0,
+    "muac_cm": 11.0,
+    "expected_bmi_status": "Normal",
+    "expected_muac_status": "Indeterminate",
+    "expected_final_status": "Indeterminate"
+  }
+]

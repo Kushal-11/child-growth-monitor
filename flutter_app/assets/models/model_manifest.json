@@ -1,0 +1,98 @@
+{
+  "artifacts": {
+    "feature_scaler.json": {
+      "sha256": "6da5811364aebba5d8acfd67a8f97c9e2e51af7fc7b058a8c9d4cbb6b56efa3e",
+      "size_bytes": 1107
+    },
+    "label_encoder.json": {
+      "sha256": "a9156137cb0211a37e36c4afb3f7e0cd435e2f4b69e03fdac55abc3fb209f12f",
+      "size_bytes": 146
+    },
+    "wasting_classifier.tflite": {
+      "sha256": "363e5c2995e6ea09a1d0f0dea84ce8f276b78118bc7e97ad1fd9ac143106bfd6",
+      "size_bytes": 18928
+    },
+    "weight_estimator.tflite": {
+      "sha256": "e325abb9aeefd9b750a2f030694417643f1f510d86bafdf09bba13bbdd6d13c4",
+      "size_bytes": 8464
+    }
+  },
+  "evaluation": {
+    "classification_accuracy": 0.5754444444444444,
+    "clinical_validity": "not_established",
+    "dataset": {
+      "name": "synthetic_dataset",
+      "path": "data/training_data/synthetic_dataset.csv",
+      "row_count": 60000,
+      "sha256": "080a25d6ed475106b60abc1fc21d7092090e8c638f58f64eab33d0357d037b4a",
+      "size_bytes": 7269421
+    },
+    "engine": "tensorflow_lite",
+    "evaluated_artifacts": {
+      "feature_scaler.json": {
+        "sha256": "6da5811364aebba5d8acfd67a8f97c9e2e51af7fc7b058a8c9d4cbb6b56efa3e",
+        "size_bytes": 1107
+      },
+      "label_encoder.json": {
+        "sha256": "a9156137cb0211a37e36c4afb3f7e0cd435e2f4b69e03fdac55abc3fb209f12f",
+        "size_bytes": 146
+      },
+      "wasting_classifier.tflite": {
+        "sha256": "363e5c2995e6ea09a1d0f0dea84ce8f276b78118bc7e97ad1fd9ac143106bfd6",
+        "size_bytes": 18928
+      },
+      "weight_estimator.tflite": {
+        "sha256": "e325abb9aeefd9b750a2f030694417643f1f510d86bafdf09bba13bbdd6d13c4",
+        "size_bytes": 8464
+      }
+    },
+    "evaluation_contract_version": 2,
+    "invalid_prediction_count": 0,
+    "mam_precision": 0.2951111111111111,
+    "mam_recall": 0.24127906976744187,
+    "mam_sample_count": 1376,
+    "non_clinical": true,
+    "sam_recall": 0.8872651356993737,
+    "sam_recall_floor": 0.8,
+    "sam_recall_floor_met": true,
+    "sam_sample_count": 1437,
+    "sample_count": 9000,
+    "split": {
+      "calibration_fraction": 0.15,
+      "method": "train_calibration_validation",
+      "random_state": 42,
+      "stratified": true,
+      "train_fraction": 0.7,
+      "validation_fraction": 0.15,
+      "validation_selection_sha256": "c8cfd36e46840bae6adb8c87d6316edf28d21d38e03ec4c51909782cb91fe953"
+    },
+    "weight_mae_kg": 0.6627041101455688
+  },
+  "feature_count": 14,
+  "feature_names": [
+    "age_months",
+    "sex_binary",
+    "height_cm",
+    "shoulder_width_cm",
+    "hip_width_cm",
+    "torso_length_cm",
+    "upper_arm_length_cm",
+    "shoulder_height_ratio",
+    "hip_height_ratio",
+    "body_build_score",
+    "chest_depth_cm",
+    "abd_depth_cm",
+    "chest_depth_ratio",
+    "abd_depth_ratio"
+  ],
+  "feature_schema_version": 1,
+  "labels": [
+    "MAM",
+    "Normal",
+    "Overweight",
+    "Risk_Overweight",
+    "SAM"
+  ],
+  "model_version": "cgm-wasting-14f-synth-v1",
+  "training_data": "synthetic"
+}

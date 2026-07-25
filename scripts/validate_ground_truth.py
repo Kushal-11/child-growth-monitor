@@ -11,11 +11,14 @@ Usage:
 import argparse
 import csv
 import difflib
+import math
 import sys
 from collections import Counter
 from datetime import date
 from pathlib import Path
 from typing import Optional, Sequence
+
+from app.services.age_service import age_months_at
 
 DEFAULT_CSV = Path("field_data/ground_truth.csv")
 
@@ -24,17 +27,17 @@ ALL_COLS = REQUIRED_COLS + [
     "actual_height_cm", "actual_weight_kg", "muac_cm", "oedema", "notes",
 ]
 
-# Plausibility ranges (spec: reject impossible values)
-HEIGHT_RANGE_CM = (40.0, 130.0)
-WEIGHT_RANGE_KG = (2.0, 30.0)
-MUAC_RANGE_CM   = (8.0, 20.0)
+# Broad unit/typo gates, not normative clinical ranges. Severe malnutrition
+# and premature infants can legitimately fall below healthy-population ranges.
+HEIGHT_RANGE_CM = (30.0, 130.0)
+WEIGHT_RANGE_KG = (0.5, 40.0)
+MUAC_RANGE_CM   = (5.0, 25.0)
 AGE_RANGE_MONTHS = (0.0, 60.0)
 
-TEMPLATE = """\
-child_id,sex,date_of_birth,measurement_date,actual_height_cm,actual_weight_kg,muac_cm,oedema,notes
-001,M,2023-04-12,2026-07-15,82.5,10.4,13.2,no,
-002,F,2024-01-30,2026-07-15,74.0,8.1,12.1,,example row - delete me
-"""
+TEMPLATE = (
+    "child_id,sex,date_of_birth,measurement_date,actual_height_cm,"
+    "actual_weight_kg,muac_cm,oedema,notes\n"
+)
 
 
 def _parse_date(val: str) -> Optional[date]:
@@ -46,7 +49,8 @@ def _parse_date(val: str) -> Optional[date]:
 
 def _parse_float(val: str) -> Optional[float]:
     try:
-        return float(str(val).strip())
+        parsed = float(str(val).strip())
+        return parsed if math.isfinite(parsed) else None
     except (TypeError, ValueError):
         return None
 
@@ -124,6 +128,11 @@ def validate_rows(
     warnings: list[str] = []
     if fieldnames is not None:
         errors.extend(check_header(fieldnames))
+        if not rows:
+            errors.append(
+                "file: header is present but there are no child data rows; "
+                "refusing to evaluate an empty field dataset"
+            )
     seen_ids: set[str] = set()
 
     for i, row in enumerate(rows, start=2):  # row 1 is the header
@@ -156,12 +165,14 @@ def validate_rows(
         if dob and mdate:
             if mdate < dob:
                 errors.append(f"{tag}: measurement_date before date_of_birth")
-            age_months = (mdate - dob).days / 30.4375
-            lo, hi = AGE_RANGE_MONTHS
-            if not (lo <= age_months <= hi):
-                errors.append(
-                    f"{tag}: age {age_months:.1f} months out of range {lo}-{hi}"
-                )
+            else:
+                age_months = age_months_at(dob, mdate)
+                lo, hi = AGE_RANGE_MONTHS
+                if not (lo <= age_months < hi):
+                    errors.append(
+                        f"{tag}: age {age_months:.1f} months out of range "
+                        f"{lo}-<{hi}"
+                    )
         if mdate and mdate > date.today():
             errors.append(f"{tag}: measurement_date in the future")
 

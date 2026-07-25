@@ -13,11 +13,9 @@ const Map<String, Map<String, String>> translations = {
     'mr': 'बाल वाढ मूल्यांकन',
   },
   'assess_subtitle': {
-    'en':
-        'Upload a photo to automatically estimate height, weight, and MUAC, '
+    'en': 'Upload a photo to automatically estimate height, weight, and MUAC, '
         'then classify stunting and wasting using WHO standards.',
-    'mr':
-        'उंची, वजन आणि MUAC स्वयंचलितपणे अंदाज करण्यासाठी फोटो अपलोड करा, '
+    'mr': 'उंची, वजन आणि MUAC स्वयंचलितपणे अंदाज करण्यासाठी फोटो अपलोड करा, '
         'नंतर WHO मानकांनुसार कुपोषण आणि वाढ वर्गीकरण करा.',
   },
   'front_view_photo': {'en': 'Front View Photo', 'mr': 'समोरून फोटो'},
@@ -48,8 +46,14 @@ const Map<String, Map<String, String>> translations = {
   },
   'back_view': {'en': 'Back View', 'mr': 'मागचे दृश्य'},
   'back_view_help': {
-    'en': 'Child facing away, full body visible',
-    'mr': 'मूल पाठ दाखवून, संपूर्ण शरीर दिसावे',
+    'en':
+        'Optional record photo only — not used in the current measurement or classification.',
+    'mr':
+        'फक्त ऐच्छिक नोंद फोटो — सध्याच्या मोजमाप किंवा वर्गीकरणात वापरला जात नाही.',
+  },
+  'back_view_archived_only': {
+    'en': 'Saved for record only — not used',
+    'mr': 'फक्त नोंदीसाठी जतन — वापरले जात नाही',
   },
   'optional_label': {'en': 'Optional', 'mr': 'ऐच्छिक'},
   'child_information': {'en': 'Child Information', 'mr': 'मुलाची माहिती'},
@@ -100,8 +104,12 @@ const Map<String, Map<String, String>> translations = {
     'mr': 'अवैध तारीख स्वरूप. कृपया तारीख निवडक वापरा.',
   },
   'age_required_feedback': {
-    'en': "Please enter the child's age (in months) or date of birth.",
-    'mr': 'कृपया मुलाचे वय (महिन्यांत) किंवा जन्मतारीख प्रविष्ट करा.',
+    'en': "Enter a valid age from 0 up to (but not including) 60 months.",
+    'mr': '० ते ६० महिन्यांपेक्षा कमी वैध वय भरा.',
+  },
+  'under_five_error': {
+    'en': 'Child must be under five years old.',
+    'mr': 'मूल पाच वर्षांपेक्षा लहान असणे आवश्यक आहे.',
   },
   'registered_children': {'en': 'Registered Children', 'mr': 'नोंदणीकृत मुले'},
   'new_child': {'en': 'New child', 'mr': 'नवीन मूल'},
@@ -201,12 +209,14 @@ const Map<String, Map<String, String>> translations = {
     'mr': 'तीव्र कुपोषण आढळले नाही. नियमित निरीक्षण सुरू ठेवा.',
   },
   'banner_unknown_title': {
-    'en': 'Status Could Not Be Determined',
-    'mr': 'स्थिती ठरवता आली नाही',
+    'en': 'Measurement Required — Indeterminate',
+    'mr': 'मोजमाप आवश्यक — अनिश्चित',
   },
   'banner_unknown_msg': {
-    'en': 'Provide weight and height if possible for a complete assessment.',
-    'mr': 'पूर्ण मूल्यांकनासाठी शक्य असल्यास वजन आणि उंची द्या.',
+    'en':
+        'Record measured height, weight, and tape MUAC. Estimates cannot certify a Normal result.',
+    'mr':
+        'मोजलेली उंची, वजन आणि टेप MUAC नोंदवा. अंदाजांवरून सामान्य निकाल प्रमाणित करता येत नाही.',
   },
   'months_unit': {'en': 'months', 'mr': 'महिने'},
   'pose_confidence': {'en': 'Pose confidence', 'mr': 'पोझ विश्वास'},
@@ -221,6 +231,34 @@ const Map<String, Map<String, String>> translations = {
   'badge_na': {'en': 'N/A', 'mr': 'लागू नाही'},
   'badge_tape': {'en': 'Tape', 'mr': 'टेप'},
   'badge_est': {'en': 'Est.', 'mr': 'अंदा.'},
+  'badge_reference_object': {
+    'en': 'Reference object',
+    'mr': 'संदर्भ वस्तू',
+  },
+  'badge_ml_estimated': {'en': 'ML estimate', 'mr': 'ML अंदाज'},
+  'badge_who_statistical': {
+    'en': 'WHO statistical',
+    'mr': 'WHO सांख्यिकीय',
+  },
+  'badge_whz_derived': {'en': 'WHZ-derived', 'mr': 'WHZ-आधारित'},
+  'badge_unavailable': {'en': 'Unavailable', 'mr': 'अनुपलब्ध'},
+  'poshan_title': {
+    'en': 'Poshan Setu classification',
+    'mr': 'पोषण सेतू वर्गीकरण'
+  },
+  'poshan_final': {'en': 'Final status', 'mr': 'अंतिम स्थिती'},
+  'poshan_bmi': {'en': 'BMI component', 'mr': 'BMI घटक'},
+  'poshan_muac': {'en': 'MUAC component', 'mr': 'MUAC घटक'},
+  'poshan_method': {'en': 'Method', 'mr': 'पद्धत'},
+  'poshan_provenance': {'en': 'Provenance', 'mr': 'स्त्रोत'},
+  'measurement_required': {
+    'en': 'Direct measurements required',
+    'mr': 'थेट मोजमाप आवश्यक',
+  },
+  'secondary_screening': {
+    'en': 'Secondary WHO / ML screening',
+    'mr': 'दुय्यम WHO / ML तपासणी',
+  },
   'chest_depth': {'en': 'Chest depth:', 'mr': 'छातीची खोली:'},
   'abd_depth': {'en': 'Abd:', 'mr': 'पोट:'},
   'ml_wasting_title': {'en': 'ML Wasting Detection', 'mr': 'ML कुपोषण शोध'},
@@ -237,11 +275,9 @@ const Map<String, Map<String, String>> translations = {
   },
   'muac_note_strong': {'en': 'MUAC note:', 'mr': 'MUAC टीप:'},
   'muac_note_text': {
-    'en':
-        'Value estimated from WHZ — not a direct tape measurement. '
+    'en': 'Value estimated from WHZ — not a direct tape measurement. '
         'Confirm with a physical MUAC tape for clinical decisions.',
-    'mr':
-        'WHZ वरून अंदाजित मूल्य — थेट टेप मोजमाप नाही. '
+    'mr': 'WHZ वरून अंदाजित मूल्य — थेट टेप मोजमाप नाही. '
         'Clinical निर्णयांसाठी भौतिक MUAC टेपने पुष्टी करा.',
   },
   'assess_another': {
@@ -258,6 +294,14 @@ const Map<String, Map<String, String>> translations = {
   'muac_range_mam': {'en': '11.5–12.5', 'mr': '११.५–१२.५'},
   'muac_range_normal': {'en': '≥12.5', 'mr': '≥१२.५'},
   'required_field': {'en': 'Required', 'mr': 'आवश्यक'},
+  'select_date_of_birth': {
+    'en': 'Select date of birth',
+    'mr': 'जन्मतारीख निवडा',
+  },
+  'measurement_range_prefix': {
+    'en': 'Enter a plausible value:',
+    'mr': 'विश्वसनीय मूल्य भरा:',
+  },
   'use_date_format': {'en': 'Use YYYY-MM-DD', 'mr': 'YYYY-MM-DD वापरा'},
   'dob_future_error': {
     'en': 'DOB cannot be in the future',

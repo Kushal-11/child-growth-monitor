@@ -27,7 +27,6 @@ import sys
 from pathlib import Path
 
 import cv2
-import mediapipe as mp
 import numpy as np
 
 # Needed so `from scripts.photo_qc import ...` below resolves when this file
@@ -67,7 +66,20 @@ _REQUIRED = ["nose", "left_shoulder", "right_shoulder",
 POSE_MODEL_PATH = Path(__file__).resolve().parent.parent / "data" / "pose_landmarker_heavy.task"
 
 
+def _mediapipe():
+    """Import the optional pose runtime only when video processing is used.
+
+    Keeping this import out of module scope lets the rest of the field-data
+    pipeline (and its mocked unit tests) start even on systems where the
+    MediaPipe runtime is unavailable or slow to initialise.
+    """
+    import mediapipe as mp
+
+    return mp
+
+
 def _build_landmarker():
+    mp = _mediapipe()
     BaseOptions = mp.tasks.BaseOptions
     PoseLandmarker = mp.tasks.vision.PoseLandmarker
     PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
@@ -89,6 +101,7 @@ def _score_frame(frame_rgb: np.ndarray, landmarker) -> tuple[float, list]:
     Run pose detection on one frame and return (score, landmarks).
     Returns (0.0, []) if no pose detected or required landmarks are missing.
     """
+    mp = _mediapipe()
     mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
     result = landmarker.detect(mp_image)
 

@@ -155,7 +155,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         heightValueInput.addEventListener('input', updateHeightCm);
         heightUnitSelect.addEventListener('change', function () {
-            heightValueInput.max = (heightUnitSelect.value === 'inch') ? 80 : 200;
+            heightValueInput.min = (heightUnitSelect.value === 'inch') ? 11.8 : 30;
+            heightValueInput.max = (heightUnitSelect.value === 'inch') ? 51.2 : 130;
             updateHeightCm();
         });
     }
@@ -163,13 +164,36 @@ document.addEventListener('DOMContentLoaded', function () {
     // ── Form submission validation + loading state ───────────────────────
     const form = document.getElementById('assessForm');
     const submitBtn = document.getElementById('submitBtn');
+    const weightInput = document.getElementById('weight_kg');
+    const measurementModeFeedback =
+        document.getElementById('measurementModeFeedback');
 
     if (form && submitBtn) {
         const msgAge = form.getAttribute('data-msg-age-required') || '';
+        const msgPhotoOrMeasurements =
+            form.getAttribute('data-msg-photo-or-measurements') || '';
         const labelProcessing = form.getAttribute('data-label-processing') || 'Processing…';
+
+        function clearMeasurementModeError() {
+            if (measurementModeFeedback) {
+                measurementModeFeedback.classList.add('d-none');
+                measurementModeFeedback.textContent = '';
+            }
+            [imageInput, heightValueInput, weightInput].forEach(function (el) {
+                if (el) el.classList.remove('is-invalid');
+            });
+        }
+
+        [imageInput, heightValueInput, weightInput].forEach(function (el) {
+            if (el) el.addEventListener('change', clearMeasurementModeError);
+            if (el && el.type !== 'file') {
+                el.addEventListener('input', clearMeasurementModeError);
+            }
+        });
 
         form.addEventListener('submit', function (e) {
             clearAgeDobError();
+            clearMeasurementModeError();
             const dob = dobHidden ? dobHidden.value : '';
             if (!dob) {
                 e.preventDefault();
@@ -178,6 +202,33 @@ document.addEventListener('DOMContentLoaded', function () {
                     ageMonthsInput.focus();
                 } else if (dobPicker) {
                     dobPicker.focus();
+                }
+                return false;
+            }
+            const hasFrontPhoto = Boolean(
+                imageInput && imageInput.files && imageInput.files.length
+            );
+            const hasManualHeight = Boolean(
+                heightValueInput && parseFloat(heightValueInput.value) > 0
+            );
+            const hasManualWeight = Boolean(
+                weightInput && parseFloat(weightInput.value) > 0
+            );
+            if (!hasFrontPhoto && !(hasManualHeight && hasManualWeight)) {
+                e.preventDefault();
+                if (measurementModeFeedback) {
+                    measurementModeFeedback.textContent = msgPhotoOrMeasurements;
+                    measurementModeFeedback.classList.remove('d-none');
+                }
+                if (!hasManualHeight && heightValueInput) {
+                    heightValueInput.classList.add('is-invalid');
+                    heightValueInput.focus();
+                } else if (!hasManualWeight && weightInput) {
+                    weightInput.classList.add('is-invalid');
+                    weightInput.focus();
+                } else if (imageInput) {
+                    imageInput.classList.add('is-invalid');
+                    imageInput.focus();
                 }
                 return false;
             }

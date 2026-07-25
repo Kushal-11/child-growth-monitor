@@ -58,8 +58,22 @@ def _growth_chart_points(child: Optional[Child]) -> List[dict]:
         m = v.measurement
         if not m:
             continue
-        h = m.predicted_height_cm or m.manual_height_cm
-        w = m.manual_weight_kg or m.predicted_weight_kg
+        # Prefer authoritative manual values, then the explicitly resolved
+        # effective value, and only then retain a legacy prediction.
+        h = (
+            m.manual_height_cm
+            if m.manual_height_cm is not None
+            else m.effective_height_cm
+            if m.effective_height_cm is not None
+            else m.predicted_height_cm
+        )
+        w = (
+            m.manual_weight_kg
+            if m.manual_weight_kg is not None
+            else m.effective_weight_kg
+            if m.effective_weight_kg is not None
+            else m.predicted_weight_kg
+        )
         if h is None and w is None:
             continue
         label = v.visit_date.strftime("%Y-%m-%d") if v.visit_date else ""
@@ -86,11 +100,12 @@ async def index(request: Request):
 @router.post("/assess", response_class=HTMLResponse)
 async def web_assess(
     request: Request,
-    image: UploadFile = File(...),
+    image: Optional[UploadFile] = File(None),
     image_side: Optional[UploadFile] = File(None),
     image_back: Optional[UploadFile] = File(None),
     child_name: str = Form(...),
     date_of_birth: str = Form(...),
+    assessment_date: Optional[str] = Form(None),
     sex: str = Form(...),
     weight_kg: float = Form(None),
     height_cm: float = Form(None),
@@ -101,11 +116,14 @@ async def web_assess(
     svc: AssessmentService = Depends(get_assessment_service),
 ):
     """Handle form submission, run assessment, show results."""
-    UPLOAD_DIR.mkdir(exist_ok=True)
-    filename = f"{uuid.uuid4().hex}_{image.filename}"
-    file_path = UPLOAD_DIR / filename
-    with open(file_path, "wb") as f:
-        shutil.copyfileobj(image.file, f)
+    filename = None
+    file_path = None
+    if image is not None:
+        UPLOAD_DIR.mkdir(exist_ok=True)
+        filename = f"{uuid.uuid4().hex}_{Path(image.filename or 'image.jpg').name}"
+        file_path = UPLOAD_DIR / filename
+        with open(file_path, "wb") as f:
+            shutil.copyfileobj(image.file, f)
 
     # Read side image bytes (optional)
     side_image_bytes = None
@@ -121,10 +139,27 @@ async def web_assess(
         ctx["error"] = ctx["t"]["err_invalid_date"]
         return templates.TemplateResponse(request, "index.html", ctx)
 
+    if assessment_date:
+        try:
+            assessed_on = date.fromisoformat(assessment_date)
+        except ValueError:
+            ctx = _template_context(request)
+            ctx["error"] = "Assessment date must use YYYY-MM-DD."
+            return templates.TemplateResponse(request, "index.html", ctx)
+    else:
+        assessed_on = date.today()
+
+    if image is None and (height_cm is None or weight_kg is None):
+        ctx = _template_context(request)
+        ctx["error"] = (
+            "Upload an image or enter both manual height and manual weight."
+        )
+        return templates.TemplateResponse(request, "index.html", ctx)
+
     try:
         result = svc.assess(
             db=db,
-            image_path=str(file_path),
+            image_path=str(file_path) if file_path is not None else None,
             child_name=child_name,
             dob=dob,
             sex=sex,
@@ -134,6 +169,7 @@ async def web_assess(
             guardian_name=guardian_name,
             location=location,
             side_image=side_image_bytes,
+            assessment_date=assessed_on,
         )
         error = None
     except Exception as e:

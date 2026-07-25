@@ -14,11 +14,11 @@ Height estimation uses age, sex, and body segment measurements
 to provide accurate height estimates without requiring reference objects.
 """
 from dataclasses import dataclass, field
+from enum import IntEnum
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import cv2
-import mediapipe as mp
 import numpy as np
 
 from config import (
@@ -33,11 +33,87 @@ from config import (
     MIN_CONFIDENCE_THRESHOLD,
 )
 
-BaseOptions = mp.tasks.BaseOptions
-PoseLandmarker = mp.tasks.vision.PoseLandmarker
-PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
-PoseLandmark = mp.tasks.vision.PoseLandmark
-VisionRunningMode = mp.tasks.vision.RunningMode
+class PoseRuntimeUnavailableError(RuntimeError):
+    """Raised only when pose processing is requested without a usable runtime."""
+
+
+class PoseLandmark(IntEnum):
+    """Stable MediaPipe pose landmark indices without importing MediaPipe.
+
+    Keeping these protocol values locally lets the API import and construct its
+    services without importing MediaPipe (which may probe audio/PortAudio in
+    some installations).  The actual MediaPipe runtime is loaded only when an
+    image is processed.
+    """
+
+    NOSE = 0
+    LEFT_EYE_INNER = 1
+    LEFT_EYE = 2
+    LEFT_EYE_OUTER = 3
+    RIGHT_EYE_INNER = 4
+    RIGHT_EYE = 5
+    RIGHT_EYE_OUTER = 6
+    LEFT_EAR = 7
+    RIGHT_EAR = 8
+    MOUTH_LEFT = 9
+    MOUTH_RIGHT = 10
+    LEFT_SHOULDER = 11
+    RIGHT_SHOULDER = 12
+    LEFT_ELBOW = 13
+    RIGHT_ELBOW = 14
+    LEFT_WRIST = 15
+    RIGHT_WRIST = 16
+    LEFT_PINKY = 17
+    RIGHT_PINKY = 18
+    LEFT_INDEX = 19
+    RIGHT_INDEX = 20
+    LEFT_THUMB = 21
+    RIGHT_THUMB = 22
+    LEFT_HIP = 23
+    RIGHT_HIP = 24
+    LEFT_KNEE = 25
+    RIGHT_KNEE = 26
+    LEFT_ANKLE = 27
+    RIGHT_ANKLE = 28
+    LEFT_HEEL = 29
+    RIGHT_HEEL = 30
+    LEFT_FOOT_INDEX = 31
+    RIGHT_FOOT_INDEX = 32
+
+
+@dataclass(frozen=True)
+class _PoseRuntime:
+    mp: Any
+    base_options: Any
+    landmarker: Any
+    landmarker_options: Any
+    running_mode: Any
+
+
+def _load_pose_runtime() -> _PoseRuntime:
+    """Import MediaPipe on first real pose operation, never at API startup."""
+
+    try:
+        import mediapipe as mp
+    except Exception as exc:  # pragma: no cover - exact import error is platform-specific
+        raise PoseRuntimeUnavailableError(
+            "Pose processing is unavailable: MediaPipe could not be imported. "
+            "Install a compatible mediapipe runtime and its native dependencies."
+        ) from exc
+
+    try:
+        return _PoseRuntime(
+            mp=mp,
+            base_options=mp.tasks.BaseOptions,
+            landmarker=mp.tasks.vision.PoseLandmarker,
+            landmarker_options=mp.tasks.vision.PoseLandmarkerOptions,
+            running_mode=mp.tasks.vision.RunningMode,
+        )
+    except AttributeError as exc:  # pragma: no cover - depends on installed package
+        raise PoseRuntimeUnavailableError(
+            "Pose processing is unavailable: the installed MediaPipe package "
+            "does not provide the Tasks PoseLandmarker API."
+        ) from exc
 
 # Pose skeleton connections for drawing
 POSE_CONNECTIONS = [
@@ -129,17 +205,32 @@ class MeasurementOutput:
     height_estimates: Optional[dict] = None  # Multiple estimates from different methods
     body_build: Optional[dict] = None  # Body build estimation (slender/average/stocky)
     weight_adjustment: float = 1.0  # Multiplier for weight based on body build
+    pose_detected: bool = False
+    pose_accepted: bool = False
+    pose_failure_reason: Optional[str] = None
+    estimation_provenance: dict = field(default_factory=dict)
 
 
 class MeasurementService:
     def __init__(self):
-        self._landmarker_options = PoseLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=str(POSE_MODEL_PATH)),
-            running_mode=VisionRunningMode.IMAGE,
-            num_poses=1,
-            min_pose_detection_confidence=POSE_MIN_DETECTION_CONFIDENCE,
-            min_pose_presence_confidence=POSE_MIN_PRESENCE_CONFIDENCE,
-        )
+        # Do not import MediaPipe or touch its native dependencies here. This
+        # constructor runs during FastAPI application creation.
+        self._pose_runtime: Optional[_PoseRuntime] = None
+        self._landmarker_options = None
+
+    def _get_pose_runtime(self) -> tuple[_PoseRuntime, Any]:
+        if self._pose_runtime is None:
+            self._pose_runtime = _load_pose_runtime()
+        if self._landmarker_options is None:
+            runtime = self._pose_runtime
+            self._landmarker_options = runtime.landmarker_options(
+                base_options=runtime.base_options(model_asset_path=str(POSE_MODEL_PATH)),
+                running_mode=runtime.running_mode.IMAGE,
+                num_poses=1,
+                min_pose_detection_confidence=POSE_MIN_DETECTION_CONFIDENCE,
+                min_pose_presence_confidence=POSE_MIN_PRESENCE_CONFIDENCE,
+            )
+        return self._pose_runtime, self._landmarker_options
 
     def _measure_body_segments(
         self, landmarks, image_shape: Tuple[int, int]
@@ -712,7 +803,21 @@ class MeasurementService:
         """
         image = cv2.imread(image_path)
         if image is None:
-            return MeasurementOutput(confidence_score=0.0)
+            return MeasurementOutput(
+                confidence_score=0.0,
+                pose_failure_reason="image_unreadable",
+                height_estimates={
+                    "pose": {
+                        "detected": False,
+                        "accepted": False,
+                        "reason": "image_unreadable",
+                    }
+                },
+                estimation_provenance={
+                    "height_source": "unavailable",
+                    "reason": "image_unreadable",
+                },
+            )
 
         # Step 1: Detect body pose and get landmarks
         pose_result = self._detect_pose(image_path, image.shape[:2])
@@ -727,9 +832,29 @@ class MeasurementService:
         # Step 2: Detect reference object (optional, kept for backwards compatibility)
         scale_factor, ref_detected, parleg_box = self._detect_parlegi(image)
 
-        # Step 3: Measure body segments if landmarks available
+        pose_detected = raw_landmarks is not None
+        pose_accepted = bool(
+            pose_detected
+            and head_y is not None
+            and heel_y is not None
+            and confidence >= MIN_CONFIDENCE_THRESHOLD
+        )
+        if not pose_detected:
+            pose_failure_reason = "no_pose_detected"
+        elif head_y is None or heel_y is None:
+            pose_failure_reason = "required_head_or_foot_landmarks_missing"
+        elif confidence < MIN_CONFIDENCE_THRESHOLD:
+            pose_failure_reason = (
+                "pose_confidence_below_threshold:"
+                f"{confidence:.3f}<{MIN_CONFIDENCE_THRESHOLD:.3f}"
+            )
+        else:
+            pose_failure_reason = None
+
+        # Step 3: Measure segments only for a qualified pose. Partial or
+        # low-confidence landmarks must not feed height/weight inference.
         body_segments = None
-        if raw_landmarks is not None:
+        if pose_accepted:
             body_segments = self._measure_body_segments(raw_landmarks, image.shape[:2])
 
         # Step 4: Draw annotations on image
@@ -744,17 +869,47 @@ class MeasurementService:
             confidence_score=confidence,
             annotated_image_filename=annotated_filename,
             body_segments=body_segments,
+            pose_detected=pose_detected,
+            pose_accepted=pose_accepted,
+            pose_failure_reason=pose_failure_reason,
+            estimation_provenance={
+                "height_source": "unavailable",
+                "pose_confidence_threshold": MIN_CONFIDENCE_THRESHOLD,
+            },
         )
 
-        # Step 5: Compute height in pixels
-        if head_y is not None and heel_y is not None:
-            height_pixels = abs(heel_y - head_y)
-            result.height_pixels = height_pixels
+        pose_metadata = {
+            "detected": pose_detected,
+            "accepted": pose_accepted,
+            "confidence": confidence,
+            "minimum_confidence": MIN_CONFIDENCE_THRESHOLD,
+            "posture_valid": posture_valid,
+            "posture_issues": posture_issues,
+            "reason": pose_failure_reason,
+        }
+
+        # Fail closed before any statistical or reference-object pathway.
+        # Age/sex alone must never turn a no-pose image into a WHO-median
+        # "image height".
+        if not pose_accepted:
+            result.height_estimates = {"pose": pose_metadata}
+            result.estimation_provenance.update(
+                {
+                    "reason": pose_failure_reason,
+                    "who_population_statistic_used": False,
+                    "reference_object_used": False,
+                }
+            )
+            return result
+
+        # Step 5: Compute height in pixels for the accepted pose.
+        result.height_pixels = abs(heel_y - head_y)
 
         # Step 6: Hybrid height estimation
-        height_estimates = {}
+        height_estimates = {"pose": pose_metadata}
         final_height_cm = None
         estimation_method = "none"
+        height_source = "unavailable"
 
         # Method A: WHO Statistical (primary method when age/sex available)
         if age_months is not None and sex is not None and who_data is not None:
@@ -767,6 +922,7 @@ class MeasurementService:
             if who_estimate["height_cm"] is not None:
                 final_height_cm = who_estimate["height_cm"]
                 estimation_method = "who_statistical"
+                height_source = "who_population_statistic_conditioned_on_pose"
                 result.confidence_score = who_estimate["confidence"]
 
         # Method B: Anthropometric ratios (supplementary)
@@ -793,6 +949,7 @@ class MeasurementService:
             if final_height_cm is None:
                 final_height_cm = ref_height
                 estimation_method = "reference_object"
+                height_source = "reference_object_scaled_pose"
                 result.confidence_score = 0.3
 
         # Step 7: Validate the final estimate
@@ -819,6 +976,12 @@ class MeasurementService:
         result.predicted_height_cm = final_height_cm
         result.estimation_method = estimation_method
         result.height_estimates = height_estimates
+        result.estimation_provenance = {
+            "height_source": height_source,
+            "pose_confidence_threshold": MIN_CONFIDENCE_THRESHOLD,
+            "who_population_statistic_used": estimation_method == "who_statistical",
+            "reference_object_used": estimation_method == "reference_object",
+        }
 
         # Reduce confidence if posture issues detected
         if not posture_valid:
@@ -918,9 +1081,10 @@ class MeasurementService:
             "posture_issues": ["No pose detected"],
         }
 
-        mp_image = mp.Image.create_from_file(image_path)
+        runtime, landmarker_options = self._get_pose_runtime()
+        mp_image = runtime.mp.Image.create_from_file(image_path)
 
-        with PoseLandmarker.create_from_options(self._landmarker_options) as landmarker:
+        with runtime.landmarker.create_from_options(landmarker_options) as landmarker:
             result = landmarker.detect(mp_image)
 
             if not result.pose_landmarks or len(result.pose_landmarks) == 0:
@@ -1178,6 +1342,7 @@ class MeasurementService:
             return None
 
         try:
+            runtime, landmarker_options = self._get_pose_runtime()
             nparr = np.frombuffer(image_bytes, np.uint8)
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             if img is None:
@@ -1185,17 +1350,31 @@ class MeasurementService:
 
             h, w = img.shape[:2]
             rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            mp_image = mp.Image(
-                image_format=mp.ImageFormat.SRGB, data=rgb
+            mp_image = runtime.mp.Image(
+                image_format=runtime.mp.ImageFormat.SRGB, data=rgb
             )
 
-            with PoseLandmarker.create_from_options(self._landmarker_options) as lm:
+            with runtime.landmarker.create_from_options(landmarker_options) as lm:
                 result = lm.detect(mp_image)
 
             if not result.pose_landmarks or not result.pose_landmarks[0]:
                 return None
 
             landmarks = result.pose_landmarks[0]
+            key_visibilities = [
+                landmarks[idx].visibility
+                for idx in (
+                    PoseLandmark.NOSE,
+                    PoseLandmark.LEFT_SHOULDER,
+                    PoseLandmark.RIGHT_SHOULDER,
+                    PoseLandmark.LEFT_HIP,
+                    PoseLandmark.RIGHT_HIP,
+                    PoseLandmark.LEFT_HEEL,
+                    PoseLandmark.RIGHT_HEEL,
+                )
+            ]
+            if float(np.mean(key_visibilities)) < MIN_CONFIDENCE_THRESHOLD:
+                return None
 
             def get_lm(idx, min_vis=0.25):
                 lm = landmarks[idx]
@@ -1266,6 +1445,8 @@ class MeasurementService:
                 abd_confidence=abd_confidence,
             )
 
+        except PoseRuntimeUnavailableError:
+            raise
         except Exception as e:
             print(f"[MeasurementService] Side-view processing error: {e}")
             return None

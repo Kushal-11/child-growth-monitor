@@ -15,10 +15,11 @@ TRANSLATIONS = {
         "page_title_assess": "Assess a Child - SNEH Growth Monitor",
         "assess_heading": "Child Growth Assessment",
         "assess_subtitle": (
-            "Upload a photo to automatically estimate height, weight, and MUAC, "
-            "then classify stunting and wasting using WHO standards."
+            "Upload a photo for non-clinical screening, or enter measured "
+            "height and weight for an authoritative Poshan Setu assessment."
         ),
         "front_view_photo": "Front View Photo",
+        "front_view_optional": "Optional with manual height + weight",
         "tip_front_1": "Child standing upright, facing the camera",
         "tip_front_2": "Full body visible — head to feet",
         "tip_front_3": "1–2 metres from camera, good lighting",
@@ -65,8 +66,13 @@ TRANSLATIONS = {
         "toggle_dob": "Or enter exact date of birth",
         "date_of_birth": "Date of Birth",
         "toggle_age_months": "Or enter age in months",
-        "optional_measurements": "Optional Measurements",
-        "optional_measurements_note": "— improve accuracy if available",
+        "optional_measurements": "Measurements",
+        "optional_measurements_note": (
+            "— height and weight are required when no front photo is supplied"
+        ),
+        "photo_or_measurements_required_feedback": (
+            "Upload a front photo or enter both manual height and weight."
+        ),
         "weight_kg": "Weight (kg)",
         "weight_placeholder": "e.g. 11.5",
         "weight_help": "From weighing scale",
@@ -77,7 +83,7 @@ TRANSLATIONS = {
         "height_placeholder": "Optional",
         "unit_cm": "cm",
         "unit_inch": "inch",
-        "height_fallback": "Fallback if image fails",
+        "height_fallback": "Measured height; manual values take precedence",
         "guardian_name": "Guardian Name",
         "location_clinic": "Location / Clinic",
         "placeholder_optional": "Optional",
@@ -203,8 +209,8 @@ TRANSLATIONS = {
         "page_title_assess": "मूल्यांकन - स्नेह वाढ निरीक्षक",
         "assess_heading": "बाल वाढ मूल्यांकन",
         "assess_subtitle": (
-            "उंची, वजन आणि MUAC स्वयंचलितपणे अंदाज करण्यासाठी फोटो अपलोड करा, "
-            "नंतर WHO मानकांनुसार कुपोषण आणि वाढ वर्गीकरण करा."
+            "क्लिनिकल नसलेल्या स्क्रीनिंगसाठी फोटो अपलोड करा, किंवा अधिकृत "
+            "Poshan Setu मूल्यांकनासाठी मोजलेली उंची आणि वजन भरा."
         ),
         "front_view_photo": "समोरून फोटो",
         "tip_front_1": "मूल सरळ उभे, कॅमेऱ्याकडे तोंड",
@@ -253,8 +259,14 @@ TRANSLATIONS = {
         "toggle_dob": "किंवा जन्मतारीख प्रविष्ट करा",
         "date_of_birth": "जन्मतारीख",
         "toggle_age_months": "किंवा वय महिन्यांत प्रविष्ट करा",
-        "optional_measurements": "ऐच्छिक मोजमाप",
-        "optional_measurements_note": "— उपलब्ध असल्यास अचूकता वाढते",
+        "optional_measurements": "मोजमाप",
+        "optional_measurements_note": (
+            "— समोरचा फोटो नसल्यास उंची आणि वजन आवश्यक आहेत"
+        ),
+        "front_view_optional": "मॅन्युअल उंची + वजन असल्यास ऐच्छिक",
+        "photo_or_measurements_required_feedback": (
+            "समोरचा फोटो अपलोड करा किंवा मॅन्युअल उंची आणि वजन दोन्ही भरा."
+        ),
         "weight_kg": "वजन (किग्रॅ)",
         "weight_placeholder": "उदा. ११.५",
         "weight_help": "वजन मापक यंत्रावरून",
@@ -265,7 +277,7 @@ TRANSLATIONS = {
         "height_placeholder": "ऐच्छिक",
         "unit_cm": "सेमी",
         "unit_inch": "इंच",
-        "height_fallback": "प्रतिमा अयशस्वी असल्यास पर्याय",
+        "height_fallback": "मोजलेली उंची; मॅन्युअल मूल्यांना प्राधान्य",
         "guardian_name": "पालक / पालकाचे नाव",
         "location_clinic": "ठिकाण / दवाखाना",
         "placeholder_optional": "ऐच्छिक",

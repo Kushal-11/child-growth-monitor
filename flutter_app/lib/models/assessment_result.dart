@@ -8,6 +8,7 @@ class AssessmentResult {
     required this.nutrition,
     this.mlPrediction,
     this.muac,
+    this.poshan,
   });
 
   final String childName;
@@ -18,6 +19,7 @@ class AssessmentResult {
   final Nutrition nutrition;
   final MlPrediction? mlPrediction;
   final MuacDetail? muac;
+  final PoshanDetail? poshan;
 
   factory AssessmentResult.fromJson(Map<String, dynamic> json) {
     return AssessmentResult(
@@ -33,10 +35,14 @@ class AssessmentResult {
       ),
       mlPrediction: json['ml_prediction'] == null
           ? null
-          : MlPrediction.fromJson(json['ml_prediction'] as Map<String, dynamic>),
+          : MlPrediction.fromJson(
+              json['ml_prediction'] as Map<String, dynamic>),
       muac: json['muac'] == null
           ? null
           : MuacDetail.fromJson(json['muac'] as Map<String, dynamic>),
+      poshan: json['poshan'] == null
+          ? null
+          : PoshanDetail.fromJson(json['poshan'] as Map<String, dynamic>),
     );
   }
 }
@@ -53,6 +59,10 @@ class Measurement {
     this.sideViewUsed = false,
     this.chestDepthCm,
     this.abdDepthCm,
+    this.effectiveHeightCm,
+    this.effectiveWeightKg,
+    this.heightSource,
+    this.weightSource,
   });
 
   final double? predictedHeightCm;
@@ -65,6 +75,10 @@ class Measurement {
   final bool sideViewUsed;
   final double? chestDepthCm;
   final double? abdDepthCm;
+  final double? effectiveHeightCm;
+  final double? effectiveWeightKg;
+  final String? heightSource;
+  final String? weightSource;
 
   factory Measurement.fromJson(Map<String, dynamic> json) {
     return Measurement(
@@ -78,6 +92,10 @@ class Measurement {
       sideViewUsed: json['side_view_used'] as bool? ?? false,
       chestDepthCm: (json['chest_depth_cm'] as num?)?.toDouble(),
       abdDepthCm: (json['abd_depth_cm'] as num?)?.toDouble(),
+      effectiveHeightCm: (json['effective_height_cm'] as num?)?.toDouble(),
+      effectiveWeightKg: (json['effective_weight_kg'] as num?)?.toDouble(),
+      heightSource: json['height_source'] as String?,
+      weightSource: json['weight_source'] as String?,
     );
   }
 }
@@ -117,6 +135,9 @@ class MlPrediction {
     this.riskProbability,
     this.overweightProbability,
     this.wastingStatus,
+    this.modelVersion,
+    this.nonClinical,
+    this.trainingData,
   });
 
   final double? estimatedWeightKg;
@@ -126,6 +147,9 @@ class MlPrediction {
   final double? riskProbability;
   final double? overweightProbability;
   final String? wastingStatus;
+  final String? modelVersion;
+  final bool? nonClinical;
+  final String? trainingData;
 
   factory MlPrediction.fromJson(Map<String, dynamic> json) {
     return MlPrediction(
@@ -134,8 +158,12 @@ class MlPrediction {
       mamProbability: (json['mam_probability'] as num?)?.toDouble(),
       normalProbability: (json['normal_probability'] as num?)?.toDouble(),
       riskProbability: (json['risk_probability'] as num?)?.toDouble(),
-      overweightProbability: (json['overweight_probability'] as num?)?.toDouble(),
+      overweightProbability:
+          (json['overweight_probability'] as num?)?.toDouble(),
       wastingStatus: json['wasting_status'] as String?,
+      modelVersion: json['model_version'] as String?,
+      nonClinical: json['non_clinical'] as bool?,
+      trainingData: json['training_data'] as String?,
     );
   }
 }
@@ -159,6 +187,49 @@ class MuacDetail {
       muacStatus: json['muac_status'] as String?,
       muacMethod: json['muac_method'] as String?,
       ageInRange: json['age_in_range'] as bool?,
+    );
+  }
+}
+
+class PoshanDetail {
+  const PoshanDetail({
+    this.bmi,
+    required this.bmiStatus,
+    required this.muacStatus,
+    required this.finalStatus,
+    required this.triggeredBy,
+    required this.classificationMethod,
+    required this.rationale,
+    required this.complete,
+  });
+
+  final double? bmi;
+  final String bmiStatus;
+  final String muacStatus;
+  final String finalStatus;
+  final List<String> triggeredBy;
+  final String classificationMethod;
+  final String rationale;
+  final bool complete;
+
+  factory PoshanDetail.fromJson(Map<String, dynamic> json) {
+    final rawTriggered = json['triggered_by'];
+    final triggeredBy = rawTriggered is List
+        ? rawTriggered.whereType<String>().toList(growable: false)
+        : const <String>[];
+    final bmiStatus = json['bmi_status'] as String? ?? 'Indeterminate';
+    final muacStatus = json['muac_status'] as String? ?? 'Indeterminate';
+    return PoshanDetail(
+      bmi: (json['bmi'] as num?)?.toDouble(),
+      bmiStatus: bmiStatus,
+      muacStatus: muacStatus,
+      finalStatus: json['final_status'] as String? ?? 'Indeterminate',
+      triggeredBy: triggeredBy,
+      classificationMethod:
+          json['classification_method'] as String? ?? 'poshan_setu_v1',
+      rationale: json['rationale'] as String? ?? '',
+      complete: json['complete'] as bool? ??
+          (bmiStatus != 'Indeterminate' && muacStatus != 'Indeterminate'),
     );
   }
 }

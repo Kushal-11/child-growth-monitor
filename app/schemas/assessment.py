@@ -13,15 +13,28 @@ class AssessmentRequest(BaseModel):
     sex: str = Field(..., pattern="^[MF]$")
     weight_kg: Optional[float] = Field(
         None,
-        gt=0,
-        le=50,
-        description="Manually entered weight in kg. If omitted, weight is estimated from WHO median.",
+        ge=0.5,
+        le=40,
+        description=(
+            "Manually entered weight in kg. Statistical/ML estimates, when "
+            "available, remain non-authoritative screening references."
+        ),
     )
     height_cm: Optional[float] = Field(
         None,
-        gt=0,
-        le=200,
-        description="Manually entered height in cm. Used as fallback when image-based estimation fails.",
+        ge=30,
+        le=130,
+        description="Manually entered height in cm. Takes precedence over image estimates.",
+    )
+    muac_cm: Optional[float] = Field(
+        None,
+        ge=5,
+        le=25,
+        description="Manual/tape MUAC in cm.",
+    )
+    assessment_date: Optional[date] = Field(
+        None,
+        description="Date measurements were collected; defaults to today.",
     )
     guardian_name: Optional[str] = None
     location: Optional[str] = None
@@ -32,6 +45,10 @@ class MeasurementDetail(BaseModel):
     predicted_weight_kg: Optional[float] = None
     manual_height_cm: Optional[float] = None
     manual_weight_kg: Optional[float] = None
+    effective_height_cm: Optional[float] = None
+    effective_weight_kg: Optional[float] = None
+    height_source: str = "unavailable"
+    weight_source: str = "unavailable"
     reference_object_detected: bool = False
     scale_factor: Optional[float] = None
     confidence_score: Optional[float] = None
@@ -62,14 +79,30 @@ class MLPrediction(BaseModel):
     overweight_probability: float = 0.0
     wasting_status: Optional[str] = None
     wasting_method: str = "ml_classifier"
+    model_version: Optional[str] = None
+    training_data: Optional[str] = None
+    non_clinical: bool = True
 
 
 class MUACDetail(BaseModel):
     """MUAC measurement or estimate."""
     muac_cm: Optional[float] = None
-    muac_status: Optional[str] = None  # "SAM" | "At Risk (MAM)" | "Normal"
-    muac_method: str = "estimated_from_whz"  # "manual" | "estimated_from_whz"
+    muac_status: str = "Indeterminate"
+    muac_method: str = "unavailable"
     age_in_range: bool = True  # False if age outside 6-59 months
+
+
+class PoshanDetail(BaseModel):
+    """Canonical Poshan Setu v1 classification and calculation provenance."""
+
+    bmi: Optional[float] = None
+    bmi_status: str
+    muac_status: str
+    final_status: str
+    triggered_by: list[str] = Field(default_factory=list)
+    classification_method: str = "poshan_setu_v1"
+    rationale: str
+    complete: bool
 
 
 class AssessmentResponse(BaseModel):
@@ -80,4 +113,5 @@ class AssessmentResponse(BaseModel):
     nutrition: NutritionDetail
     ml_prediction: Optional[MLPrediction] = None
     muac: Optional[MUACDetail] = None
+    poshan: PoshanDetail
     summary: str

@@ -6,8 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../../constants/config.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/database_provider.dart';
+import '../../services/age_service.dart';
 import '../../services/image_storage_service.dart';
 
 class ChildFormScreen extends ConsumerStatefulWidget {
@@ -24,10 +26,11 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
   final _guardian = TextEditingController();
   final _location = TextEditingController();
   DateTime? _dob;
-  String _sex = 'M';
+  String? _sex;
   String? _photoPath;
   bool _loading = false;
   bool _saving = false;
+  String? _loadError;
 
   bool get _isEdit => widget.childId != null;
 
@@ -39,7 +42,20 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    final child = await ref.read(childDaoProvider).getById(widget.childId!);
+    final ownerUserId = ref.read(authProvider).user?.id;
+    if (ownerUserId == null) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _loadError = 'Sign in to edit this child.';
+        });
+      }
+      return;
+    }
+    final child = await ref.read(childDaoProvider).getById(
+          widget.childId!,
+          ownerUserId: ownerUserId,
+        );
     if (child != null) {
       _name.text = child.name;
       _guardian.text = child.guardianName ?? '';
@@ -47,6 +63,8 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
       _dob = DateTime.tryParse(child.dateOfBirth);
       _sex = child.sex;
       _photoPath = child.photoPath;
+    } else {
+      _loadError = 'Child not found for the signed-in user.';
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -74,7 +92,8 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
     final picked = await showDatePicker(
       context: context,
       initialDate: _dob ?? DateTime(now.year - 1, now.month, now.day),
-      firstDate: DateTime(now.year - 6),
+      firstDate: DateTime(now.year - 5, now.month, now.day)
+          .add(const Duration(days: 1)),
       lastDate: now,
     );
     if (picked != null && mounted) setState(() => _dob = picked);
@@ -88,14 +107,29 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
       );
       return;
     }
+    final ageMonths = AgeService.ageMonthsAt(_dob!, DateTime.now());
+    if (!ageMonths.isFinite ||
+        ageMonths < 0 ||
+        ageMonths >= maxUnderFiveAgeMonths) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Child must be under five years old'),
+        ),
+      );
+      return;
+    }
     setState(() => _saving = true);
     final dao = ref.read(childDaoProvider);
     final dobStr = DateFormat('yyyy-MM-dd').format(_dob!);
     final ownerId = ref.read(authProvider).user?.id;
     try {
+      if (ownerId == null) {
+        throw StateError('Sign in before saving a child.');
+      }
       if (_isEdit) {
         await dao.updateChild(
           id: widget.childId!,
+          ownerUserId: ownerId,
           name: _name.text.trim(),
           guardianName:
               _guardian.text.trim().isEmpty ? null : _guardian.text.trim(),
@@ -108,7 +142,7 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
         final id = await dao.createChild(
           name: _name.text.trim(),
           dateOfBirth: dobStr,
-          sex: _sex,
+          sex: _sex!,
           guardianName:
               _guardian.text.trim().isEmpty ? null : _guardian.text.trim(),
           location:
@@ -134,6 +168,17 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    if (_loadError != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Edit child')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(_loadError!, textAlign: TextAlign.center),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: Text(_isEdit ? 'Edit child' : 'New child')),
       body: Form(
@@ -146,8 +191,9 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
                 children: [
                   CircleAvatar(
                     radius: 48,
-                    backgroundImage:
-                        _photoPath != null ? FileImage(File(_photoPath!)) : null,
+                    backgroundImage: _photoPath != null
+                        ? FileImage(File(_photoPath!))
+                        : null,
                     child: _photoPath == null
                         ? const Icon(Icons.person, size: 48)
                         : null,
@@ -200,7 +246,9 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
                 DropdownMenuItem(value: 'M', child: Text('Male')),
                 DropdownMenuItem(value: 'F', child: Text('Female')),
               ],
-              onChanged: _isEdit ? null : (v) => setState(() => _sex = v ?? 'M'),
+              onChanged:
+                  _isEdit ? null : (value) => setState(() => _sex = value),
+              validator: (value) => value == null ? 'Sex is required' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(

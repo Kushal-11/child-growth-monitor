@@ -51,8 +51,8 @@ Usage
 # Run batch assessment (per-child layout, auto-detected):
     python scripts/batch_assess.py --images "/path/to/sample images/"
 
-# Images without ground truth (just run the system):
-    python scripts/batch_assess.py --images /path/to/photos/
+# Images without age/sex metadata produce explicit error-only rows; no
+# demographic defaults are fabricated.
 
 Ground-truth CSV columns (flat layout)
 --------------------------------------
@@ -82,24 +82,26 @@ All other columns are ignored and preserved in the output.
 
 import argparse
 import csv
+import hashlib
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Optional
 
 # Ensure project root on path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT))
 
+from app.services.age_service import age_months_at, completed_months  # noqa: E402
 from scripts.validate_ground_truth import AGE_RANGE_MONTHS, validate_rows  # noqa: E402
 
-TEMPLATE_CSV = """\
-image_file,date_of_birth,measurement_date,sex,actual_height_cm,actual_weight_kg,muac_cm,oedema,notes
-child1.jpg,2022-03-15,2024-03-20,M,85.0,11.2,14.5,no,
-child2.jpg,2023-07-01,2024-03-20,F,78.5,,13.2,no,weight not available
-child3.jpg,2021-11-20,2024-03-20,M,,,,,height and weight unknown
-"""
+TEMPLATE_CSV = (
+    "image_file,date_of_birth,measurement_date,sex,actual_height_cm,"
+    "actual_weight_kg,muac_cm,oedema,notes\n"
+)
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+RUNTIME_MANIFEST = REPO_ROOT / "data" / "models" / "model_manifest.json"
 
 # Per-child layout filenames (case-insensitive prefix match)
 PER_CHILD_FRONT_NAMES = ("front",)
@@ -210,7 +212,35 @@ def _compute_age_months(dob: date, at: Optional[date] = None) -> float:
     """Age in months at `at` (the measurement date). Falls back to today,
     which is only correct when assessment runs the same day as measurement."""
     ref = at or datetime.now(timezone.utc).date()
-    return (ref - dob).days / 30.4375
+    return age_months_at(dob, ref)
+
+
+def _runtime_manifest_sha256() -> Optional[str]:
+    if not RUNTIME_MANIFEST.is_file():
+        return None
+    return hashlib.sha256(RUNTIME_MANIFEST.read_bytes()).hexdigest()
+
+
+def _safe_error_context(gt: dict) -> tuple[Optional[float], str]:
+    """Best-effort truthful age/sex for an errored row; never invent defaults."""
+    sex = str(gt.get("sex") or "").strip().upper()
+    dob, _ = _parse_dob(str(gt.get("date_of_birth") or "").strip())
+    if dob is None:
+        return None, sex
+    raw_measurement_date = str(gt.get("measurement_date") or "").strip()
+    if raw_measurement_date:
+        try:
+            assessed_on = date.fromisoformat(raw_measurement_date)
+        except ValueError:
+            return None, sex
+    else:
+        assessed_on = datetime.now(timezone.utc).date()
+    try:
+        age = age_months_at(dob, assessed_on)
+    except ValueError:
+        return None, sex
+    lo, hi = AGE_RANGE_MONTHS
+    return (age if lo <= age < hi else None), sex
 
 
 def _parse_dob(dob_str: str) -> tuple[Optional[date], Optional[str]]:
@@ -221,10 +251,9 @@ def _parse_dob(dob_str: str) -> tuple[Optional[date], Optional[str]]:
     caller can surface it in the result row instead of fabricating an age
     and emitting a verdict derived from it.
 
-    Empty/blank (nothing supplied, e.g. the --images-only mode with no
-    ground truth) is distinguished from a garbled value (something was
-    supplied but doesn't parse) so a working "just run the system" mode
-    isn't mislabelled as broken.
+    Empty/blank input is distinguished from a garbled value so the output
+    explains whether metadata was omitted or malformed. Both paths are
+    error-only; neither fabricates an age.
     """
     if not dob_str:
         return (
@@ -242,9 +271,9 @@ def _parse_dob(dob_str: str) -> tuple[Optional[date], Optional[str]]:
 
 _WASTING_SEVERITY = {"SAM": 2, "MAM": 1, "Normal": 0}
 
-# WHO MUAC cutoffs are defined for 6-59 months only. Mirrors
-# app/services/muac_service.py's `age_in_range` bounds exactly.
-MUAC_AGE_RANGE_MONTHS = (6.0, 59.9)
+# WHO MUAC cutoffs are defined for under-five children aged at least 6 months.
+# The upper bound is exclusive: an exact age of 60 months is out of scope.
+MUAC_AGE_RANGE_MONTHS = (6.0, 60.0)
 
 
 def _muac_status(
@@ -260,14 +289,14 @@ def _muac_status(
     `_combine_status` drops the arm rather than treating it as a negative.
 
     The window matches app/services/muac_service.py's `age_in_range`
-    (6.0-59.9) so the study's gold standard and the app's own classifier
+    (6.0 <= age < 60.0) so the study's gold standard and the app's own classifier
     cannot drift apart. `age_months` is None when age is unknown, which is
     likewise not a licence to classify.
     """
     if muac_cm is None or age_months is None:
         return None
     lo, hi = MUAC_AGE_RANGE_MONTHS
-    if not (lo <= age_months <= hi):
+    if not (lo <= age_months < hi):
         return None
     if muac_cm < 11.5:
         return "SAM"
@@ -337,6 +366,10 @@ def run_batch(
     from app.services.nutrition_service import NutritionService
 
     who_data = WHODataService()
+    # NutritionService and every WHO calculation expect populated LMS tables.
+    # Instantiation alone leaves them empty; load the authoritative Excel LMS
+    # data before the first child is processed.
+    who_data.load_all()
     meas_svc = MeasurementService()
     nutr_svc = NutritionService(who_data)
     ml_svc   = MLService()
@@ -412,11 +445,12 @@ def _run_flat(
             )
         except Exception as e:
             print(f"    [ERROR] {fname}: {e}")
+            error_age, error_sex = _safe_error_context(gt)
             row = _error_row(
                 fname=fname,
                 child_name=fname,  # I-3: identity, never an operator-supplied name
-                age_months=24.0,
-                sex=(gt.get("sex") or "M").strip().upper(),
+                age_months=error_age,
+                sex=error_sex,
                 actual_height=_parse_float(gt.get("actual_height_cm")),
                 actual_weight=_parse_float(gt.get("actual_weight_kg")),
                 manual_muac=_parse_float(gt.get("muac_cm")),
@@ -447,7 +481,10 @@ def _process_child_image(
     # warning below - it is never persisted to any file.
     identity = child_id or fname
     _display_label = gt.get("child_name") or identity
-    sex = (gt.get("sex") or "M").strip().upper() or "M"
+    sex = str(gt.get("sex") or "").strip().upper()
+    sex_error = None
+    if sex not in ("M", "F"):
+        sex_error = "sex must be explicitly supplied as M or F"
 
     dob_str = (gt.get("date_of_birth") or "").strip()
     mdate_str = (gt.get("measurement_date") or "").strip()
@@ -460,6 +497,9 @@ def _process_child_image(
     if mdate_str:
         try:
             meas_date = date.fromisoformat(mdate_str)
+            if meas_date > datetime.now(timezone.utc).date():
+                mdate_error = "measurement_date must not be in the future"
+                measurement_date_source = "future_invalid"
         except ValueError:
             # Same treatment as an unparseable date_of_birth: age drives
             # every WHO z-score AND selects the WFL (<24m) vs WFH (>=24m)
@@ -480,11 +520,16 @@ def _process_child_image(
 
     dob, dob_error = _parse_dob(dob_str)
     age_range_error = None
+    age_months: Optional[float] = None
     if dob is not None and mdate_error is None:
-        age_months = _compute_age_months(dob, meas_date)
+        try:
+            age_months = _compute_age_months(dob, meas_date)
+        except ValueError as exc:
+            age_range_error = str(exc)
+    if age_months is not None and age_range_error is None:
         lo, hi = AGE_RANGE_MONTHS
-        if not (lo <= age_months <= hi):
-            # WHO growth standards are only defined for 0-60 months. A
+        if not (lo <= age_months < hi):
+            # This under-five pipeline is defined for 0 <= age < 60 months. A
             # parseable-but-impossible age (swapped dob/measurement_date
             # columns, a future dob, a one-digit year typo, ...) must be
             # rejected the same way an unparseable dob is: never let a
@@ -494,29 +539,27 @@ def _process_child_image(
             # unambiguously out of range (e.g. -12.0, 600.0), but a value
             # that rounds to exactly the boundary itself at 1 decimal
             # (e.g. 60.0246 -> "60.0") would read as self-contradictory
-            # next to "out of range 0-60" - show extra precision only
+            # next to "out of range 0-<60" - show extra precision only
             # then, so the rejection is self-explanatory.
             rounded_1dp = round(age_months, 1)
             age_disp = (
                 f"{age_months:.2f}" if rounded_1dp in (lo, hi) else f"{rounded_1dp:.1f}"
             )
             age_range_error = (
-                f"age_months {age_disp} out of range {lo:.0f}-{hi:.0f} "
+                f"age_months {age_disp} out of range {lo:.0f}-<{hi:.0f} "
                 f"(date_of_birth='{dob_str}', "
                 f"measurement_date='{mdate_str or 'unset - fell back to today'}')"
             )
-    else:
-        # Placeholder only, to keep the pose/ML pipeline running below;
-        # dob_error/mdate_error forces error + pred_status_final=None on the
-        # row so nothing derived from this fabricated age is presented as
-        # usable.
-        age_months = 24.0
-    # True age, or None when it could not be established. Distinct from the
-    # 24.0 placeholder above, which exists only to keep pose/ML running —
-    # anything that classifies against age must use this, never the
-    # placeholder.
+    # True age, or None when it could not be established. No fabricated age
+    # is allowed to reach pose, ML, or WHO calculations.
     known_age_months = (
-        age_months if (dob is not None and mdate_error is None and not age_range_error)
+        age_months
+        if (
+            age_months is not None
+            and dob is not None
+            and mdate_error is None
+            and not age_range_error
+        )
         else None
     )
     oedema_present = (gt.get("oedema") or "").strip().lower() == "yes"
@@ -524,6 +567,33 @@ def _process_child_image(
     actual_height = _parse_float(gt.get("actual_height_cm"))
     actual_weight = _parse_float(gt.get("actual_weight_kg"))
     manual_muac   = _parse_float(gt.get("muac_cm"))
+
+    metadata_errors = [
+        message
+        for message in (sex_error, dob_error, mdate_error, age_range_error)
+        if message
+    ]
+    if metadata_errors or known_age_months is None:
+        return _error_row(
+            fname=fname,
+            child_name=identity,
+            age_months=known_age_months,
+            sex=sex,
+            actual_height=actual_height,
+            actual_weight=actual_weight,
+            manual_muac=manual_muac,
+            oedema=(gt.get("oedema") or "").strip().lower(),
+            error_msg="; ".join(metadata_errors) or "age unavailable",
+            measurement_date=mdate_str,
+            measurement_date_source=measurement_date_source,
+        )
+
+    # Narrow the Optional type after the fail-closed metadata gate above.
+    age_months = known_age_months
+    assessment_ref_date = (
+        meas_date if meas_date is not None else datetime.now(timezone.utc).date()
+    )
+    completed_age_months = completed_months(dob, assessment_ref_date)
 
     if verbose:
         tag = f"{child_id}/" if child_id else ""
@@ -537,7 +607,17 @@ def _process_child_image(
         who_data=who_data,
     )
     pred_height = meas.predicted_height_cm
-    effective_height = pred_height if pred_height else actual_height
+    effective_height = actual_height if actual_height is not None else pred_height
+    if actual_height is not None:
+        effective_height_source = "manual_measured"
+    elif pred_height is not None:
+        effective_height_source = (
+            meas.estimation_provenance.get("height_source")
+            if getattr(meas, "estimation_provenance", None)
+            else meas.estimation_method
+        )
+    else:
+        effective_height_source = "unavailable"
 
     # --- Side-view AP depth (per-child layout only) ---
     side_segments = None
@@ -556,23 +636,27 @@ def _process_child_image(
 
     pred_weight_ml    = ml_pred.estimated_weight_kg if ml_pred else None
     wasting_status_ml = ml_pred.wasting_status if ml_pred else None
-    sam_prob = round(ml_pred.sam_probability, 4) if ml_pred else None
-    mam_prob = round(ml_pred.mam_probability, 4) if ml_pred else None
+    sam_prob = ml_pred.sam_probability if ml_pred else None
+    mam_prob = ml_pred.mam_probability if ml_pred else None
+    ml_model_version = getattr(ml_pred, "model_version", None) if ml_pred else None
+    ml_training_data = getattr(ml_pred, "training_data", None) if ml_pred else None
+    ml_non_clinical = getattr(ml_pred, "non_clinical", None) if ml_pred else None
+    ml_runtime_manifest_sha256 = (
+        _runtime_manifest_sha256() if ml_pred else None
+    )
 
     # --- Z-scores from ACTUAL measurements ---
     actual_haz_z      = None
     actual_whz_z      = None
     actual_haz_status = None
     actual_whz_status = None
-    # Guarded on `known_age_months`, NOT on `dob`. A parseable dob combined
-    # with an unparseable measurement_date leaves `dob` truthy while
-    # `age_months` holds the 24.0 placeholder — which is both fabricated and
-    # sitting exactly on the WFL/WFH table boundary. Keying on `dob` here
-    # would compute the gold standard at that fabricated age and write it to
-    # the CSV as if it were real. WHO tables are indexed by COMPLETED months,
-    # so truncate rather than round: 23.7 months is row 23.
+    # WHO age-indexed tables use completed calendar months. Metadata errors
+    # already returned an error-only row above, so no fabricated age reaches
+    # this calculation.
     if actual_height and known_age_months is not None:
-        actual_haz_z = nutr_svc.compute_haz(sex, int(known_age_months), actual_height)
+        actual_haz_z = nutr_svc.compute_haz(
+            sex, completed_age_months, actual_height
+        )
         if actual_haz_z is not None:
             actual_haz_status = _haz_status_from_z(actual_haz_z)
             actual_haz_z = round(actual_haz_z, 3)
@@ -589,14 +673,16 @@ def _process_child_image(
     pred_whz_z      = None
     pred_haz_status = None
     pred_whz_status = None
-    if pred_height and known_age_months is not None:
-        pred_haz_z = nutr_svc.compute_haz(sex, int(known_age_months), pred_height)
+    if effective_height and known_age_months is not None:
+        pred_haz_z = nutr_svc.compute_haz(
+            sex, completed_age_months, effective_height
+        )
         if pred_haz_z is not None:
             pred_haz_status = _haz_status_from_z(pred_haz_z)
             pred_haz_z = round(pred_haz_z, 3)
-    if pred_height and pred_weight_ml and known_age_months is not None:
+    if effective_height and pred_weight_ml and known_age_months is not None:
         pred_whz_z = nutr_svc.compute_whz(
-            sex, known_age_months, pred_height, pred_weight_ml,
+            sex, known_age_months, effective_height, pred_weight_ml,
         )
         if pred_whz_z is not None:
             pred_whz_status = _whz_status_from_z(pred_whz_z)
@@ -626,16 +712,10 @@ def _process_child_image(
     pred_status_final = (
         max(_pred_arms, key=lambda s: _WASTING_SEVERITY[s]) if _pred_arms else None
     )
-    if dob_error or age_range_error or mdate_error:
-        # dob could not be parsed, or the resulting age is outside the
-        # 0-60 month range WHO growth standards are defined for: never
-        # present a verdict derived from a fabricated or impossible age.
-        pred_status_final = None
-
     row = {
         "image_file":           fname,
         "child_name":           identity,
-        "age_months":           round(age_months, 1),
+        "age_months":           age_months,
         "sex":                  sex,
         "measurement_date":     mdate_str,
         "measurement_date_source": measurement_date_source,
@@ -652,12 +732,16 @@ def _process_child_image(
         "actual_combined_status": actual_combined_status,
         # Predictions
         "pred_height_cm":       round(pred_height, 1) if pred_height else None,
-        "pred_weight_ml_kg":    round(pred_weight_ml, 2) if pred_weight_ml else None,
+        "pred_weight_ml_kg":    pred_weight_ml,
         "pred_haz_z":           pred_haz_z,
         "pred_whz_z":           pred_whz_z,
         "pred_haz_status":      pred_haz_status,
         "pred_whz_status":      pred_whz_status,
         "ml_wasting_status":    wasting_status_ml,
+        "ml_model_version":     ml_model_version,
+        "ml_training_data":     ml_training_data,
+        "ml_non_clinical":      ml_non_clinical,
+        "ml_runtime_manifest_sha256": ml_runtime_manifest_sha256,
         "pred_status_final":    pred_status_final,
         "sam_probability":      sam_prob,
         "mam_probability":      mam_prob,
@@ -667,9 +751,10 @@ def _process_child_image(
         # Metadata
         "pose_confidence":      round(meas.confidence_score, 3) if meas.confidence_score else None,
         "estimation_method":    meas.estimation_method,
+        "effective_height_source": effective_height_source,
         "annotated_image":      meas.annotated_image_filename,
         "notes":                gt.get("notes", ""),
-        "error":                dob_error or age_range_error or mdate_error or "",
+        "error":                "",
     }
 
     if ml_svc.is_available and meas.body_segments and effective_height:
@@ -750,7 +835,7 @@ def _load_master_ground_truth(ground_truth_csv: Path) -> dict[str, dict]:
 
     A ground-truth file with impossible values (e.g. a ragged row whose
     shift produces an out-of-range height/weight/MUAC, a bad date, an age
-    outside 0-60 months, ...) must never silently produce a study — refuse
+    outside 0 <= age < 60 months, ...) must never silently produce a study — refuse
     to run at all rather than assess every child against untrustworthy
     data. Warnings (missing optional measurements) are printed but do not
     block.
@@ -800,6 +885,7 @@ def _run_per_child(
     master_gt = master_gt or {}
     results = []
     for child_id, front_path, side_path, values in entries:
+        error_values = values
         # The merge (and everything derived from it) lives inside the
         # per-child try: a malformed master CSV row must degrade only this
         # child's row, never abort the batch for every other child.
@@ -818,6 +904,7 @@ def _run_per_child(
                 "oedema":           merged.get("oedema", ""),
                 "notes":            merged.get("notes", ""),
             }
+            error_values = gt
             side_bytes = side_path.read_bytes() if side_path else None
             row = _process_child_image(
                 fname=front_path.name,
@@ -842,15 +929,16 @@ def _run_per_child(
                 row["pred_status_final"] = None
         except Exception as e:
             print(f"    [ERROR] {child_id}: {e}")
+            error_age, error_sex = _safe_error_context(error_values)
             row = _error_row(
                 fname=front_path.name,
                 child_name=child_id,  # I-3: identity, never an operator-supplied name
-                age_months=24.0,
-                sex=(values.get("sex") or "M"),
-                actual_height=_parse_float(values.get("actual_height_cm")),
-                actual_weight=_parse_float(values.get("actual_weight_kg")),
-                manual_muac=_parse_float(values.get("muac_cm")),
-                oedema=(values.get("oedema") or "").strip().lower(),
+                age_months=error_age,
+                sex=error_sex,
+                actual_height=_parse_float(error_values.get("actual_height_cm")),
+                actual_weight=_parse_float(error_values.get("actual_weight_kg")),
+                manual_muac=_parse_float(error_values.get("muac_cm")),
+                oedema=(error_values.get("oedema") or "").strip().lower(),
                 error_msg=str(e),
             )
         results.append(row)
@@ -870,10 +958,12 @@ def _write_results(output_csv: Path, results: list[dict]):
         "actual_combined_status",
         "pred_height_cm", "pred_weight_ml_kg",
         "pred_haz_z", "pred_whz_z", "pred_haz_status", "pred_whz_status",
-        "ml_wasting_status", "pred_status_final",
+        "ml_wasting_status", "ml_model_version", "ml_training_data",
+        "ml_non_clinical", "ml_runtime_manifest_sha256", "pred_status_final",
         "sam_probability", "mam_probability",
         "height_error_cm", "weight_error_kg",
-        "pose_confidence", "estimation_method", "annotated_image",
+        "pose_confidence", "estimation_method", "effective_height_source",
+        "annotated_image",
         "feat_shoulder_width_cm", "feat_hip_width_cm", "feat_torso_length_cm",
         "feat_upper_arm_length_cm", "feat_shoulder_height_ratio",
         "feat_hip_height_ratio", "feat_body_build_score",
@@ -970,13 +1060,15 @@ def _parse_float(val) -> Optional[float]:
 def _error_row(
     fname: str,
     child_name: str,
-    age_months: float,
+    age_months: Optional[float],
     sex: str,
     actual_height: Optional[float],
     actual_weight: Optional[float],
     error_msg: str,
     manual_muac: Optional[float] = None,
     oedema: str = "",
+    measurement_date: str = "",
+    measurement_date_source: str = "unavailable",
 ) -> dict:
     """Result row for a child whose pipeline raised before producing one.
 
@@ -990,12 +1082,28 @@ def _error_row(
     return {
         "image_file":   fname,
         "child_name":   child_name,
-        "age_months":   round(age_months, 1),
+        "age_months":   age_months,
         "sex":          sex,
+        "measurement_date": measurement_date,
+        "measurement_date_source": measurement_date_source,
         "actual_height_cm": actual_height,
         "actual_weight_kg": actual_weight,
+        "actual_haz_z": None,
+        "actual_whz_z": None,
+        "actual_haz_status": None,
+        "actual_whz_status": None,
         "muac_cm":      manual_muac,
+        "actual_muac_status": None,
         "actual_oedema": oedema,
+        "actual_combined_status": None,
+        "pred_height_cm": None,
+        "pred_weight_ml_kg": None,
+        "pred_haz_z": None,
+        "pred_whz_z": None,
+        "pred_haz_status": None,
+        "pred_whz_status": None,
+        "ml_wasting_status": None,
+        "pred_status_final": None,
         "error":        error_msg,
     }
 

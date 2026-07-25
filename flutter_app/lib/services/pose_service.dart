@@ -56,7 +56,8 @@ class PoseService {
     double noseToEye = 0;
 
     if (nose != null && leftEye != null && rightEye != null) {
-      noseToEye = ((nose.y - leftEye.y).abs() + (nose.y - rightEye.y).abs()) / 2;
+      noseToEye =
+          ((nose.y - leftEye.y).abs() + (nose.y - rightEye.y).abs()) / 2;
       headTopY = estimateHeadTopY(
         noseY: nose.y * imageHeight,
         leftEyeY: leftEye.y * imageHeight,
@@ -80,7 +81,8 @@ class PoseService {
     // head confidence: visible head landmarks out of 5
     // (nose, leftEye, rightEye, leftEar, rightEar)
     final headLandmarks = [nose, leftEye, rightEye, leftEar, rightEar];
-    final headVisible = headLandmarks.where((l) => l != null && l.likelihood >= 0.5).length;
+    final headVisible =
+        headLandmarks.where((l) => l != null && l.likelihood >= 0.5).length;
     final headConfidence = headVisible / 5.0;
 
     // --- shoulders ---
@@ -93,7 +95,8 @@ class PoseService {
 
     if (leftShoulder != null && rightShoulder != null) {
       shoulderWidthPx = (leftShoulder.x - rightShoulder.x).abs() * imageWidth;
-      shoulderMidpointY = ((leftShoulder.y + rightShoulder.y) / 2) * imageHeight;
+      shoulderMidpointY =
+          ((leftShoulder.y + rightShoulder.y) / 2) * imageHeight;
 
       if (leftShoulder.likelihood >= 0.5 && rightShoulder.likelihood >= 0.5) {
         torsoConfidence += 0.5;
@@ -149,7 +152,14 @@ class PoseService {
     final rightAnkle = lm[PoseLandmarkType.rightAnkle];
 
     // heelY = max y of all foot landmark y coords (lowest point in image)
-    final footLandmarks = [leftHeel, rightHeel, leftFootIndex, rightFootIndex, leftAnkle, rightAnkle];
+    final footLandmarks = [
+      leftHeel,
+      rightHeel,
+      leftFootIndex,
+      rightFootIndex,
+      leftAnkle,
+      rightAnkle
+    ];
     final visibleFootYs = footLandmarks
         .where((l) => l != null && l.likelihood >= 0.5)
         .map((l) => l!.y * imageHeight)
@@ -204,11 +214,13 @@ class PoseService {
 
   /// Extract side-view segments from pose landmarks.
   ///
-  /// [heightCm] is the known or estimated height used to compute scale.
+  /// When [heightCm] is omitted, returns raw normalized/pixel-ratio segments
+  /// without applying centimetre validation. This is the adapter path:
+  /// MeasurementService applies the real effective-height scale later.
   SideViewSegments extractSideSegments(
-    List<PoseLandmark> landmarks,
-    double heightCm,
-  ) {
+    List<PoseLandmark> landmarks, [
+    double? heightCm,
+  ]) {
     final lm = _landmarkMap(landmarks);
 
     // compute scale: heightCm / totalHeightPx (nose to lowest heel)
@@ -221,14 +233,18 @@ class PoseService {
 
     if (nose != null) {
       final heelYs = <double>[];
-      if (leftHeel != null && leftHeel.likelihood >= 0.5) heelYs.add(leftHeel.y);
-      if (rightHeel != null && rightHeel.likelihood >= 0.5) heelYs.add(rightHeel.y);
+      if (leftHeel != null && leftHeel.likelihood >= 0.5) {
+        heelYs.add(leftHeel.y);
+      }
+      if (rightHeel != null && rightHeel.likelihood >= 0.5) {
+        heelYs.add(rightHeel.y);
+      }
 
       if (heelYs.isNotEmpty) {
         final maxHeelY = heelYs.reduce(math.max);
         totalHeightPx = (maxHeelY - nose.y).abs();
         if (totalHeightPx > 0) {
-          scale = heightCm / totalHeightPx;
+          scale = heightCm == null ? null : heightCm / totalHeightPx;
         }
       }
     }
@@ -239,7 +255,10 @@ class PoseService {
       lm[PoseLandmarkType.rightShoulder],
       lm[PoseLandmarkType.leftElbow],
       lm[PoseLandmarkType.rightElbow],
-    ].where((l) => l != null && l.likelihood >= 0.5).cast<PoseLandmark>().toList();
+    ]
+        .where((l) => l != null && l.likelihood >= 0.5)
+        .cast<PoseLandmark>()
+        .toList();
 
     double? chestDepthPx;
     double chestConfidence = 0;
@@ -261,7 +280,10 @@ class PoseService {
       lm[PoseLandmarkType.rightHip],
       lm[PoseLandmarkType.leftKnee],
       lm[PoseLandmarkType.rightKnee],
-    ].where((l) => l != null && l.likelihood >= 0.5).cast<PoseLandmark>().toList();
+    ]
+        .where((l) => l != null && l.likelihood >= 0.5)
+        .cast<PoseLandmark>()
+        .toList();
 
     double? abdDepthPx;
     double abdConfidence = 0;
@@ -374,7 +396,8 @@ class PoseService {
   // Private helpers
   // -------------------------------------------------------------------------
 
-  Map<PoseLandmarkType, PoseLandmark> _landmarkMap(List<PoseLandmark> landmarks) {
+  Map<PoseLandmarkType, PoseLandmark> _landmarkMap(
+      List<PoseLandmark> landmarks) {
     return {for (final l in landmarks) l.type: l};
   }
 }
@@ -409,9 +432,9 @@ class PoseServiceSource implements PoseSource {
         armConfidence: 0,
       );
     }
-    // Real width/height aren't known at this layer; PoseService normalizes
-    // landmark coords to 0..1, so the cm-conversion in MeasurementService
-    // works against pixel ratios. Pass dummy 1.0 to retain that contract.
+    // Landmark coordinates are already normalized to a shared 0..1 space.
+    // A unit canvas preserves all segment ratios; MeasurementService later
+    // applies the independently resolved centimetre scale.
     return _pose.extractSegments(landmarks, 1.0, 1.0);
   }
 
@@ -419,7 +442,7 @@ class PoseServiceSource implements PoseSource {
   Future<SideViewSegments?> sideSegmentsFor(String path) async {
     final landmarks = await _pose.detectPose(path);
     if (landmarks.isEmpty) return null;
-    return _pose.extractSideSegments(landmarks, 1.0);
+    return _pose.extractSideSegments(landmarks);
   }
 
   @override

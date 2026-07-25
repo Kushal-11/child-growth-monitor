@@ -85,6 +85,13 @@ class _FakeWHOData:
     pass
 
 
+def test_batch_template_is_header_only():
+    assert TEMPLATE_CSV.splitlines() == [
+        "image_file,date_of_birth,measurement_date,sex,actual_height_cm,"
+        "actual_weight_kg,muac_cm,oedema,notes"
+    ]
+
+
 def test_age_uses_measurement_date_not_today():
     dob = date(2024, 1, 1)
     at = date(2026, 1, 1)
@@ -306,9 +313,9 @@ def test_negative_age_from_swapped_dates_sets_error_and_suppresses_verdict():
         child_id=None,
         verbose=False,
     )
-    assert abs(row["age_months"] - (-12.0)) < 0.5
+    assert row["age_months"] is None
     assert row["error"], "a negative computed age must populate the error field"
-    assert "-12" in row["error"] or "-12.0" in row["error"]
+    assert "before date_of_birth" in row["error"]
     assert row["pred_status_final"] is None
 
 
@@ -331,7 +338,7 @@ def test_future_dob_sets_error_and_suppresses_verdict():
         child_id=None,
         verbose=False,
     )
-    assert row["age_months"] < 0
+    assert row["age_months"] is None
     assert row["error"], "a future date_of_birth must populate the error field"
     assert row["pred_status_final"] is None
 
@@ -356,20 +363,19 @@ def test_age_over_60_months_sets_error_and_suppresses_verdict():
         child_id=None,
         verbose=False,
     )
-    assert abs(row["age_months"] - 600.0) < 0.5
+    assert row["age_months"] is None
     assert row["error"], "an age over 60 months must populate the error field"
-    assert "600" in row["error"]
+    assert "future" in row["error"]
     assert row["pred_status_final"] is None
 
 
 def test_age_boundary_error_message_shows_precise_value_not_60_0():
-    """A child measured 1827 days after birth (60.0246 months - just past
-    the WHO 60-month ceiling) must still be rejected (the 0.0-60.0 inclusive
-    boundary itself does not change), but the error message must show that
-    precisely (e.g. '60.02'), not round to the self-contradictory
+    """A child measured after the fifth calendar birthday is past
+    the WHO 60-month ceiling and must be rejected. The error must not round
+    a just-over-boundary value to the self-contradictory
     '60.0 out of range 0-60', which reads like a bug to a field worker."""
     dob = date(2020, 1, 1)
-    mdate = dob + timedelta(days=1827)
+    mdate = date(2025, 1, 2)
     row = _process_child_image(
         fname="child_boundary.jpg",
         img_path=Path("child_boundary.jpg"),
@@ -397,10 +403,8 @@ def test_age_boundary_error_message_shows_precise_value_not_60_0():
 
 
 def test_no_date_of_birth_supplied_is_distinct_from_malformed():
-    """The --images-only mode (no ground-truth CSV) leaves date_of_birth
-    blank. That is a supported, working mode - not a malformed value - so
-    the error message must say plainly that nothing was supplied, distinct
-    from the 'unparseable' message used for a garbled value."""
+    """No-metadata input must fail without inventing age or sex, while the
+    message still distinguishes omission from a malformed value."""
     row = _process_child_image(
         fname="child_no_gt.jpg",
         img_path=Path("child_no_gt.jpg"),
@@ -751,6 +755,43 @@ def test_app_verdict_takes_worst_arm_in_both_directions():
 
     assert row["pred_whz_status"] == "Normal"
     assert row["pred_status_final"] == "SAM"
+
+
+def test_batch_output_preserves_raw_ml_values_for_field_metrics():
+    class RawML:
+        is_available = False
+
+        @staticmethod
+        def predict(*_args, **_kwargs):
+            prediction = _FakeMLPrediction(
+                "SAM", estimated_weight_kg=12.3456789
+            )
+            prediction.sam_probability = 0.123456789
+            prediction.mam_probability = 0.234567891
+            return prediction
+
+    dob = date.today() - timedelta(days=730)
+    row = _process_child_image(
+        fname="raw.jpg",
+        img_path=Path("raw.jpg"),
+        gt={
+            "date_of_birth": dob.isoformat(),
+            "measurement_date": date.today().isoformat(),
+            "sex": "M",
+        },
+        meas_svc=_FakeMeasService(
+            predicted_height_cm=85.0, body_segments={"torso": 1.0}
+        ),
+        ml_svc=RawML(),
+        nutr_svc=_FakeNutritionService(),
+        who_data=_FakeWHOData(),
+        side_image_bytes=None,
+        child_id=None,
+        verbose=False,
+    )
+    assert row["pred_weight_ml_kg"] == 12.3456789
+    assert row["sam_probability"] == 0.123456789
+    assert row["mam_probability"] == 0.234567891
 
 
 class _SpyNutritionService:

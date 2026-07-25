@@ -69,7 +69,7 @@ _MUAC_GIRLS: list[tuple[float, float]] = [
 
 @dataclass
 class MUACResult:
-    muac_cm: Optional[float]        # rounded to 1 decimal place
+    muac_cm: Optional[float]        # full-precision calculation/input
     muac_status: Optional[str]      # "SAM" | "At Risk (MAM)" | "Normal"
     # "manual" | "landmark_estimated" | "estimated_from_whz"
     muac_method: str
@@ -117,12 +117,12 @@ class MUACService:
             shoulder_width_cm:   Shoulder width from pose (optional).
             height_cm:           Total height (optional, used for normalisation).
         """
-        age_in_range = 6.0 <= age_months <= 59.9
+        age_in_range = 6.0 <= age_months < 60.0
 
         # ── 1. Manual measurement ────────────────────────────────────────
         if manual_muac_cm is not None and manual_muac_cm > 0:
             return MUACResult(
-                muac_cm=round(manual_muac_cm, 1),
+                muac_cm=float(manual_muac_cm),
                 muac_status=MUACService._classify(manual_muac_cm, age_in_range),
                 muac_method="manual",
                 age_in_range=age_in_range,
@@ -144,7 +144,7 @@ class MUACService:
             )
             if est is not None:
                 return MUACResult(
-                    muac_cm=round(est, 1),
+                    muac_cm=est,
                     muac_status=MUACService._classify(est, age_in_range),
                     muac_method="landmark_estimated",
                     age_in_range=age_in_range,
@@ -162,7 +162,6 @@ class MUACService:
         median = MUACService._median_for_age(age_months, sex)
         whz_clamped = max(-3.0, min(3.0, whz))
         muac_cm = median * (1.0 + 0.087 * whz_clamped)
-        muac_cm = round(muac_cm, 1)
 
         return MUACResult(
             muac_cm=muac_cm,

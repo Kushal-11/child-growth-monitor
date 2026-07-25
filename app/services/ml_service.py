@@ -14,7 +14,12 @@ Usage:
 from typing import Optional
 
 from app.services.measurement_service import BodySegments, SideViewSegments
-from ml.inference import WastingFeatures, WastingPrediction, get_predictor
+from ml.inference import (
+    WastingFeatures,
+    WastingPrediction,
+    get_predictor,
+    runtime_artifacts_present,
+)
 
 
 def _body_build_score(shoulder_width_cm: float, height_cm: float,
@@ -42,11 +47,26 @@ class MLService:
     """FastAPI-friendly wrapper around the WastingPredictor."""
 
     def __init__(self):
-        self._predictor = get_predictor()
+        # Loading a TFLite interpreter may import TensorFlow on hosts without
+        # tflite-runtime. Keep that work off the FastAPI startup path.
+        self._predictor = None
+
+    def _get_predictor(self):
+        if self._predictor is None:
+            self._predictor = get_predictor()
+        return self._predictor
 
     @property
     def is_available(self) -> bool:
+        if self._predictor is None:
+            return runtime_artifacts_present()
         return self._predictor.is_available
+
+    @property
+    def model_version(self) -> Optional[str]:
+        if self._predictor is None:
+            return None
+        return self._predictor.model_version
 
     def extract_features(
         self,
@@ -159,4 +179,4 @@ class MLService:
         features = self.extract_features(segments, age_months, sex, height_cm, side_segments)
         if features is None:
             return None
-        return self._predictor.predict(features)
+        return self._get_predictor().predict(features)

@@ -1,6 +1,6 @@
 """Tests for scripts/validate_ground_truth.py."""
 from scripts.validate_ground_truth import (
-    ALL_COLS, check_header, load_csv, read_header, validate_rows,
+    ALL_COLS, TEMPLATE, check_header, load_csv, read_header, validate_rows,
 )
 
 
@@ -32,7 +32,7 @@ def test_weight_out_of_range_rejected():
 
 
 def test_muac_out_of_range_rejected():
-    errors, _ = validate_rows([_good_row(muac_cm="25.0")])
+    errors, _ = validate_rows([_good_row(muac_cm="25.1")])
     assert len(errors) == 1 and "muac" in errors[0].lower()
 
 
@@ -77,6 +77,10 @@ def test_missing_optional_measurements_warn_not_error():
     )
     assert errors == []
     assert len(warnings) == 3  # height, weight, muac missing
+
+
+def test_blank_template_contains_header_only():
+    assert TEMPLATE.splitlines() == [",".join(ALL_COLS)]
 
 
 # ---------------------------------------------------------------------------

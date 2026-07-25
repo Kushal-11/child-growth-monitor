@@ -3,29 +3,32 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../constants/config.dart';
 import '../../../database/database.dart';
 import '../../../providers/assessment_provider.dart';
 import '../../../providers/assessment_service_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/children_provider.dart';
 import '../../../providers/database_provider.dart';
+import '../../../providers/sync_provider.dart';
+import '../../../services/age_service.dart';
 
 final assessmentChildrenProvider =
     StreamProvider.autoDispose<List<ChildrenData>>((ref) {
-      final ownerId = ref.watch(authProvider).user?.id;
-      if (ownerId == null) return Stream.value(const <ChildrenData>[]);
-      return ref.watch(childDaoProvider).watchForOwner(ownerId);
-    });
+  final ownerId = ref.watch(authProvider).user?.id;
+  if (ownerId == null) return Stream.value(const <ChildrenData>[]);
+  return ref.watch(childDaoProvider).watchForOwner(ownerId);
+});
 
 class AssessmentFormState {
   AssessmentFormState({
     this.step = 0,
     this.selectedChildId,
     this.childName = '',
-    String? dateOfBirth,
+    this.dateOfBirth = '',
     this.ageMonths = '',
     this.useDob = true,
-    this.sex = 'M',
+    this.sex = '',
     this.guardianName = '',
     this.location = '',
     this.weightKg = '',
@@ -39,11 +42,7 @@ class AssessmentFormState {
     this.isSubmitting = false,
     this.error,
     this.revision = 0,
-  }) : dateOfBirth =
-           dateOfBirth ??
-           DateFormat(
-             'yyyy-MM-dd',
-           ).format(DateTime.now().subtract(const Duration(days: 365 * 3)));
+  });
 
   final int step;
   final int? selectedChildId;
@@ -67,32 +66,66 @@ class AssessmentFormState {
   final int revision;
 
   bool get childDetailsValid {
-    final dob = DateTime.tryParse(resolvedDateOfBirth);
     return childName.trim().isNotEmpty &&
-        dob != null &&
-        !dob.isAfter(DateTime.now());
+        (sex == 'M' || sex == 'F') &&
+        resolvedAgeMonths != null &&
+        resolvedAgeMonths! >= 0 &&
+        resolvedAgeMonths! < maxUnderFiveAgeMonths;
   }
 
   bool get photoValid => frontImagePath != null;
 
   bool get measurementsValid =>
-      _optionalPositive(weightKg) &&
-      _optionalPositive(heightValue) &&
-      _optionalPositive(muacCm);
+      _optionalInRange(
+        weightKg,
+        minPlausibleWeightKg,
+        maxPlausibleWeightKg,
+      ) &&
+      _heightValid &&
+      _optionalInRange(
+        muacCm,
+        minPlausibleMuacCm,
+        maxPlausibleMuacCm,
+      );
+
+  double? get resolvedAgeMonths {
+    if (!useDob) {
+      final months = double.tryParse(ageMonths.trim());
+      return months != null && months.isFinite ? months : null;
+    }
+    final dob = DateTime.tryParse(dateOfBirth.trim());
+    if (dob == null) return null;
+    try {
+      return AgeService.ageMonthsAt(dob, DateTime.now());
+    } on ArgumentError {
+      return null;
+    }
+  }
 
   String get resolvedDateOfBirth {
     if (useDob) return dateOfBirth.trim();
     final months = double.tryParse(ageMonths.trim());
-    if (months == null || months < 0) return dateOfBirth.trim();
+    if (months == null || !months.isFinite || months < 0) return '';
+    // Free-form age has no original birth date, so this conversion is
+    // intentionally approximate UI input. Stored DOB-based paths use
+    // calendar-aware AgeService calculations.
     return DateFormat('yyyy-MM-dd').format(
       DateTime.now().subtract(Duration(days: (months * 30.4375).round())),
     );
   }
 
-  bool _optionalPositive(String value) {
+  bool get _heightValid {
+    if (heightValue.trim().isEmpty) return true;
+    final value = double.tryParse(heightValue.trim());
+    if (value == null || !value.isFinite) return false;
+    final heightCm = heightUnit == 'inch' ? value * 2.54 : value;
+    return heightCm >= minPlausibleHeightCm && heightCm <= maxPlausibleHeightCm;
+  }
+
+  bool _optionalInRange(String value, double min, double max) {
     if (value.trim().isEmpty) return true;
     final parsed = double.tryParse(value.trim());
-    return parsed != null && parsed > 0;
+    return parsed != null && parsed.isFinite && parsed >= min && parsed <= max;
   }
 
   AssessmentFormState copyWith({
@@ -124,9 +157,8 @@ class AssessmentFormState {
   }) {
     return AssessmentFormState(
       step: step ?? this.step,
-      selectedChildId: clearSelectedChild
-          ? null
-          : (selectedChildId ?? this.selectedChildId),
+      selectedChildId:
+          clearSelectedChild ? null : (selectedChildId ?? this.selectedChildId),
       childName: childName ?? this.childName,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       ageMonths: ageMonths ?? this.ageMonths,
@@ -138,15 +170,12 @@ class AssessmentFormState {
       heightValue: heightValue ?? this.heightValue,
       heightUnit: heightUnit ?? this.heightUnit,
       muacCm: muacCm ?? this.muacCm,
-      frontImagePath: clearFrontImage
-          ? null
-          : (frontImagePath ?? this.frontImagePath),
-      sideImagePath: clearSideImage
-          ? null
-          : (sideImagePath ?? this.sideImagePath),
-      backImagePath: clearBackImage
-          ? null
-          : (backImagePath ?? this.backImagePath),
+      frontImagePath:
+          clearFrontImage ? null : (frontImagePath ?? this.frontImagePath),
+      sideImagePath:
+          clearSideImage ? null : (sideImagePath ?? this.sideImagePath),
+      backImagePath:
+          clearBackImage ? null : (backImagePath ?? this.backImagePath),
       showValidationErrors: showValidationErrors ?? this.showValidationErrors,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       error: clearError ? null : (error ?? this.error),
@@ -161,10 +190,10 @@ class AssessmentFormNotifier extends StateNotifier<AssessmentFormState> {
   final Ref _ref;
 
   void updateChildName(String value) => state = state.copyWith(
-    childName: value,
-    clearSelectedChild: state.selectedChildId != null,
-    clearError: true,
-  );
+        childName: value,
+        clearSelectedChild: state.selectedChildId != null,
+        clearError: true,
+      );
 
   void updateDateOfBirth(String value) =>
       state = state.copyWith(dateOfBirth: value, clearError: true);
@@ -214,10 +243,10 @@ class AssessmentFormNotifier extends StateNotifier<AssessmentFormState> {
   void setImage(String role, String path) {
     state = switch (role) {
       'front' => state.copyWith(
-        frontImagePath: path,
-        showValidationErrors: false,
-        clearError: true,
-      ),
+          frontImagePath: path,
+          showValidationErrors: false,
+          clearError: true,
+        ),
       'side' => state.copyWith(sideImagePath: path),
       'back' => state.copyWith(backImagePath: path),
       _ => state,
@@ -273,8 +302,8 @@ class AssessmentFormNotifier extends StateNotifier<AssessmentFormState> {
     final heightCm = heightValue == null
         ? null
         : state.heightUnit == 'inch'
-        ? heightValue * 2.54
-        : heightValue;
+            ? heightValue * 2.54
+            : heightValue;
 
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {
@@ -295,6 +324,7 @@ class AssessmentFormNotifier extends StateNotifier<AssessmentFormState> {
       );
       _ref.read(assessmentResultProvider.notifier).state = result;
       _ref.invalidate(childrenProvider);
+      unawaited(_ref.read(syncServiceProvider).runOnce());
       state = state.copyWith(isSubmitting: false);
       return true;
     } catch (error) {
@@ -309,10 +339,7 @@ class AssessmentFormNotifier extends StateNotifier<AssessmentFormState> {
   }
 }
 
-final assessmentFormProvider =
-    StateNotifierProvider.autoDispose<
-      AssessmentFormNotifier,
-      AssessmentFormState
-    >((ref) {
-      return AssessmentFormNotifier(ref);
-    });
+final assessmentFormProvider = StateNotifierProvider.autoDispose<
+    AssessmentFormNotifier, AssessmentFormState>((ref) {
+  return AssessmentFormNotifier(ref);
+});

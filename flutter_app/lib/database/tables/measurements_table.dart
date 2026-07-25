@@ -28,4 +28,17 @@ class Measurements extends Table {
   RealColumn get muacCm => real().nullable()();
   TextColumn get muacStatus => text().nullable()();
   TextColumn get muacMethod => text().nullable()();
+  RealColumn get effectiveHeightCm => real().nullable()();
+  RealColumn get effectiveWeightKg => real().nullable()();
+  TextColumn get heightSource => text().nullable()();
+  TextColumn get weightSource => text().nullable()();
+  RealColumn get bmi => real().nullable()();
+  TextColumn get bmiStatus => text().nullable()();
+  TextColumn get poshanStatus => text().nullable()();
+  TextColumn get poshanTriggeredBy => text().nullable()();
+  TextColumn get classificationMethod => text().nullable()();
+  TextColumn get classificationRationale => text().nullable()();
+  TextColumn get mlModelVersion => text().nullable()();
+  BoolColumn get mlNonClinical => boolean().nullable()();
+  TextColumn get mlTrainingData => text().nullable()();
 }

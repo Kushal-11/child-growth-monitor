@@ -41,13 +41,14 @@ void main() {
 
     await tester.tap(find.byKey(const Key('assessment_next')));
     await tester.pump();
-    expect(find.text('Required'), findsOneWidget);
+    expect(find.text('Required'), findsWidgets);
     expect(find.byKey(const Key('assessment_step_1')), findsOneWidget);
 
     await tester.enterText(
       find.byKey(const Key('assessment_child_name_0')),
       'Aarav',
     );
+    _selectRequiredDemographics(container);
     await tester.tap(find.byKey(const Key('assessment_next')));
     await tester.pumpAndSettle();
 
@@ -65,7 +66,7 @@ void main() {
     await tester.enterText(find.byKey(const Key('assessment_weight')), '-1');
     await tester.tap(find.byKey(const Key('assessment_next')));
     await tester.pump();
-    expect(find.text('Must be a positive number'), findsOneWidget);
+    expect(find.textContaining('Enter a plausible value'), findsOneWidget);
     expect(find.byKey(const Key('assessment_step_2')), findsOneWidget);
   });
 
@@ -83,6 +84,7 @@ void main() {
       find.byKey(const Key('assessment_child_name_0')),
       'Meera',
     );
+    _selectRequiredDemographics(container);
     await tester.tap(find.byKey(const Key('assessment_next')));
     await tester.pumpAndSettle();
 
@@ -102,6 +104,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('assessment_step_2')), findsOneWidget);
   });
+
+  testWidgets('new assessment starts without fabricated DOB or sex',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final container = _container();
+    addTearDown(container.dispose);
+    await _pumpScreen(tester, container);
+
+    expect(container.read(assessmentFormProvider).dateOfBirth, isEmpty);
+    expect(container.read(assessmentFormProvider).sex, isEmpty);
+    expect(find.text('Select date of birth'), findsOneWidget);
+
+    await tester.tap(find.text('Male'));
+    await tester.pump();
+    expect(container.read(assessmentFormProvider).sex, 'M');
+    await tester.tap(find.text('Male'));
+    await tester.pump();
+    expect(container.read(assessmentFormProvider).sex, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+void _selectRequiredDemographics(ProviderContainer container) {
+  final date = DateTime.now().subtract(const Duration(days: 365));
+  final dob = date.toIso8601String().substring(0, 10);
+  final notifier = container.read(assessmentFormProvider.notifier);
+  notifier.updateSex('M');
+  notifier.updateDateOfBirth(dob);
 }
 
 ProviderContainer _container() {

@@ -1,12 +1,13 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:child_growth_monitor_app/database/database.dart';
 
 void main() {
-  test('schema v3 fresh DB has new columns and inserts work', () async {
+  test('schema v4 fresh DB has Poshan provenance columns', () async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     final id = await db.into(db.children).insert(
           ChildrenCompanion.insert(
@@ -20,6 +21,24 @@ void main() {
     expect(child.isArchived, false);
     expect(child.ownerUserId, isNull);
     expect(child.photoPath, isNull);
+    final childId = child.id;
+    final visitId = await db.into(db.visits).insert(
+          VisitsCompanion.insert(
+            childId: childId,
+            localUuid: '00000000-0000-4000-8000-000000000001',
+            ageMonths: 12,
+          ),
+        );
+    await db.into(db.measurements).insert(
+          MeasurementsCompanion.insert(
+            visitId: visitId,
+            poshanStatus: const Value('Indeterminate'),
+            classificationMethod: const Value('poshan_setu_v1'),
+          ),
+        );
+    final measurement = await db.select(db.measurements).getSingle();
+    expect(measurement.poshanStatus, 'Indeterminate');
+    expect(measurement.mlTrainingData, isNull);
     await db.close();
   });
 
@@ -41,7 +60,10 @@ void main() {
     final legacy =
         AppDatabase.forTesting(NativeDatabase(file, enableMigrations: false));
 
-    // children: v1 shape (no owner_user_id / photo_path / is_archived).
+    final childrenV3Columns = legacyVersion >= 3
+        ? 'owner_user_id INTEGER, photo_path TEXT, '
+            'is_archived INTEGER NOT NULL DEFAULT 0, '
+        : '';
     await legacy.customStatement(
       'CREATE TABLE children ('
       'id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
@@ -50,6 +72,7 @@ void main() {
       'sex TEXT NOT NULL, '
       'guardian_name TEXT, '
       'location TEXT, '
+      '$childrenV3Columns'
       "created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')), "
       "updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')))",
     );
@@ -67,7 +90,8 @@ void main() {
         'image_path TEXT, '
         'side_image_path TEXT, '
         'back_image_path TEXT, '
-        'notes TEXT)',
+        'notes TEXT'
+        '${legacyVersion >= 3 ? ", owner_user_id INTEGER, entry_method TEXT NOT NULL DEFAULT 'assessment'" : ""})',
       );
       await legacy.customStatement(
         'CREATE TABLE measurements ('
@@ -86,7 +110,7 @@ void main() {
     await legacy.close();
 
     // 2) Reopen with migrations enabled. Drift sees user_version < schemaVersion
-    //    (3) and runs the real onUpgrade migrator. A query forces it to open.
+    //    (4) and runs the real onUpgrade migrator. A query forces it to open.
     final upgraded = AppDatabase.forTesting(NativeDatabase(file));
     final rows = await upgraded.select(upgraded.children).get();
     expect(rows, isA<List>());
@@ -114,15 +138,31 @@ void main() {
     expect(row.isArchived, false);
     expect(row.ownerUserId, isNull);
 
+    final measurementCols =
+        await upgraded.customSelect('PRAGMA table_info(measurements)').get();
+    final measurementNames =
+        measurementCols.map((row) => row.data['name'] as String).toSet();
+    expect(measurementNames, contains('effective_height_cm'));
+    expect(measurementNames, contains('bmi_status'));
+    expect(measurementNames, contains('poshan_status'));
+    expect(measurementNames, contains('classification_method'));
+    expect(measurementNames, contains('ml_model_version'));
+    expect(measurementNames, contains('ml_non_clinical'));
+    expect(measurementNames, contains('ml_training_data'));
+
     await upgraded.close();
   }
 
-  test('v2 -> v3 upgrade runs without crashing and adds visits columns',
+  test('v3 -> v4 preserves rows and adds Poshan columns', () async {
+    await runUpgradeFrom(3);
+  });
+
+  test('v2 -> v4 upgrade runs without crashing and adds visits columns',
       () async {
     await runUpgradeFrom(2);
   });
 
-  test('v1 -> v3 upgrade runs without crashing (no duplicate-column)',
+  test('v1 -> v4 upgrade runs without crashing (no duplicate-column)',
       () async {
     // Regression: a v1 DB hits the from < 2 destructive recreate (which builds
     // visits at the current schema, already including the new columns) AND the

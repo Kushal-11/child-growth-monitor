@@ -67,6 +67,9 @@ class WastingPrediction {
   final double riskProbability;
   final double overweightProbability;
   final String wastingStatus;
+  final String? modelVersion;
+  final String? trainingData;
+  final bool? nonClinical;
 
   const WastingPrediction({
     this.estimatedWeightKg,
@@ -76,5 +79,8 @@ class WastingPrediction {
     required this.riskProbability,
     required this.overweightProbability,
     required this.wastingStatus,
+    this.modelVersion,
+    this.trainingData,
+    this.nonClinical,
   });
 }

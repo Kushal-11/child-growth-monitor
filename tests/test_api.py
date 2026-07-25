@@ -96,6 +96,104 @@ class TestAssessEndpoint:
         )
         assert response.status_code == 400
 
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        (
+            ("height_cm", "10"),
+            ("weight_kg", "nan"),
+            ("muac_cm", "30"),
+        ),
+    )
+    def test_rejects_implausible_or_non_finite_measurements(
+        self, client, field, value
+    ):
+        import io
+
+        response = client.post(
+            "/api/v1/assess",
+            data={
+                "child_name": "Validation Child",
+                "date_of_birth": "2024-01-01",
+                "sex": "M",
+                field: value,
+            },
+            files={"image": ("test.jpg", io.BytesIO(b"image"), "image/jpeg")},
+        )
+        assert response.status_code == 400
+
+    def test_rejects_future_dob(self, client):
+        import io
+
+        response = client.post(
+            "/api/v1/assess",
+            data={
+                "child_name": "Future Child",
+                "date_of_birth": "2099-01-01",
+                "sex": "F",
+            },
+            files={"image": ("test.jpg", io.BytesIO(b"image"), "image/jpeg")},
+        )
+        assert response.status_code == 400
+        assert "date_of_birth" in response.json()["detail"]
+
+    def test_pose_runtime_unavailable_returns_503(
+        self, client, tmp_path, monkeypatch
+    ):
+        import io
+
+        from app.api import routes as routes_module
+        from app.services.measurement_service import PoseRuntimeUnavailableError
+
+        class UnavailableService:
+            @staticmethod
+            def _compute_age_months(_dob, _today):
+                return 24.0
+
+            @staticmethod
+            def _validate_inputs(**_kwargs):
+                return None
+
+            @staticmethod
+            def assess(**_kwargs):
+                raise PoseRuntimeUnavailableError("model asset is missing")
+
+        original = app.dependency_overrides.get(
+            routes_module.get_assessment_service
+        )
+        app.dependency_overrides[routes_module.get_assessment_service] = (
+            lambda: UnavailableService()
+        )
+        monkeypatch.setattr(routes_module, "UPLOAD_DIR", tmp_path)
+        try:
+            response = client.post(
+                "/api/v1/assess",
+                data={
+                    "child_name": "Runtime Child",
+                    "date_of_birth": "2024-01-01",
+                    "sex": "M",
+                },
+                files={
+                    "image": (
+                        "test.jpg",
+                        io.BytesIO(b"image"),
+                        "image/jpeg",
+                    )
+                },
+            )
+        finally:
+            if original is None:
+                app.dependency_overrides.pop(
+                    routes_module.get_assessment_service, None
+                )
+            else:
+                app.dependency_overrides[
+                    routes_module.get_assessment_service
+                ] = original
+
+        assert response.status_code == 503
+        assert "Pose measurement runtime is unavailable" in response.json()["detail"]
+        assert not list(tmp_path.iterdir())
+
 
 class TestWebUI:
     def test_index_page(self, client):
