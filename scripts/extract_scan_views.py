@@ -27,6 +27,12 @@ from scripts.intake_check import VIDEO_EXTENSIONS  # noqa: E402
 DEFAULT_RAW = Path("field_data/raw")
 DEFAULT_OUT = Path("field_data/derived")
 DEFAULT_REPORT = Path("field_data/reports/video_views.csv")
+DEFAULT_SAMPLE_EVERY = 15
+DEFAULT_MAX_FRAMES = 120
+FRONTAL_SCORE_FLOOR = 0.05
+SHARPNESS_SCORE_CAP = 200.0
+POSE_RANK_WEIGHT = 0.7
+SHARPNESS_RANK_WEIGHT = 0.3
 REPORT_COLS = [
     "child_id", "video_file", "frames_sampled", "usable_frames",
     "front_best", "side_best", "unknown_best", "reason",
@@ -56,10 +62,13 @@ def rank_frame(cand: FrameCandidate, role: str) -> float:
     s = cand.score
     base = s.pose_confidence * s.coverage * s.upright
     if role == "front":
-        base *= max(s.frontal, 0.05)
+        base *= max(s.frontal, FRONTAL_SCORE_FLOOR)
     # Prefer sharp frames, capped so a blurry high-confidence pose can still
     # lose to a crisp frame with similar pose quality.
-    return base * (0.7 + 0.3 * min(s.sharpness / 200.0, 1.0))
+    sharpness = min(s.sharpness / SHARPNESS_SCORE_CAP, 1.0)
+    return base * (
+        POSE_RANK_WEIGHT + SHARPNESS_RANK_WEIGHT * sharpness
+    )
 
 
 def choose_best_by_orientation(
@@ -106,10 +115,39 @@ def _sample_video(
             except Exception as e:
                 failures.append(f"frame {frame_idx}: {e}")
                 continue
+            if not score.usable:
+                failures.append(
+                    f"frame {frame_idx}: {score.reason or 'failed pose QC'}"
+                )
+                continue
             candidates.append(FrameCandidate(frame_idx, frame.copy(), score))
     finally:
         cap.release()
     return candidates, sampled, failures
+
+
+def _video_inputs(videos: Iterable[Path]) -> list[dict]:
+    """Build a stable cache key for the current video inputs."""
+    return [
+        {
+            "name": video.name,
+            "size": video.stat().st_size,
+            "mtime_ns": video.stat().st_mtime_ns,
+        }
+        for video in videos
+    ]
+
+
+def _manifest_outputs_exist(
+    manifest: dict, child_out_root: Path,
+) -> bool:
+    """Return whether every selected path recorded by a manifest still exists."""
+    for row in manifest.get("rows") or []:
+        for role in ("front", "side", "unknown"):
+            relative_path = row.get(f"{role}_best")
+            if relative_path and not (child_out_root / relative_path).is_file():
+                return False
+    return True
 
 
 def extract_child_video_views(
@@ -129,15 +167,31 @@ def extract_child_video_views(
     )
     out_dir = out_root / child_id / "video_views"
     manifest_path = out_dir / "manifest.json"
+    inputs = _video_inputs(videos)
     if manifest_path.exists() and not force:
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            return manifest.get("rows") or []
+            cache_matches = (
+                manifest.get("inputs") == inputs
+                and manifest.get("sample_every") == sample_every
+                and manifest.get("max_frames") == max_frames
+                and isinstance(manifest.get("rows"), list)
+                and _manifest_outputs_exist(manifest, out_root / child_id)
+            )
+            if cache_matches:
+                return manifest["rows"]
         except (OSError, json.JSONDecodeError):
             pass
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    manifest: dict = {"child_id": child_id, "videos": [], "rows": rows}
+    manifest: dict = {
+        "child_id": child_id,
+        "inputs": inputs,
+        "sample_every": sample_every,
+        "max_frames": max_frames,
+        "videos": [],
+        "rows": rows,
+    }
     for video in videos:
         candidates, sampled, failures = _sample_video(
             video, landmarker, sample_every, max_frames
@@ -146,9 +200,9 @@ def extract_child_video_views(
         video_record = {
             "source": video.name,
             "frames_sampled": sampled,
-            "usable_frames": sum(1 for c in candidates if c.score.usable),
+            "usable_frames": len(candidates),
             "selected": {},
-            "failures": failures[:10],
+            "failures": failures,
         }
         row = {
             "child_id": child_id,
@@ -164,11 +218,21 @@ def extract_child_video_views(
             cand = best.get(role)
             if cand is None:
                 continue
-            out_name = f"{video.stem}_{role}_best.jpg"
+            suffix = video.suffix.lower().lstrip(".")
+            out_name = f"{video.stem}_{suffix}_{role}_best.jpg"
             out_path = out_dir / out_name
             import cv2
 
-            cv2.imwrite(str(out_path), cand.image_bgr)
+            try:
+                written = cv2.imwrite(str(out_path), cand.image_bgr)
+            except Exception as error:
+                failures.append(f"{role} output write failed: {error}")
+                continue
+            if not written:
+                failures.append(
+                    f"{role} output write failed: {out_path.name}"
+                )
+                continue
             rel = str(out_path.relative_to(out_root / child_id))
             row[f"{role}_best"] = rel
             video_record["selected"][role] = {
@@ -178,6 +242,8 @@ def extract_child_video_views(
             }
         if not any(row[f"{role}_best"] for role in ("front", "side", "unknown")):
             row["reason"] = "; ".join(failures) or "no usable frame"
+        elif failures:
+            row["reason"] = f"{len(failures)} frame/output failure(s); see manifest"
         rows.append(row)
         manifest["videos"].append(video_record)
 
@@ -214,13 +280,25 @@ def run_extract(
     return rows
 
 
+def _positive_int(value: str) -> int:
+    """Parse a strictly positive integer for argparse."""
+    parsed = int(value)
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return parsed
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--raw", type=Path, default=DEFAULT_RAW)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
-    parser.add_argument("--sample-every", type=int, default=15)
-    parser.add_argument("--max-frames", type=int, default=120)
+    parser.add_argument(
+        "--sample-every", type=_positive_int, default=DEFAULT_SAMPLE_EVERY,
+    )
+    parser.add_argument(
+        "--max-frames", type=_positive_int, default=DEFAULT_MAX_FRAMES,
+    )
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
 

@@ -5,6 +5,8 @@ score_photo is monkeypatched everywhere; no MediaPipe model is loaded.
 import json
 from pathlib import Path
 
+from pytest import MonkeyPatch
+
 from scripts.photo_qc import PhotoScore
 from scripts.clean_media import Candidate, select_best, clean_child, run_clean
 
@@ -449,7 +451,9 @@ def test_arm_photo_not_scored_or_blamed(tmp_path, monkeypatch):
     assert (tmp_path / "cleaned" / "001" / "archive" / "arm" / "arm.jpg").exists()
 
 
-def test_back_and_arm_archives_are_counted_in_report(tmp_path, monkeypatch):
+def test_back_and_arm_archives_are_counted_in_report(
+    tmp_path: Path, monkeypatch: MonkeyPatch,
+) -> None:
     """The QC report should expose preserved non-measurement views."""
     import cv2
     import numpy as np
