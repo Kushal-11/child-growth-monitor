@@ -5,12 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n_provider.dart';
 import '../../providers/api_provider.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
 import '../../providers/sync_provider.dart';
 import '../../services/image_storage_service.dart';
 import '../shared/app_scaffold.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.imageStorageService});
+
+  final ImageStorageService? imageStorageService;
 
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
@@ -18,6 +22,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _urlController = TextEditingController();
+  late final ImageStorageService _imageStorageService;
   bool _loading = false;
   bool? _healthy;
   String? _error;
@@ -27,6 +32,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    _imageStorageService = widget.imageStorageService ?? ImageStorageService();
     _loadUrl();
     _refreshStorage();
   }
@@ -85,7 +91,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _refreshStorage() async {
-    final used = await ImageStorageService().totalUsedBytes();
+    final used = await _imageStorageService.totalUsedBytes();
     if (!mounted) return;
     setState(() => _bytesUsed = used);
   }
@@ -100,7 +106,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _clearImages() async {
-    await ImageStorageService().clearAll();
+    await _imageStorageService.clearAll();
     await _refreshStorage();
   }
 
@@ -117,13 +123,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return AppScaffold(
       currentIndex: 2,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           Text(
             t('settings_heading', ref),
             style: theme.textTheme.headlineSmall,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xs),
+          Text(t('settings_subtitle', ref), style: theme.textTheme.bodyMedium),
+          const SizedBox(height: AppSpacing.xl),
 
           // Server Connection card
           Card(
@@ -132,12 +140,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    t('server_connection', ref),
-                    style: theme.textTheme.titleMedium,
+                  _SettingsSectionHeader(
+                    icon: Icons.dns_outlined,
+                    title: t('server_connection', ref),
+                    subtitle: t('server_connection_help', ref),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   TextFormField(
+                    key: const Key('settings_base_url'),
                     controller: _urlController,
                     decoration: InputDecoration(
                       labelText: t('api_base_url', ref),
@@ -145,7 +155,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     keyboardType: TextInputType.url,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
 
                   // Status indicator
                   if (_loading)
@@ -160,7 +170,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         children: [
                           Icon(
                             _healthy! ? Icons.check_circle : Icons.error,
-                            color: _healthy! ? Colors.green : Colors.red,
+                            color: _healthy!
+                                ? AppColors.successText
+                                : AppColors.error,
                             size: 18,
                           ),
                           const SizedBox(width: 8),
@@ -170,7 +182,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   ? t('connected_ms', ref)
                                   : _error ?? t('connection_failed', ref),
                               style: TextStyle(
-                                color: _healthy! ? Colors.green : Colors.red,
+                                color: _healthy!
+                                    ? AppColors.successText
+                                    : AppColors.error,
                                 fontSize: 13,
                               ),
                             ),
@@ -184,12 +198,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     children: [
                       Expanded(
                         child: FilledButton(
+                          key: const Key('settings_save_test'),
                           onPressed: _loading ? null : _saveAndTest,
                           child: Text(t('save_and_test', ref)),
                         ),
                       ),
                       const SizedBox(width: 8),
                       TextButton(
+                        key: const Key('settings_reset_default'),
                         onPressed: _loading ? null : _resetToDefault,
                         child: Text(t('reset_default', ref)),
                       ),
@@ -200,7 +216,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
 
           Card(
             child: Padding(
@@ -208,20 +224,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(t('sync_status', ref),
-                      style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 12),
-                  Consumer(builder: (context, ref, _) {
-                    final pending =
-                        ref.watch(pendingSyncCountProvider).value ?? 0;
-                    return Text(
-                      pending == 0
-                          ? t('sync_all_synced', ref)
-                          : '${t('sync_pending', ref)}: $pending',
-                    );
-                  }),
+                  _SettingsSectionHeader(
+                    icon: Icons.cloud_sync_outlined,
+                    title: t('sync_status', ref),
+                    subtitle: t('sync_status_help', ref),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final pending =
+                          ref.watch(pendingSyncCountProvider).value ?? 0;
+                      return Text(
+                        pending == 0
+                            ? t('sync_all_synced', ref)
+                            : '${t('sync_pending', ref)}: $pending',
+                      );
+                    },
+                  ),
                   const SizedBox(height: 12),
                   FilledButton.icon(
+                    key: const Key('settings_sync_now'),
                     onPressed: _syncing ? null : _syncNow,
                     icon: _syncing
                         ? const SizedBox(
@@ -237,7 +259,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
 
           Card(
             child: Padding(
@@ -245,9 +267,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(t('storage_title', ref),
-                      style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 8),
+                  _SettingsSectionHeader(
+                    icon: Icons.folder_copy_outlined,
+                    title: t('storage_title', ref),
+                    subtitle: t('storage_help', ref),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
                   Text(
                     _bytesUsed == null
                         ? '...'
@@ -255,6 +280,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
+                    key: const Key('settings_clear_images'),
                     onPressed: _clearImages,
                     icon: const Icon(Icons.delete_outline),
                     label: Text(t('storage_clear', ref)),
@@ -265,6 +291,48 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SettingsSectionHeader extends StatelessWidget {
+  const _SettingsSectionHeader({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.primaryContainer,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(icon, color: AppColors.primary),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: theme.textTheme.titleMedium),
+              const SizedBox(height: 2),
+              Text(subtitle, style: theme.textTheme.bodyMedium),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

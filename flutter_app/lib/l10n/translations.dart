@@ -8,7 +8,10 @@ const Map<String, Map<String, String>> translations = {
   },
   'lang_en': {'en': 'English', 'mr': 'English'},
   'lang_mr': {'en': 'मराठी', 'mr': 'मराठी'},
-  'assess_heading': {'en': 'Child Growth Assessment', 'mr': 'बाल वाढ मूल्यांकन'},
+  'assess_heading': {
+    'en': 'Child Growth Assessment',
+    'mr': 'बाल वाढ मूल्यांकन',
+  },
   'assess_subtitle': {
     'en':
         'Upload a photo to automatically estimate height, weight, and MUAC, '
@@ -65,7 +68,10 @@ const Map<String, Map<String, String>> translations = {
     'en': 'Or enter age in months',
     'mr': 'किंवा वय महिन्यांत प्रविष्ट करा',
   },
-  'optional_measurements': {'en': 'Optional Measurements', 'mr': 'ऐच्छिक मोजमाप'},
+  'optional_measurements': {
+    'en': 'Optional Measurements',
+    'mr': 'ऐच्छिक मोजमाप',
+  },
   'optional_measurements_note': {
     'en': '— improve accuracy if available',
     'mr': '— उपलब्ध असल्यास अचूकता वाढते',
@@ -151,7 +157,10 @@ const Map<String, Map<String, String>> translations = {
   'th_weight_kg': {'en': 'Weight (kg)', 'mr': 'वजन (किग्रॅ)'},
   'th_haz_status': {'en': 'HAZ Status', 'mr': 'HAZ स्थिती'},
   'th_whz_status': {'en': 'WHZ Status', 'mr': 'WHZ स्थिती'},
-  'no_measurement_data': {'en': 'No measurement data', 'mr': 'मोजमाप माहिती नाही'},
+  'no_measurement_data': {
+    'en': 'No measurement data',
+    'mr': 'मोजमाप माहिती नाही',
+  },
   'no_visits_yet': {
     'en': 'No visits recorded yet.',
     'mr': 'अद्याप कोणतीही भेट नोंदवलेली नाही.',
@@ -222,7 +231,10 @@ const Map<String, Map<String, String>> translations = {
   'sam_probability': {'en': 'SAM probability', 'mr': 'SAM संभाव्यता'},
   'mam_probability': {'en': 'MAM probability', 'mr': 'MAM संभाव्यता'},
   'normal_probability': {'en': 'Normal probability', 'mr': 'सामान्य संभाव्यता'},
-  'ml_estimated_weight': {'en': 'ML estimated weight:', 'mr': 'ML अंदाजित वजन:'},
+  'ml_estimated_weight': {
+    'en': 'ML estimated weight:',
+    'mr': 'ML अंदाजित वजन:',
+  },
   'muac_note_strong': {'en': 'MUAC note:', 'mr': 'MUAC टीप:'},
   'muac_note_text': {
     'en':
@@ -232,7 +244,10 @@ const Map<String, Map<String, String>> translations = {
         'WHZ वरून अंदाजित मूल्य — थेट टेप मोजमाप नाही. '
         'Clinical निर्णयांसाठी भौतिक MUAC टेपने पुष्टी करा.',
   },
-  'assess_another': {'en': 'Assess Another Child', 'mr': 'दुसऱ्या मुलाचे मूल्यांकन'},
+  'assess_another': {
+    'en': 'Assess Another Child',
+    'mr': 'दुसऱ्या मुलाचे मूल्यांकन',
+  },
   'view_all_children': {'en': 'View All Children', 'mr': 'सर्व मुले पहा'},
   'print_report': {'en': 'Print Report', 'mr': 'अहवाल छापा'},
   'age_outside_muac': {
@@ -329,4 +344,45 @@ const Map<String, Map<String, String>> translations = {
   'storage_title': {'en': 'Storage', 'mr': 'स्टोरेज'},
   'storage_used': {'en': 'Used', 'mr': 'वापरले'},
   'storage_clear': {'en': 'Clear all images', 'mr': 'सर्व प्रतिमा हटवा'},
+  'settings_subtitle': {
+    'en': 'Keep the app ready for offline field work.',
+    'mr': 'क्षेत्रातील ऑफलाइन कामासाठी अ‍ॅप तयार ठेवा.',
+  },
+  'server_connection_help': {
+    'en': 'Set the clinic API endpoint before signing in or syncing visits.',
+    'mr': 'साइन इन किंवा भेटी सिंक करण्यापूर्वी क्लिनिक API endpoint सेट करा.',
+  },
+  'sync_status_help': {
+    'en': 'Queued assessments are uploaded when the server is reachable.',
+    'mr': 'सर्व्हर उपलब्ध झाल्यावर रांगेतील मूल्यांकन अपलोड होतात.',
+  },
+  'storage_help': {
+    'en': 'Captured images remain on device for offline review until cleared.',
+    'mr': 'हटवले जाईपर्यंत फोटो ऑफलाइन पाहणीसाठी उपकरणावर राहतात.',
+  },
+  'server_settings': {'en': 'Server settings', 'mr': 'सर्व्हर सेटिंग्ज'},
+  'configure_server': {'en': 'Configure server', 'mr': 'सर्व्हर कॉन्फिगर करा'},
+  'login_welcome': {
+    'en': 'Field-ready growth assessment for every child.',
+    'mr': 'प्रत्येक मुलासाठी क्षेत्रात वापरण्यास तयार वाढ मूल्यांकन.',
+  },
+  'offline_ready': {'en': 'Works offline', 'mr': 'ऑफलाइन कार्य करते'},
+  'sign_in': {'en': 'Sign in', 'mr': 'साइन इन करा'},
+  'sign_in_help': {
+    'en': 'Use your field worker account to continue.',
+    'mr': 'पुढे जाण्यासाठी तुमचे क्षेत्र कर्मचारी खाते वापरा.',
+  },
+  'username_or_email': {
+    'en': 'Username or email',
+    'mr': 'वापरकर्तानाव किंवा ईमेल',
+  },
+  'password': {'en': 'Password', 'mr': 'पासवर्ड'},
+  'show_password': {'en': 'Show password', 'mr': 'पासवर्ड दाखवा'},
+  'hide_password': {'en': 'Hide password', 'mr': 'पासवर्ड लपवा'},
+  'log_in': {'en': 'Log in', 'mr': 'लॉग इन करा'},
+  'signing_in': {'en': 'Signing in…', 'mr': 'साइन इन होत आहे…'},
+  'login_privacy_note': {
+    'en': 'Assessment data stays encrypted on this device.',
+    'mr': 'मूल्यांकन माहिती या उपकरणावर कूटबद्ध राहते.',
+  },
 };
