@@ -51,6 +51,17 @@ class TestHAZBoundaries:
         assert S > 0
         assert NutritionService(who_data).compute_haz(sex, age_months, M) == pytest.approx(0)
 
+    @pytest.mark.parametrize("sex", ["F", "M"])
+    def test_24_month_transition_selects_standing_height_row(
+        self, who_data, sex
+    ):
+        rows = who_data._haz_lms[
+            (who_data._haz_lms["sex"] == sex)
+            & (who_data._haz_lms["age_months"] == 24)
+        ]
+        assert len(rows) == 1
+        assert rows.iloc[0]["measure"] == "height"
+
     def test_age_above_authoritative_boundary_is_unavailable(self, who_data):
         assert who_data.get_haz_lms("F", 61) is None
 

@@ -74,16 +74,57 @@ class WHODataService:
         if df["age_months"].isna().any() or (df["age_months"] % 1 != 0).any():
             raise WHODataError(f"WHO length/height-for-age workbook {path} contains malformed ages")
         df["age_months"] = df["age_months"].astype(int)
-        if (~df["sex"].isin(["F", "M"])).any() or df.duplicated(["sex", "age_months"]).any():
-            raise WHODataError(f"WHO length/height-for-age workbook {path} has invalid or duplicate sex/age rows")
+        if (~df["sex"].isin(["F", "M"])).any():
+            raise WHODataError(
+                f"WHO length/height-for-age workbook {path} has invalid sex rows"
+            )
+
+        # WHO publishes both recumbent length and standing height at the
+        # 24-month transition. The packaged source contains both transition
+        # rows under the ``height`` label; standing height is the lower median
+        # (WHO applies the standard 0.7 cm length-to-height adjustment).
+        # Permit exactly this transition duplicate and reject duplicates
+        # anywhere else.
+        expected_measure = np.where(df["age_months"] < 24, "length", "height")
+        nonclinical_measure = df["measure"].to_numpy() != expected_measure
+        allowed_transition_row = df["age_months"].to_numpy() == 24
+        if (nonclinical_measure & ~allowed_transition_row).any():
+            raise WHODataError(
+                f"WHO length/height-for-age workbook {path} has invalid "
+                "length/height age coverage"
+            )
+
+        duplicate_rows = df.duplicated(["sex", "age_months"], keep=False)
+        if duplicate_rows.any():
+            duplicates = df.loc[duplicate_rows]
+            group_sizes = duplicates.groupby(["sex", "age_months"]).size()
+            if (
+                (duplicates["age_months"] != 24).any()
+                or (group_sizes != 2).any()
+            ):
+                raise WHODataError(
+                    f"WHO length/height-for-age workbook {path} has invalid "
+                    "or duplicate sex/age rows"
+                )
+            standing_height_indices = duplicates.groupby(
+                ["sex", "age_months"]
+            )["M"].idxmin()
+            df = pd.concat(
+                [df.loc[~duplicate_rows], df.loc[standing_height_indices]],
+                ignore_index=True,
+            )
+
+        expected_measure = np.where(df["age_months"] < 24, "length", "height")
+        if not (df["measure"].to_numpy() == expected_measure).all():
+            raise WHODataError(
+                f"WHO length/height-for-age workbook {path} has invalid "
+                "length/height age coverage"
+            )
         for sex in ("F", "M"):
             ages = set(df.loc[df["sex"] == sex, "age_months"])
             missing_ages = set(range(61)).difference(ages)
             if missing_ages:
                 raise WHODataError(f"WHO length/height-for-age workbook {path} lacks {sex} age coverage: {sorted(missing_ages)}")
-        expected_measure = np.where(df["age_months"] < 24, "length", "height")
-        if not (df["measure"].to_numpy() == expected_measure).all():
-            raise WHODataError(f"WHO length/height-for-age workbook {path} has invalid length/height age coverage")
         return df
 
     def _load_size_lms(self, label: str, keys: Tuple[str, str]) -> pd.DataFrame:
