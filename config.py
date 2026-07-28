@@ -120,6 +120,11 @@ ZSCORE_CLASSIFICATIONS = {
     },
 }
 
+# Physiological gate for accepting an ML weight estimate relative to the
+# authoritative WHO median. Values outside this range fall back safely.
+ML_WEIGHT_MIN_MEDIAN_RATIO = 0.45
+ML_WEIGHT_MAX_MEDIAN_RATIO = 1.80
+
 # ============================================================
 # ANTHROPOMETRIC RATIOS FOR HEIGHT ESTIMATION
 # ============================================================

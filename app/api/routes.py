@@ -11,6 +11,7 @@ import shutil
 import uuid
 import json
 from datetime import date
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -28,6 +29,11 @@ from config import UPLOAD_DIR
 
 
 router = APIRouter(prefix="/api/v1", tags=["API"])
+
+
+def _safe_upload_name(filename: Optional[str]) -> str:
+    """Discard any client-supplied directory components."""
+    return Path(filename or "capture.jpg").name
 
 
 def _decode_string_list(value: Optional[str]) -> list[str]:
@@ -116,7 +122,8 @@ async def assess_child(
 
     # Save front image
     UPLOAD_DIR.mkdir(exist_ok=True)
-    filename = f"{uuid.uuid4().hex}_{image.filename}"
+    safe_original_name = _safe_upload_name(image.filename)
+    filename = f"{uuid.uuid4().hex}_{safe_original_name}"
     file_path = UPLOAD_DIR / filename
     with open(file_path, "wb") as f:
         shutil.copyfileobj(image.file, f)

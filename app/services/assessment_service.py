@@ -35,7 +35,12 @@ from app.services.muac_service import MUACService
 from app.services.nutrition_service import NutritionService
 from app.services.poshan_setu_service import classify_poshan_setu
 from app.services.who_data_service import WHODataService
-from config import WASTING_STATUS_LABELS, WastingStatus
+from config import (
+    ML_WEIGHT_MAX_MEDIAN_RATIO,
+    ML_WEIGHT_MIN_MEDIAN_RATIO,
+    WASTING_STATUS_LABELS,
+    WastingStatus,
+)
 
 
 class AssessmentService:
@@ -121,7 +126,9 @@ class AssessmentService:
                     sex, effective_height, age_months=age_months
                 )
                 weight_in_bounds = who_median_ref is not None and (
-                    0.45 * who_median_ref <= ml_weight <= 1.80 * who_median_ref
+                    ML_WEIGHT_MIN_MEDIAN_RATIO * who_median_ref
+                    <= ml_weight
+                    <= ML_WEIGHT_MAX_MEDIAN_RATIO * who_median_ref
                 )
                 if weight_in_bounds:
                     effective_weight = ml_weight

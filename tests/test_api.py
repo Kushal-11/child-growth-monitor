@@ -71,6 +71,21 @@ class TestChildrenEndpoints:
 
 
 class TestAssessEndpoint:
+    @pytest.mark.parametrize(
+        ("supplied", "expected"),
+        [
+            ("../../outside.jpg", "outside.jpg"),
+            (r"C:\fakepath\capture.jpg", r"C:\fakepath\capture.jpg"),
+            (None, "capture.jpg"),
+        ],
+    )
+    def test_upload_filename_discards_posix_path_components(
+        self, supplied: str | None, expected: str
+    ) -> None:
+        from app.api.routes import _safe_upload_name
+
+        assert _safe_upload_name(supplied) == expected
+
     def test_missing_fields(self, client):
         """Missing required form fields should return 422."""
         response = client.post("/api/v1/assess", data={"child_name": "Test"})
