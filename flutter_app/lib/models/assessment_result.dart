@@ -8,6 +8,11 @@ class AssessmentResult {
     required this.nutrition,
     this.mlPrediction,
     this.muac,
+    this.bmiValue,
+    this.bmiStatus = 'Insufficient data',
+    this.protocolStatus = 'Insufficient data',
+    this.triggeredIndicators = const [],
+    this.measurementMethods = const {},
   });
 
   final String childName;
@@ -18,6 +23,11 @@ class AssessmentResult {
   final Nutrition nutrition;
   final MlPrediction? mlPrediction;
   final MuacDetail? muac;
+  final double? bmiValue;
+  final String bmiStatus;
+  final String protocolStatus;
+  final List<String> triggeredIndicators;
+  final Map<String, String> measurementMethods;
 
   factory AssessmentResult.fromJson(Map<String, dynamic> json) {
     return AssessmentResult(
@@ -37,6 +47,11 @@ class AssessmentResult {
       muac: json['muac'] == null
           ? null
           : MuacDetail.fromJson(json['muac'] as Map<String, dynamic>),
+      bmiValue: (json['bmi_value'] as num?)?.toDouble(),
+      bmiStatus: json['bmi_status'] as String? ?? 'Insufficient data',
+      protocolStatus: json['protocol_status'] as String? ?? 'Insufficient data',
+      triggeredIndicators: (json['triggered_indicators'] as List<dynamic>? ?? const []).cast<String>(),
+      measurementMethods: (json['measurement_methods'] as Map<String, dynamic>? ?? const {}).map((k, v) => MapEntry(k, v.toString())),
     );
   }
 }

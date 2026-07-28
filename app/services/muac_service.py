@@ -30,6 +30,8 @@ Reference for MUAC medians:
 from dataclasses import dataclass
 from typing import Optional
 
+from config import MUAC_MAM_MAX_CM, MUAC_SAM_MAX_CM
+
 
 # ── WHO MUAC-for-age medians (cm) ──────────────────────────────────────────
 # Source: WHO Child Growth Standards 2006 — Arm circumference-for-age tables
@@ -338,8 +340,8 @@ class MUACService:
         """Classify MUAC using WHO absolute thresholds (6–59 months only)."""
         if not age_in_range:
             return None
-        if muac_cm < 11.5:
+        if muac_cm < MUAC_SAM_MAX_CM:
             return "SAM"
-        if muac_cm < 12.5:
+        if muac_cm < MUAC_MAM_MAX_CM:
             return "At Risk (MAM)"
         return "Normal"

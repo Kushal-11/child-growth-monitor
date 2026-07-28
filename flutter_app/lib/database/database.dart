@@ -19,7 +19,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -48,6 +48,13 @@ class AppDatabase extends _$AppDatabase {
               await migrator.addColumn(visits, visits.ownerUserId);
               await migrator.addColumn(visits, visits.entryMethod);
             }
+          }
+          if (from >= 2 && from < 4) {
+            await migrator.addColumn(measurements, measurements.bmiValue);
+            await migrator.addColumn(measurements, measurements.bmiStatus);
+            await migrator.addColumn(measurements, measurements.protocolStatus);
+            await migrator.addColumn(measurements, measurements.triggeredIndicators);
+            await migrator.addColumn(measurements, measurements.measurementMethods);
           }
         },
       );

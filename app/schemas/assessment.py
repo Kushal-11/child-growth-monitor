@@ -1,6 +1,6 @@
 """Pydantic schemas for API request/response validation."""
 from datetime import date
-from typing import Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -80,4 +80,9 @@ class AssessmentResponse(BaseModel):
     nutrition: NutritionDetail
     ml_prediction: Optional[MLPrediction] = None
     muac: Optional[MUACDetail] = None
+    bmi_value: Optional[float] = None
+    bmi_status: str = "Insufficient data"
+    protocol_status: str = "Insufficient data"
+    triggered_indicators: List[str] = Field(default_factory=list)
+    measurement_methods: Dict[str, str] = Field(default_factory=dict)
     summary: str

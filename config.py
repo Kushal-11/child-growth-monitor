@@ -50,6 +50,13 @@ WHO_DATA_FILES = {
 }
 
 # Classification thresholds (WHO standard)
+# BMI+MUAC protocol thresholds. These are a separate screening protocol and
+# must not be described as WHO weight-for-height (WHZ) classifications.
+BMI_SAM_MAX_BY_SEX = {"M": 13.0, "F": 12.8}
+BMI_MAM_MAX_BY_SEX = {"M": 13.7, "F": 13.5}
+MUAC_SAM_MAX_CM = 11.5
+MUAC_MAM_MAX_CM = 12.5
+
 ZSCORE_CLASSIFICATIONS = {
     "haz": {
         (-99, -3): "Severely Stunted",

@@ -130,6 +130,11 @@ class SyncService {
         if (m?.muacCm != null) 'muac_cm': m!.muacCm.toString(),
         if (m?.muacStatus != null) 'muac_status': m!.muacStatus!,
         if (m?.muacMethod != null) 'muac_method': m!.muacMethod!,
+        if (m?.bmiValue != null) 'bmi_value': m!.bmiValue.toString(),
+        if (m?.bmiStatus != null) 'bmi_status': m!.bmiStatus!,
+        if (m?.protocolStatus != null) 'protocol_status': m!.protocolStatus!,
+        if (m?.triggeredIndicators != null) 'triggered_indicators': m!.triggeredIndicators!,
+        if (m?.measurementMethods != null) 'measurement_methods': m!.measurementMethods!,
         if (child.guardianName != null) 'guardian_name': child.guardianName!,
         if (child.location != null) 'location': child.location!,
       });

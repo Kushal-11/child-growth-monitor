@@ -9,6 +9,7 @@ Height resolution priority:
   2. Manual height_cm input (fallback when image detection fails)
 """
 from datetime import date, datetime
+import json
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -27,6 +28,7 @@ from app.services.measurement_service import MeasurementOutput, MeasurementServi
 from app.services.ml_service import MLService
 from app.services.muac_service import MUACService
 from app.services.nutrition_service import NutritionService
+from app.services.protocol_classification_service import ProtocolClassificationService
 from app.services.who_data_service import WHODataService
 
 
@@ -67,10 +69,8 @@ class AssessmentService:
         )
 
         # 3. Determine effective height
-        # Priority: image-based prediction > manual input
-        effective_height = meas.predicted_height_cm
-        if effective_height is None and height_cm is not None:
-            effective_height = height_cm
+        # A clinician's manual measurement always overrides an estimate.
+        effective_height = height_cm if height_cm is not None else meas.predicted_height_cm
 
         # 3b. Process side-view image for AP depth features (optional)
         side_segments = None
@@ -173,11 +173,18 @@ class AssessmentService:
             height_cm=effective_height,
         )
 
-        # 5c. Combine MUAC + WHZ via WHO OR-rule for the final clinical call
-        combined_status = MUACService.combine_with_whz_status(
-            muac_status=muac_result.muac_status,
-            whz_status=whz_status,
+        # 5c. Apply the requested BMI+MUAC protocol. This result intentionally
+        # remains separate from the WHO WHZ/HAZ classifications above.
+        protocol = ProtocolClassificationService.classify(
+            effective_weight, effective_height, sex, muac_result.muac_status
         )
+        height_method = "manual" if height_cm is not None else ("image_estimated" if meas.predicted_height_cm is not None else "unavailable")
+        weight_method = weight_source or "unavailable"
+        measurement_methods = {
+            "height": height_method,
+            "weight": weight_method,
+            "muac": muac_result.muac_method,
+        }
 
         # 6. Persist to database
         child = self._get_or_create_child(
@@ -204,6 +211,11 @@ class AssessmentService:
             haz_status=haz_status,
             whz_status=whz_status,
             confidence_score=meas.confidence_score,
+            bmi_value=protocol.bmi_value,
+            bmi_status=protocol.bmi_status,
+            protocol_status=protocol.final_status,
+            triggered_indicators=json.dumps(protocol.triggered_indicators),
+            measurement_methods=json.dumps(measurement_methods),
         )
         db.add(measurement_record)
         db.commit()
@@ -288,6 +300,11 @@ class AssessmentService:
                 muac_method=muac_result.muac_method,
                 age_in_range=muac_result.age_in_range,
             ),
+            bmi_value=protocol.bmi_value,
+            bmi_status=protocol.bmi_status,
+            protocol_status=protocol.final_status,
+            triggered_indicators=protocol.triggered_indicators,
+            measurement_methods=measurement_methods,
             summary=summary,
         )
 
@@ -338,10 +355,10 @@ class AssessmentService:
         lines = [f"Assessment for {name} ({age_months:.1f} months old):"]
 
         if effective_height is not None:
-            if predicted_height is not None:
-                lines.append(f"  Height: {effective_height:.1f} cm (from image)")
-            elif manual_height is not None:
+            if manual_height is not None:
                 lines.append(f"  Height: {effective_height:.1f} cm (manual input)")
+            elif predicted_height is not None:
+                lines.append(f"  Height: {effective_height:.1f} cm (from image)")
         else:
             lines.append("  Height: Could not be determined.")
             if not ref_detected:

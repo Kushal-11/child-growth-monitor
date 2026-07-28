@@ -28,4 +28,9 @@ class Measurements extends Table {
   RealColumn get muacCm => real().nullable()();
   TextColumn get muacStatus => text().nullable()();
   TextColumn get muacMethod => text().nullable()();
+  RealColumn get bmiValue => real().nullable()();
+  TextColumn get bmiStatus => text().nullable()();
+  TextColumn get protocolStatus => text().nullable()();
+  TextColumn get triggeredIndicators => text().nullable()();
+  TextColumn get measurementMethods => text().nullable()();
 }

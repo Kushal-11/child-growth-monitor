@@ -67,6 +67,11 @@ async def sync_assessment(
     muac_cm: Optional[float] = Form(None),
     muac_status: Optional[str] = Form(None),
     muac_method: Optional[str] = Form(None),
+    bmi_value: Optional[float] = Form(None),
+    bmi_status: Optional[str] = Form(None),
+    protocol_status: Optional[str] = Form(None),
+    triggered_indicators: Optional[str] = Form(None),
+    measurement_methods: Optional[str] = Form(None),
     entry_method: str = Form("assessment"),
     is_archived: str = Form("false"),
     guardian_name: Optional[str] = Form(None),
@@ -171,6 +176,11 @@ async def sync_assessment(
         muac_cm=muac_cm,
         muac_status=muac_status,
         muac_method=muac_method,
+        bmi_value=bmi_value,
+        bmi_status=bmi_status,
+        protocol_status=protocol_status,
+        triggered_indicators=triggered_indicators,
+        measurement_methods=measurement_methods,
     )
     db.add(measurement)
     try:

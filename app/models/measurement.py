@@ -54,6 +54,13 @@ class MeasurementResult(Base):
     muac_status = Column(String(50), nullable=True)
     muac_method = Column(String(50), nullable=True)  # manual / estimated_from_whz
 
+    # BMI+MUAC screening protocol (distinct from WHO WHZ/HAZ above)
+    bmi_value = Column(Float, nullable=True)
+    bmi_status = Column(String(50), nullable=True)
+    protocol_status = Column(String(50), nullable=True)
+    triggered_indicators = Column(String(255), nullable=True)  # JSON array
+    measurement_methods = Column(String(500), nullable=True)  # JSON object
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     visit = relationship("Visit", back_populates="measurement")

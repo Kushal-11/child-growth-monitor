@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import '../constants/config.dart';
@@ -13,6 +15,7 @@ import 'ml_inference_service.dart';
 import 'muac_service.dart';
 import 'nutrition_service.dart';
 import 'pose_source.dart';
+import 'protocol_classification_service.dart';
 import 'who_data_service.dart';
 
 /// Thrown when on-device pose detection fails to produce a usable result.
@@ -156,6 +159,13 @@ class AssessmentService {
 
     final hazStatus = haz != null ? classifyHaz(haz) : null;
     final whzStatus = whz != null ? classifyWhz(whz) : null;
+    final protocol = ProtocolClassificationService.classify(
+        effectiveWeight, m.effectiveHeightCm, sex, muacResult.muacStatus);
+    final methods = <String, String>{
+      'height': manualHeightCm != null ? 'manual' : m.estimationMethod,
+      'weight': manualWeightKg != null ? 'manual' : (prediction != null ? 'ml_estimated' : 'who_median_estimated'),
+      'muac': muacResult.muacMethod,
+    };
 
     final child = await _childDao.findOrCreate(
       name: childName,
@@ -198,6 +208,11 @@ class AssessmentService {
         muacCm: Value(muacResult.muacCm),
         muacStatus: Value(muacResult.muacStatus),
         muacMethod: Value(muacResult.muacMethod),
+        bmiValue: Value(protocol.bmiValue),
+        bmiStatus: Value(protocol.bmiStatus),
+        protocolStatus: Value(protocol.finalStatus),
+        triggeredIndicators: Value(jsonEncode(protocol.triggeredIndicators)),
+        measurementMethods: Value(jsonEncode(methods)),
       ),
     );
     await _syncQueueDao.enqueue(visitId);
@@ -252,6 +267,11 @@ class AssessmentService {
         muacMethod: muacResult.muacMethod,
         ageInRange: muacResult.ageInRange,
       ),
+      bmiValue: protocol.bmiValue,
+      bmiStatus: protocol.bmiStatus,
+      protocolStatus: protocol.finalStatus,
+      triggeredIndicators: protocol.triggeredIndicators,
+      measurementMethods: methods,
     );
   }
 
