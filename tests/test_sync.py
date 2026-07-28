@@ -47,7 +47,7 @@ def _payload():
         "child_name": "Test Child",
         "date_of_birth": "2024-01-01",
         "sex": "M",
-        "age_months": "16.0",
+        "age_months": "28.1",
         "visit_date": "2026-05-05T10:00:00",
         "predicted_height_cm": "78.0",
         "predicted_weight_kg": "9.5",
@@ -56,11 +56,21 @@ def _payload():
         "haz_status": "Normal",
         "whz_status": "Normal",
         "muac_cm": "14.0",
-        "muac_status": "Normal",
-        "muac_method": "estimated_from_whz",
+        "muac_status": "NORMAL",
+        "muac_method": "manual",
         "ml_wasting_status": "Normal",
         "ml_estimated_weight_kg": "9.4",
         "confidence_score": "0.85",
+        "effective_height_cm": "78.0",
+        "effective_weight_kg": "9.5",
+        "height_method": "who_statistical",
+        "weight_method": "ml_estimated",
+        "estimation_method": "who_statistical",
+        "bmi": "15.61",
+        "bmi_status": "Normal",
+        "height_confidence": "0.85",
+        "weight_confidence": "0.81",
+        "classification_confidence": "0.92",
         "body_build": "average",
         "side_view_used": "false",
         "sam_probability": "0.02",
@@ -68,6 +78,20 @@ def _payload():
         "normal_probability": "0.85",
         "risk_probability": "0.02",
         "overweight_probability": "0.01",
+        "ml_wasting_method": "ml_classifier",
+        "muac_age_in_range": "true",
+        "muac_confidence": "1.0",
+        "muac_uncertainty_lower_cm": "14.0",
+        "muac_uncertainty_upper_cm": "14.0",
+        "muac_calibration_version": "direct-tape",
+        "muac_is_direct_measurement": "true",
+        "muac_requires_confirmation": "false",
+        "combined_status": "NORMAL",
+        "combined_triggered_by": "[]",
+        "combined_rationale": "No direct MUAC or WHZ flag triggered",
+        "combined_method": "who_muac_whz_or_rule",
+        "combined_confidence_score": "0.85",
+        "combined_protocol_version": "WHO-CMAM-OR-2009/2013-v1",
     }
 
 
@@ -117,8 +141,8 @@ def test_sync_missing_required_field_returns_422():
     assert response.status_code == 422
 
 
-def test_sync_persists_all_mobile_fields():
-    """All mobile-computed fields must round-trip into measurement_results."""
+def test_sync_persists_evidence_but_recomputes_client_verdicts():
+    """Raw evidence persists while unverified client labels are ignored."""
     from app.models.database import SessionLocal
     from app.models.measurement import MeasurementResult
     from app.models.visit import Visit
@@ -148,17 +172,112 @@ def test_sync_persists_all_mobile_fields():
         assert m.ml_wasting_status == "Normal"
         assert m.muac_cm == 14.0
         assert m.muac_status == "Normal"
-        assert m.muac_method == "estimated_from_whz"
+        assert m.muac_method == "manual"
         assert m.sam_probability == 0.02
         assert m.mam_probability == 0.10
         assert m.normal_probability == 0.85
         assert m.risk_probability == 0.02
         assert m.overweight_probability == 0.01
         assert m.confidence_score == 0.85
+        assert m.effective_height_cm == 78.0
+        assert m.effective_weight_kg == 9.5
+        assert m.height_method == "unavailable"
+        assert m.weight_method == "ml_estimated"
+        assert m.estimation_method == "who_statistical"
+        assert m.bmi is None
+        assert m.bmi_status == "Indeterminate"
+        assert m.height_confidence == 0.85
+        assert m.weight_confidence == 0.81
+        assert m.classification_confidence is None
+        assert m.ml_wasting_method == "ml_classifier"
+        assert m.muac_age_in_range is True
+        assert m.muac_confidence == 1.0
+        assert m.muac_uncertainty_lower_cm == 14.0
+        assert m.muac_uncertainty_upper_cm == 14.0
+        assert m.muac_calibration_version == "direct-tape"
+        assert m.muac_is_direct_measurement is True
+        assert m.muac_requires_confirmation is False
+        assert m.combined_status == "NORMAL"
+        assert m.combined_triggered_by == "[]"
+        assert m.combined_rationale == "No MUAC or WHZ flag triggered"
+        assert m.combined_method == "who_muac_whz_or_rule"
+        assert m.combined_confidence_score == 0.85
+        assert m.combined_protocol_version == "WHO-CMAM-OR-2009/2013-v1"
+        assert m.poshan_status == "Indeterminate"
+        assert m.poshan_triggered_by == "[]"
+        assert m.classification_method == "poshan_setu_v1"
+        assert "final Indeterminate" in m.classification_rationale
+        assert m.poshan_complete is False
         assert m.predicted_height_cm == 78.0
         assert m.predicted_weight_kg == 9.5
-        assert m.haz_zscore == -1.0
-        assert m.whz_zscore == -0.5
+        assert m.haz_zscore is None
+        assert m.whz_zscore is None
+    finally:
+        db.close()
+
+    # Reload through the history API (the Flutter-compatible read contract)
+    # and compare every decision/evidence field with the synchronized payload.
+    history = client.get("/api/v1/children", headers=AUTH_HEADERS)
+    child_id = next(c["id"] for c in history.json() if c["name"] == body["child_name"])
+    detail = client.get(f"/api/v1/children/{child_id}", headers=AUTH_HEADERS)
+    assert detail.status_code == 200
+    restored = next(
+        v["measurement"] for v in detail.json()["visits"]
+        if v["visit_id"] == visit_id
+    )
+    assert restored["combined_triggered_by"] == []
+    assert restored["poshan_triggered_by"] == []
+    assert restored["poshan_status"] == "Indeterminate"
+    assert restored["classification_method"] == "poshan_setu_v1"
+    assert restored["bmi_status"] == "Indeterminate"
+    assert restored["haz_status"] is None
+    assert restored["whz_status"] is None
+
+
+def test_sync_rejects_tampered_normal_verdict_and_recomputes_sam():
+    from app.models.database import SessionLocal
+    from app.models.measurement import MeasurementResult
+
+    body = _payload()
+    body.update(
+        {
+            "local_uuid": str(uuid.uuid4()),
+            "manual_height_cm": "100.0",
+            "manual_weight_kg": "12.0",
+            "muac_cm": "14.0",
+            "muac_method": "manual",
+            "muac_is_direct_measurement": "true",
+            "bmi": "20.0",
+            "bmi_status": "Normal",
+            "poshan_status": "Normal",
+            "poshan_triggered_by": "[]",
+            "classification_method": "client_supplied",
+            "classification_rationale": "tampered normal verdict",
+            "combined_status": "NORMAL",
+        }
+    )
+    response = client.post(
+        "/api/v1/sync",
+        data=body,
+        headers=AUTH_HEADERS,
+    )
+    assert response.status_code == 200
+    assert response.json()["poshan"]["final_status"] == "SAM"
+    assert response.json()["poshan"]["triggered_by"] == ["bmi"]
+
+    db = SessionLocal()
+    try:
+        stored = (
+            db.query(MeasurementResult)
+            .filter(
+                MeasurementResult.visit_id == response.json()["server_visit_id"]
+            )
+            .one()
+        )
+        assert stored.poshan_status == "SAM"
+        assert stored.bmi_status == "SAM"
+        assert stored.classification_method == "poshan_setu_v1"
+        assert "tampered normal verdict" not in stored.classification_rationale
     finally:
         db.close()
 

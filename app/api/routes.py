@@ -9,6 +9,7 @@ Endpoints:
 """
 import shutil
 import uuid
+import json
 from datetime import date
 from pathlib import Path
 from typing import Optional
@@ -20,7 +21,8 @@ from app.models.child import Child
 from app.models.user import User
 from app.services.auth_service import get_current_user
 from app.models.database import get_db
-from app.schemas.assessment import AssessmentResponse
+from app.schemas.assessment import AssessmentRequest, AssessmentResponse
+from app.services.age_service import AgeService
 from app.services.assessment_service import AssessmentService
 from config import UPLOAD_DIR
 
@@ -29,9 +31,27 @@ from config import UPLOAD_DIR
 router = APIRouter(prefix="/api/v1", tags=["API"])
 
 
+def _decode_string_list(value: Optional[str]) -> list[str]:
+    """Decode legacy JSON evidence without breaking child history."""
+    if not value:
+        return []
+    try:
+        decoded = json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return []
+    if not isinstance(decoded, list):
+        return []
+    return [item for item in decoded if isinstance(item, str)]
+
+
 def get_assessment_service() -> AssessmentService:
     """Placeholder; overridden at app startup in main.py."""
     raise NotImplementedError
+
+
+def get_age_service() -> AgeService:
+    """Provide the shared stateless clinical-age service."""
+    return AgeService()
 
 
 @router.get("/health")
@@ -56,6 +76,7 @@ async def assess_child(
     location: str = Form(None),
     db: Session = Depends(get_db),
     svc: AssessmentService = Depends(get_assessment_service),
+    age_svc: AgeService = Depends(get_age_service),
 ):
     """Main assessment endpoint. Accepts multipart form with image + metadata."""
     if sex not in ("M", "F"):
@@ -64,21 +85,27 @@ async def assess_child(
     try:
         dob = date.fromisoformat(date_of_birth)
     except ValueError:
-        raise HTTPException(400, "date_of_birth must be ISO format (YYYY-MM-DD)")
-    if dob > date.today():
-        raise HTTPException(422, "date_of_birth cannot be in the future")
-    if not child_name.strip() or len(child_name) > 100:
-        raise HTTPException(422, "child_name must contain 1 to 100 characters")
-    for field_name, value, maximum in (
-        ("weight_kg", weight_kg, 50),
-        ("height_cm", height_cm, 200),
-        ("height_value", height_value, 200),
-        ("muac_cm", muac_cm, 30),
-    ):
-        if value is not None and (value <= 0 or value > maximum):
-            raise HTTPException(422, f"{field_name} is outside the supported range")
-    if height_unit not in ("cm", "inch"):
-        raise HTTPException(422, "height_unit must be 'cm' or 'inch'")
+        raise HTTPException(
+            422, "date_of_birth must be ISO format (YYYY-MM-DD)"
+        ) from None
+
+    as_of = date.today()
+    try:
+        # Apply the same Pydantic contract used by JSON callers to multipart data.
+        AssessmentRequest.model_validate(
+            {
+                "child_name": child_name,
+                "date_of_birth": dob,
+                "sex": sex,
+                "weight_kg": weight_kg,
+                "height_cm": height_cm,
+                "guardian_name": guardian_name,
+                "location": location,
+            },
+            context={"age_service": age_svc, "as_of": as_of},
+        )
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
     # Convert height if provided with unit
     final_height_cm = height_cm
@@ -113,6 +140,7 @@ async def assess_child(
         guardian_name=guardian_name,
         location=location,
         side_image=side_image_bytes,
+        as_of=as_of,
     )
     return result
 
@@ -171,25 +199,64 @@ def get_child(
             visit_data["measurement"] = {
                 "predicted_height_cm": m.predicted_height_cm,
                 "predicted_weight_kg": m.predicted_weight_kg,
-                "manual_weight_kg": m.manual_weight_kg,
                 "manual_height_cm": m.manual_height_cm,
+                "manual_weight_kg": m.manual_weight_kg,
+                "reference_object_detected": m.reference_object_detected == "true",
+                "scale_factor": m.scale_factor,
                 "haz_zscore": m.haz_zscore,
                 "whz_zscore": m.whz_zscore,
                 "haz_status": m.haz_status,
                 "whz_status": m.whz_status,
                 "confidence_score": m.confidence_score,
-                "bmi": m.bmi,
-                "bmi_status": m.bmi_status,
-                "combined_status": m.combined_status,
-                "combined_triggered_by": (
-                    m.combined_triggered_by.split(",")
-                    if m.combined_triggered_by else []
-                ),
+                "effective_height_cm": m.effective_height_cm,
+                "effective_weight_kg": m.effective_weight_kg,
                 "height_method": m.height_method,
                 "weight_method": m.weight_method,
+                "estimation_method": m.estimation_method,
+                "bmi": m.bmi,
+                "bmi_status": m.bmi_status,
+                "height_confidence": m.height_confidence,
+                "weight_confidence": m.weight_confidence,
+                "classification_confidence": m.classification_confidence,
+                "body_build": m.body_build,
+                "side_view_used": m.side_view_used,
+                "chest_depth_cm": m.chest_depth_cm,
+                "abd_depth_cm": m.abd_depth_cm,
+                "ml_estimated_weight_kg": m.ml_estimated_weight_kg,
+                "ml_wasting_status": m.ml_wasting_status,
+                "ml_wasting_method": m.ml_wasting_method,
+                "sam_probability": m.sam_probability,
+                "mam_probability": m.mam_probability,
+                "normal_probability": m.normal_probability,
+                "risk_probability": m.risk_probability,
+                "overweight_probability": m.overweight_probability,
                 "muac_cm": m.muac_cm,
                 "muac_status": m.muac_status,
                 "muac_method": m.muac_method,
+                "muac_age_in_range": m.muac_age_in_range,
+                "muac_confidence": m.muac_confidence,
+                "muac_uncertainty_lower_cm": m.muac_uncertainty_lower_cm,
+                "muac_uncertainty_upper_cm": m.muac_uncertainty_upper_cm,
+                "muac_model_version": m.muac_model_version,
+                "muac_calibration_version": m.muac_calibration_version,
+                "muac_is_direct_measurement": m.muac_is_direct_measurement,
+                "muac_requires_confirmation": m.muac_requires_confirmation,
+                "muac_referral_guidance": m.muac_referral_guidance,
+                "combined_status": m.combined_status,
+                "combined_triggered_by": _decode_string_list(
+                    m.combined_triggered_by
+                ),
+                "combined_rationale": m.combined_rationale,
+                "combined_method": m.combined_method,
+                "combined_confidence_score": m.combined_confidence_score,
+                "combined_protocol_version": m.combined_protocol_version,
+                "poshan_status": m.poshan_status,
+                "poshan_triggered_by": _decode_string_list(
+                    m.poshan_triggered_by
+                ),
+                "classification_method": m.classification_method,
+                "classification_rationale": m.classification_rationale,
+                "poshan_complete": m.poshan_complete,
             }
         visits.append(visit_data)
 

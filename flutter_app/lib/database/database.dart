@@ -19,7 +19,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -48,6 +48,63 @@ class AppDatabase extends _$AppDatabase {
               await migrator.addColumn(visits, visits.ownerUserId);
               await migrator.addColumn(visits, visits.entryMethod);
             }
+          }
+          // From v1 the measurements table was recreated above using the
+          // current schema, so only additive-upgrade existing v2/v3 tables.
+          if (from >= 2 && from < 4) {
+            await migrator.addColumn(
+                measurements, measurements.effectiveHeightCm);
+            await migrator.addColumn(
+                measurements, measurements.effectiveWeightKg);
+            await migrator.addColumn(measurements, measurements.heightMethod);
+            await migrator.addColumn(measurements, measurements.weightMethod);
+            await migrator.addColumn(measurements, measurements.bmi);
+            await migrator.addColumn(measurements, measurements.bmiStatus);
+            await migrator.addColumn(
+                measurements, measurements.heightConfidence);
+            await migrator.addColumn(
+                measurements, measurements.weightConfidence);
+            await migrator.addColumn(
+                measurements, measurements.classificationConfidence);
+            await migrator.addColumn(measurements, measurements.wastingMethod);
+            await migrator.addColumn(measurements, measurements.muacAgeInRange);
+            await migrator.addColumn(measurements, measurements.muacConfidence);
+            await migrator.addColumn(
+                measurements, measurements.muacUncertaintyLowerCm);
+            await migrator.addColumn(
+                measurements, measurements.muacUncertaintyUpperCm);
+            await migrator.addColumn(
+                measurements, measurements.muacModelVersion);
+            await migrator.addColumn(
+                measurements, measurements.muacCalibrationVersion);
+            await migrator.addColumn(
+                measurements, measurements.muacIsDirectMeasurement);
+            await migrator.addColumn(
+                measurements, measurements.muacRequiresConfirmation);
+            await migrator.addColumn(
+                measurements, measurements.muacReferralGuidance);
+            await migrator.addColumn(measurements, measurements.combinedStatus);
+            await migrator.addColumn(
+                measurements, measurements.combinedTriggeredBy);
+            await migrator.addColumn(
+                measurements, measurements.combinedRationale);
+            await migrator.addColumn(measurements, measurements.combinedMethod);
+            await migrator.addColumn(
+                measurements, measurements.combinedConfidenceScore);
+            await migrator.addColumn(
+                measurements, measurements.combinedProtocolVersion);
+          }
+          // v1 recreates the current table above; only existing v2-v4 tables
+          // need the additive Poshan Setu evidence columns.
+          if (from >= 2 && from < 5) {
+            await migrator.addColumn(measurements, measurements.poshanStatus);
+            await migrator.addColumn(
+                measurements, measurements.poshanTriggeredBy);
+            await migrator.addColumn(
+                measurements, measurements.classificationMethod);
+            await migrator.addColumn(
+                measurements, measurements.classificationRationale);
+            await migrator.addColumn(measurements, measurements.poshanComplete);
           }
         },
       );
