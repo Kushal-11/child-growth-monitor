@@ -17,18 +17,32 @@
         {% set muac_st = (result.muac.muac_status or "") if result.muac else "" %}
         {% set ml_st = (result.ml_prediction.wasting_status or "") if result.ml_prediction else "" %}
         {% set haz = result.nutrition.haz_status or "" %}
-        {% set protocol_st = result.protocol_status or "" %}
+        {% set combined = result.combined_nutrition.status.value %}
+        {% set status_labels = {
+            "SAM": "Severe Acute Malnutrition (SAM)",
+            "MAM": "Moderate Acute Malnutrition (MAM)",
+            "NORMAL": "Normal",
+            "RISK_OVERWEIGHT": "Possible Risk of Overweight",
+            "OVERWEIGHT": "Overweight",
+            "OBESE": "Obese",
+            "UNKNOWN": "Unknown"
+        } %}
 
-        {% if protocol_st == "SAM" %}
+        {% if combined == "SAM" %}
             {% set banner_class = "status-sam" %}
             {% set banner_icon = "⚠" %}
             {% set banner_title = t.banner_sam_title %}
             {% set banner_msg = t.banner_sam_msg %}
-        {% elif protocol_st == "MAM" %}
+        {% elif combined == "MAM" %}
             {% set banner_class = "status-mam" %}
             {% set banner_icon = "⚠" %}
             {% set banner_title = t.banner_mam_title %}
             {% set banner_msg = t.banner_mam_msg %}
+        {% elif combined in ["RISK_OVERWEIGHT", "OVERWEIGHT", "OBESE"] %}
+            {% set banner_class = "status-stunted" %}
+            {% set banner_icon = "⚠" %}
+            {% set banner_title = status_labels[combined] %}
+            {% set banner_msg = result.combined_nutrition.rationale %}
         {% elif "Stunted" in haz %}
             {% set banner_class = "status-stunted" %}
             {% set banner_icon = "📋" %}
@@ -38,7 +52,7 @@
                 {% set banner_title = t.haz_stunted %}
             {% endif %}
             {% set banner_msg = t.banner_stunted_msg %}
-        {% elif result.nutrition.haz_zscore is not none or result.nutrition.whz_zscore is not none %}
+        {% elif combined != "UNKNOWN" %}
             {% set banner_class = "status-normal" %}
             {% set banner_icon = "✓" %}
             {% set banner_title = t.banner_normal_title %}
@@ -57,6 +71,8 @@
                 <div class="flex-grow-1">
                     <div class="status-banner-title">{{ banner_title }}</div>
                     <div class="status-banner-msg">{{ banner_msg }}</div>
+                    <div class="fw-bold mt-1">Final wasting status: {{ status_labels[combined] }}</div>
+                    <div class="small opacity-75">{{ result.combined_nutrition.rationale }}</div>
                 </div>
                 <div class="text-end d-none d-sm-block">
                     <div class="small opacity-75">{{ result.child_name }}</div>
@@ -142,16 +158,15 @@
                         <div class="card metric-card h-100 text-center">
                             <div class="card-body px-2 py-3">
                                 <div class="metric-label">{{ t.metric_height }}</div>
-                                {% if result.measurement.predicted_height_cm %}
+                                {% if result.measurement.effective_height_cm is not none %}
                                     <div class="metric-value">
-                                        {{ "%.1f"|format(result.measurement.predicted_height_cm) }}<span class="metric-unit">{{ t.unit_cm }}</span>
+                                        {{ "%.1f"|format(result.measurement.effective_height_cm) }}<span class="metric-unit">{{ t.unit_cm }}</span>
                                     </div>
-                                    <span class="badge bg-success mt-1">{{ t.badge_image }}</span>
-                                {% elif result.measurement.manual_height_cm %}
-                                    <div class="metric-value">
-                                        {{ "%.1f"|format(result.measurement.manual_height_cm) }}<span class="metric-unit">{{ t.unit_cm }}</span>
-                                    </div>
-                                    <span class="badge bg-info mt-1">{{ t.badge_manual }}</span>
+                                    {% if result.measurement.height_method == 'manual' %}
+                                        <span class="badge bg-info mt-1">{{ t.badge_manual }}</span>
+                                    {% else %}
+                                        <span class="badge bg-success mt-1">{{ t.badge_image }}</span>
+                                    {% endif %}
                                 {% else %}
                                     <div class="metric-value text-muted fs-3">—</div>
                                     <span class="badge bg-warning text-dark mt-1 small">{{ t.badge_undetected }}</span>
@@ -200,14 +215,11 @@
                                 {% if result.nutrition.whz_zscore is not none %}
                                     <div class="metric-zscore">WHZ {{ "%.2f"|format(result.nutrition.whz_zscore) }}</div>
                                     <span class="badge mt-1
-                                        {% if 'SAM' in whz %}bg-danger
-                                        {% elif 'MAM' in whz %}bg-warning text-dark
-                                        {% elif 'Normal' in whz %}bg-success
+                                        {% if whz == 'SAM' %}bg-danger
+                                        {% elif whz == 'MAM' %}bg-warning text-dark
+                                        {% elif whz == 'NORMAL' %}bg-success
                                         {% else %}bg-secondary{% endif %} small">
-                                        {% if 'SAM' in whz %}{{ t.whz_sam }}
-                                        {% elif 'MAM' in whz %}{{ t.whz_mam }}
-                                        {% elif 'Normal' in whz %}{{ t.whz_normal }}
-                                        {% else %}{{ whz[:10] }}{% endif %}
+                                        {{ status_labels[whz] }}
                                     </span>
                                 {% endif %}
 
@@ -240,14 +252,14 @@
                                     {% endif %}
                                     {% if result.muac.muac_status %}
                                         <div class="metric-zscore">
-                                            {{ t.muac_range_sam if result.muac.muac_status == "SAM" else (t.muac_range_mam if "At Risk" in result.muac.muac_status else t.muac_range_normal) }}
+                                            {{ t.muac_range_sam if result.muac.muac_status == "SAM" else (t.muac_range_mam if result.muac.muac_status == "MAM" else t.muac_range_normal) }}
                                         </div>
                                         <span class="badge mt-1
                                             {% if result.muac.muac_status == 'SAM' %}bg-danger
-                                            {% elif 'At Risk' in result.muac.muac_status %}bg-warning text-dark
+                                            {% elif result.muac.muac_status == 'MAM' %}bg-warning text-dark
                                             {% else %}bg-success{% endif %} small">
                                             {% if result.muac.muac_status == 'SAM' %}{{ t.whz_sam }}
-                                            {% elif 'At Risk' in result.muac.muac_status %}{{ t.whz_mam }}
+                                            {% elif result.muac.muac_status == 'MAM' %}{{ t.whz_mam }}
                                             {% else %}{{ t.normal_label }}{% endif %}
                                         </span>
                                     {% endif %}

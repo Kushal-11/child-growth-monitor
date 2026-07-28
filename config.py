@@ -1,5 +1,6 @@
 """Centralized configuration for the Child Growth Monitor application."""
 import os
+from enum import Enum
 from pathlib import Path
 
 # Paths
@@ -40,22 +41,56 @@ POSE_MIN_PRESENCE_CONFIDENCE = 0.5
 
 # WHO data file mappings
 WHO_DATA_FILES = {
-    "haz_0_59m": DATA_DIR / "who_haz_0_59m.csv",
-    "wfh_0_59m": DATA_DIR / "who_wfh_0_59m.csv",
-    "whz_reference": DATA_DIR / "who_whz_reference.csv",
+    # Lossless text packaging avoids binary-patch rejection by the PR API.
+    "lhfa_0_5": DATA_DIR / "lhfa_children_0-to-5-years_lms.xlsx.b64",
     "wfh_boys_2_5": DATA_DIR / "wfh_boys_2-to-5-years_zscores.xlsx",
     "wfh_girls_2_5": DATA_DIR / "wfh_girls_2-to-5-years_zscores.xlsx",
     "wfl_boys_0_2": DATA_DIR / "wfl_boys_0-to-2-years_zscores.xlsx",
     "wfl_girls_0_2": DATA_DIR / "wfl_girls_0-to-2-years_zscores.xlsx",
 }
 
+class WastingStatus(str, Enum):
+    """Canonical machine-readable wasting classification vocabulary."""
+
+    SAM = "SAM"
+    MAM = "MAM"
+    NORMAL = "NORMAL"
+    RISK_OVERWEIGHT = "RISK_OVERWEIGHT"
+    OVERWEIGHT = "OVERWEIGHT"
+    OBESE = "OBESE"
+    UNKNOWN = "UNKNOWN"
+
+
+WASTING_STATUS_LABELS = {
+    WastingStatus.SAM: "Severe Acute Malnutrition (SAM)",
+    WastingStatus.MAM: "Moderate Acute Malnutrition (MAM)",
+    WastingStatus.NORMAL: "Normal",
+    WastingStatus.RISK_OVERWEIGHT: "Possible Risk of Overweight",
+    WastingStatus.OVERWEIGHT: "Overweight",
+    WastingStatus.OBESE: "Obese",
+    WastingStatus.UNKNOWN: "Unknown",
+}
+
+_LEGACY_WASTING_STATUSES = {
+    label: status for status, label in WASTING_STATUS_LABELS.items()
+}
+
+
+def canonicalize_wasting_status(value):
+    """Convert persisted legacy labels at migration/deserialization boundaries."""
+    if value is None:
+        return None
+    try:
+        return WastingStatus(value)
+    except ValueError:
+        try:
+            return _LEGACY_WASTING_STATUSES[value]
+        except KeyError as exc:
+            raise ValueError(f"Unrecognized wasting status: {value!r}") from exc
+
 # Classification thresholds (WHO standard)
-# BMI+MUAC protocol thresholds. These are a separate screening protocol and
-# must not be described as WHO weight-for-height (WHZ) classifications.
-BMI_SAM_MAX_BY_SEX = {"M": 13.0, "F": 12.8}
-BMI_MAM_MAX_BY_SEX = {"M": 13.7, "F": 13.5}
-MUAC_SAM_MAX_CM = 11.5
-MUAC_MAM_MAX_CM = 12.5
+CLINICAL_MIN_AGE_MONTHS = 0
+CLINICAL_MAX_AGE_MONTHS = 60  # Exclusive: WHO tables cover birth through 59 months.
 
 ZSCORE_CLASSIFICATIONS = {
     "haz": {
@@ -65,12 +100,12 @@ ZSCORE_CLASSIFICATIONS = {
         (2, 99): "Tall",
     },
     "whz": {
-        (-99, -3): "Severe Acute Malnutrition (SAM)",
-        (-3, -2): "Moderate Acute Malnutrition (MAM)",
-        (-2, 1): "Normal",
-        (1, 2): "Possible Risk of Overweight",
-        (2, 3): "Overweight",
-        (3, 99): "Obese",
+        (-99, -3): WastingStatus.SAM,
+        (-3, -2): WastingStatus.MAM,
+        (-2, 1): WastingStatus.NORMAL,
+        (1, 2): WastingStatus.RISK_OVERWEIGHT,
+        (2, 3): WastingStatus.OVERWEIGHT,
+        (3, 99): WastingStatus.OBESE,
     },
 }
 

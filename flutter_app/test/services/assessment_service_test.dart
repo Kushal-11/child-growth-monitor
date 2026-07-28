@@ -19,24 +19,24 @@ import '../fixtures/who_test_data.dart';
 class _StubPose implements PoseSource {
   @override
   Future<BodySegments> segmentsFor(String _) async => const BodySegments(
-        headHeightPx: 100,
-        torsoLengthPx: 240,
-        legLengthPx: 380,
-        shoulderWidthPx: 160,
-        hipWidthPx: 140,
-        upperArmLengthPx: 120,
-        totalHeightPx: 800,
-        headTopY: 0,
-        chinY: 100,
-        shoulderMidpointY: 200,
-        hipMidpointY: 440,
-        heelY: 800,
-        headConfidence: 1,
-        torsoConfidence: 1,
-        legConfidence: 1,
-        hipConfidence: 1,
-        armConfidence: 1,
-      );
+    headHeightPx: 100,
+    torsoLengthPx: 240,
+    legLengthPx: 380,
+    shoulderWidthPx: 160,
+    hipWidthPx: 140,
+    upperArmLengthPx: 120,
+    totalHeightPx: 800,
+    headTopY: 0,
+    chinY: 100,
+    shoulderMidpointY: 200,
+    hipMidpointY: 440,
+    heelY: 800,
+    headConfidence: 1,
+    torsoConfidence: 1,
+    legConfidence: 1,
+    hipConfidence: 1,
+    armConfidence: 1,
+  );
   @override
   Future<SideViewSegments?> sideSegmentsFor(String _) async => null;
   @override
@@ -46,24 +46,24 @@ class _StubPose implements PoseSource {
 class _DegradedPose implements PoseSource {
   @override
   Future<BodySegments> segmentsFor(String _) async => const BodySegments(
-        headHeightPx: null,
-        torsoLengthPx: null,
-        legLengthPx: null,
-        shoulderWidthPx: null,
-        hipWidthPx: null,
-        upperArmLengthPx: null,
-        totalHeightPx: null,
-        headTopY: null,
-        chinY: null,
-        shoulderMidpointY: null,
-        hipMidpointY: null,
-        heelY: null,
-        headConfidence: 0,
-        torsoConfidence: 0,
-        legConfidence: 0,
-        hipConfidence: 0,
-        armConfidence: 0,
-      );
+    headHeightPx: null,
+    torsoLengthPx: null,
+    legLengthPx: null,
+    shoulderWidthPx: null,
+    hipWidthPx: null,
+    upperArmLengthPx: null,
+    totalHeightPx: null,
+    headTopY: null,
+    chinY: null,
+    shoulderMidpointY: null,
+    hipMidpointY: null,
+    heelY: null,
+    headConfidence: 0,
+    torsoConfidence: 0,
+    legConfidence: 0,
+    hipConfidence: 0,
+    armConfidence: 0,
+  );
   @override
   Future<SideViewSegments?> sideSegmentsFor(String _) async => null;
   @override
@@ -96,8 +96,7 @@ class _StubMl extends MlInferenceService {
   bool weightWithinBounds({
     required double predictedKg,
     required double whoMedianKg,
-  }) =>
-      true;
+  }) => true;
 }
 
 void main() {
@@ -144,6 +143,16 @@ void main() {
     final visits = await db.select(db.visits).get();
     expect(visits.length, 1);
     expect(visits.first.localUuid.length, 36);
+
+    final stored = await db.select(db.measurements).getSingle();
+    expect(stored.effectiveHeightCm, result.measurement.effectiveHeightCm);
+    expect(stored.effectiveWeightKg, result.measurement.predictedWeightKg);
+    expect(stored.combinedStatus, result.combinedNutrition.status);
+    expect(stored.combinedMethod, 'who_muac_whz_or_rule');
+    expect(stored.combinedProtocolVersion, AssessmentService.protocolVersion);
+    expect(stored.muacRequiresConfirmation, isTrue);
+    expect(stored.muacIsDirectMeasurement, isFalse);
+    expect(stored.muacCalibrationVersion, 'who-median-formula-v1');
   });
 
   test('ML failure produces a result labelled who_fallback', () async {
@@ -164,54 +173,61 @@ void main() {
     expect(stored.first.wastingStatus, 'who_fallback');
   });
 
-  test('throws PoseDetectionFailedException when totalHeightPx missing', () async {
-    final who = WhoDataService();
-    final svcDegraded = AssessmentService(
-      childDao: ChildDao(db),
-      visitDao: VisitDao(db),
-      syncQueueDao: SyncQueueDao(db),
-      pose: _DegradedPose(),
-      measurement: MeasurementService(who),
-      nutrition: NutritionService(who),
-      who: who,
-      ml: ml,
-      persistImage: (path) async => path,
-    );
+  test(
+    'throws PoseDetectionFailedException when totalHeightPx missing',
+    () async {
+      final who = WhoDataService();
+      final svcDegraded = AssessmentService(
+        childDao: ChildDao(db),
+        visitDao: VisitDao(db),
+        syncQueueDao: SyncQueueDao(db),
+        pose: _DegradedPose(),
+        measurement: MeasurementService(who),
+        nutrition: NutritionService(who),
+        who: who,
+        ml: ml,
+        persistImage: (path) async => path,
+      );
 
-    // The service should fail BEFORE touching the WHO/measurement services,
-    // so passing un-loaded WhoDataService instances is fine.
-    await expectLater(
-      svcDegraded.runAssessment(
+      // The service should fail BEFORE touching the WHO/measurement services,
+      // so passing un-loaded WhoDataService instances is fine.
+      await expectLater(
+        svcDegraded.runAssessment(
+          frontImagePath: '/tmp/front.jpg',
+          childName: 'Carmen',
+          dateOfBirth: '2024-03-01',
+          sex: 'F',
+        ),
+        throwsA(isA<PoseDetectionFailedException>()),
+      );
+    },
+  );
+
+  test(
+    'MUAC in SAM range escalates the summary to SAM even when WHZ is Normal',
+    () async {
+      // Tape-measured SAM (MUAC < 11.5) with an otherwise-normal weight: the
+      // WHO OR-rule must surface SAM, not the green "Normal" the WHZ alone gives.
+      final result = await svc.runAssessment(
         frontImagePath: '/tmp/front.jpg',
-        childName: 'Carmen',
-        dateOfBirth: '2024-03-01',
+        childName: 'Fatima',
+        dateOfBirth: '2024-01-01',
         sex: 'F',
-      ),
-      throwsA(isA<PoseDetectionFailedException>()),
-    );
-  });
+        manualMuacCm: 10.0,
+      );
 
-  test('MUAC in SAM range escalates the summary to SAM even when WHZ is Normal',
-      () async {
-    // Tape-measured SAM (MUAC < 11.5) with an otherwise-normal weight: the
-    // WHO OR-rule must surface SAM, not the green "Normal" the WHZ alone gives.
-    final result = await svc.runAssessment(
-      frontImagePath: '/tmp/front.jpg',
-      childName: 'Fatima',
-      dateOfBirth: '2024-01-01',
-      sex: 'F',
-      manualMuacCm: 10.0,
-    );
+      expect(result.muac!.muacStatus, 'SAM');
+      final whz = result.nutrition.whzStatus;
+      expect(
+        whz == null || !whz.contains('SAM'),
+        isTrue,
+        reason: 'precondition: WHZ itself is not SAM in this scenario',
+      );
+      expect(result.summary, 'SAM');
+    },
+  );
 
-    expect(result.muac!.muacStatus, 'SAM');
-    final whz = result.nutrition.whzStatus;
-    expect(whz == null || !whz.contains('SAM'), isTrue,
-        reason: 'precondition: WHZ itself is not SAM in this scenario');
-    expect(result.summary, 'SAM');
-  });
-
-  test('ML wasting SAM escalates the summary to SAM even when WHZ is Normal',
-      () async {
+  test('ML wasting output stays decision support when WHZ is Normal', () async {
     ml.canned = const WastingPrediction(
       estimatedWeightKg: 11.0,
       samProbability: 0.85,
@@ -231,9 +247,12 @@ void main() {
 
     expect(result.mlPrediction!.wastingStatus, 'SAM');
     final whz = result.nutrition.whzStatus;
-    expect(whz == null || !whz.contains('SAM'), isTrue,
-        reason: 'precondition: WHZ itself is not SAM in this scenario');
-    expect(result.summary, 'SAM');
+    expect(
+      whz == null || !whz.contains('SAM'),
+      isTrue,
+      reason: 'precondition: WHZ itself is not SAM in this scenario',
+    );
+    expect(result.summary, 'NORMAL');
   });
 
   test('runAssessment tags created child with ownerUserId', () async {
@@ -247,8 +266,9 @@ void main() {
     expect(result.childName, 'Owned Assessment Child');
 
     final children = await db.select(db.children).get();
-    final created =
-        children.firstWhere((c) => c.name == 'Owned Assessment Child');
+    final created = children.firstWhere(
+      (c) => c.name == 'Owned Assessment Child',
+    );
     expect(created.ownerUserId, 9001);
   });
 }
