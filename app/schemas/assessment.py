@@ -82,8 +82,17 @@ class MUACDetail(BaseModel):
     """MUAC measurement or estimate."""
     muac_cm: Optional[float] = None
     muac_status: Optional[WastingStatus] = None
-    muac_method: str = "estimated_from_whz"  # "manual" | "estimated_from_whz"
+    # "manual" | "landmark_estimated" | "estimated_from_whz"
+    muac_method: str = "estimated_from_whz"
     age_in_range: bool = True  # False if age outside 6-59 months
+    confidence: Optional[float] = Field(None, ge=0, le=1)
+    uncertainty_lower_cm: Optional[float] = None
+    uncertainty_upper_cm: Optional[float] = None
+    model_version: Optional[str] = None
+    calibration_version: Optional[str] = None
+    is_direct_measurement: bool = False
+    requires_confirmation: bool = False
+    referral_guidance: Optional[str] = None
 
 
 class CombinedNutritionDetail(BaseModel):

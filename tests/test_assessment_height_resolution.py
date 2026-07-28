@@ -137,6 +137,7 @@ def test_api_returns_effective_manual_height_and_uses_it_downstream(
     monkeypatch, db_session
 ):
     service, muac_calls = _service_with_spies(monkeypatch)
+    original_overrides = app.dependency_overrides.copy()
     app.dependency_overrides[get_assessment_service] = lambda: service
     app.dependency_overrides[get_db] = lambda: db_session
     try:
@@ -153,6 +154,7 @@ def test_api_returns_effective_manual_height_and_uses_it_downstream(
         )
     finally:
         app.dependency_overrides.clear()
+        app.dependency_overrides.update(original_overrides)
 
     assert response.status_code == 200
     measurement = response.json()["measurement"]

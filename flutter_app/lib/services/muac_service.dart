@@ -5,12 +5,28 @@ class MuacResult {
   final String? muacStatus;
   final String muacMethod;
   final bool ageInRange;
+  final double? confidence;
+  final double? uncertaintyLowerCm;
+  final double? uncertaintyUpperCm;
+  final String? modelVersion;
+  final String? calibrationVersion;
+  final bool isDirectMeasurement;
+  final bool requiresConfirmation;
+  final String? referralGuidance;
 
   const MuacResult({
     this.muacCm,
     this.muacStatus,
     required this.muacMethod,
     required this.ageInRange,
+    this.confidence,
+    this.uncertaintyLowerCm,
+    this.uncertaintyUpperCm,
+    this.modelVersion,
+    this.calibrationVersion,
+    this.isDirectMeasurement = false,
+    this.requiresConfirmation = false,
+    this.referralGuidance,
   });
 }
 
@@ -29,6 +45,11 @@ class MuacService {
         muacStatus: classifyMuac(manualMuacCm, ageInRange),
         muacMethod: 'manual',
         ageInRange: ageInRange,
+        confidence: 1,
+        uncertaintyLowerCm: double.parse(manualMuacCm.toStringAsFixed(1)),
+        uncertaintyUpperCm: double.parse(manualMuacCm.toStringAsFixed(1)),
+        calibrationVersion: 'direct-tape',
+        isDirectMeasurement: true,
       );
     }
 
@@ -38,6 +59,10 @@ class MuacService {
         muacStatus: null,
         muacMethod: 'estimated_from_whz',
         ageInRange: ageInRange,
+        modelVersion: 'whz-explanatory-v1',
+        calibrationVersion: 'who-median-formula-v1',
+        requiresConfirmation: true,
+        referralGuidance: 'Obtain a direct tape MUAC measurement.',
       );
     }
 
@@ -48,9 +73,19 @@ class MuacService {
     );
     return MuacResult(
       muacCm: muacCm,
-      muacStatus: classifyMuac(muacCm, ageInRange),
+      // This value is derived from WHZ and must not be treated as an
+      // independent clinical MUAC classification.
+      muacStatus: null,
       muacMethod: 'estimated_from_whz',
       ageInRange: ageInRange,
+      confidence: 0.4,
+      uncertaintyLowerCm: double.parse((muacCm - 1).toStringAsFixed(1)),
+      uncertaintyUpperCm: double.parse((muacCm + 1).toStringAsFixed(1)),
+      modelVersion: 'whz-explanatory-v1',
+      calibrationVersion: 'who-median-formula-v1',
+      requiresConfirmation: true,
+      referralGuidance:
+          'WHZ-derived MUAC is explanatory only; obtain a direct tape measurement.',
     );
   }
 

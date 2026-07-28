@@ -198,12 +198,16 @@ class AssessmentService:
             upper_arm_length_cm=muac_arm_cm,
             shoulder_width_cm=muac_shoulder_cm,
             height_cm=effective_height,
+            landmark_visibility=(meas.body_segments.arm_confidence if meas.body_segments else None),
         )
 
         # 5c. Combine MUAC + WHZ via WHO OR-rule for the final clinical call
         combined_status = MUACService.combine_with_whz_status(
             muac_status=muac_result.muac_status,
-            whz_status=whz_status.value if whz_status else None,
+            whz_status=whz_status,
+            muac_method=muac_result.muac_method,
+            is_direct_measurement=muac_result.is_direct_measurement,
+            landmark_autonomous_call_allowed=MUACService.LANDMARK_SAM_RECALL_VALIDATED,
         )
         combined_confidence = self._combined_confidence(
             combined_status.triggered_by, muac_result.muac_method,
@@ -324,6 +328,14 @@ class AssessmentService:
                 muac_status=muac_result.muac_status,
                 muac_method=muac_result.muac_method,
                 age_in_range=muac_result.age_in_range,
+                confidence=muac_result.confidence,
+                uncertainty_lower_cm=muac_result.uncertainty_lower_cm,
+                uncertainty_upper_cm=muac_result.uncertainty_upper_cm,
+                model_version=muac_result.model_version,
+                calibration_version=muac_result.calibration_version,
+                is_direct_measurement=muac_result.is_direct_measurement,
+                requires_confirmation=muac_result.requires_confirmation,
+                referral_guidance=muac_result.referral_guidance,
             ),
             combined_nutrition=CombinedNutritionDetail(
                 status=combined_status.status,

@@ -11,10 +11,26 @@ class AnthropometricRatios {
   });
 }
 
-const _ratios0to12 = AnthropometricRatios(headRatio: 0.28, torsoRatio: 0.32, legRatio: 0.40);
-const _ratios12to24 = AnthropometricRatios(headRatio: 0.25, torsoRatio: 0.32, legRatio: 0.43);
-const _ratios24to48 = AnthropometricRatios(headRatio: 0.22, torsoRatio: 0.30, legRatio: 0.48);
-const _ratios48to60 = AnthropometricRatios(headRatio: 0.20, torsoRatio: 0.30, legRatio: 0.50);
+const _ratios0to12 = AnthropometricRatios(
+  headRatio: 0.28,
+  torsoRatio: 0.32,
+  legRatio: 0.40,
+);
+const _ratios12to24 = AnthropometricRatios(
+  headRatio: 0.25,
+  torsoRatio: 0.32,
+  legRatio: 0.43,
+);
+const _ratios24to48 = AnthropometricRatios(
+  headRatio: 0.22,
+  torsoRatio: 0.30,
+  legRatio: 0.48,
+);
+const _ratios48to60 = AnthropometricRatios(
+  headRatio: 0.20,
+  torsoRatio: 0.30,
+  legRatio: 0.50,
+);
 
 AnthropometricRatios getAnthropometricRatios(double ageMonths) {
   if (ageMonths < 12) return _ratios0to12;
@@ -75,14 +91,12 @@ String? classifyMuac(double muacCm, bool ageInRange) {
   return 'NORMAL';
 }
 
-/// Combine WHZ, MUAC, and the ML wasting classifier into a single nutrition
-/// verdict via the WHO 2009/2013 CMAM **OR-rule**: a child is SAM/MAM if ANY
-/// available signal says so — the most-severe signal wins.
+/// Combine WHZ and independently measured MUAC into a single nutrition
+/// verdict via the WHO 2009/2013 CMAM **OR-rule**.
 ///
-/// Ported from the backend `MUACService.combine_with_whz_status`, extended to
-/// also weigh the ML prediction (matching the reference web result banner).
-/// Returns one of: 'SAM' | 'MAM' | 'Overweight' | 'Risk_Overweight' |
-/// 'Normal' | 'Unknown' ('Unknown' only when no signal is available).
+/// Ported from the backend `MUACService.combine_with_whz_status`. WHZ-derived
+/// MUAC is the same evidence transformed and must not be counted twice. ML
+/// predictions remain decision support and do not define clinical status.
 ///
 /// SAFETY-CRITICAL: never collapse a SAM/MAM signal to 'Normal'. A tape-
 /// measured SAM child (MUAC < 11.5) with a borderline-normal WHZ must still
@@ -90,12 +104,13 @@ String? classifyMuac(double muacCm, bool ageInRange) {
 String combineNutritionStatus({
   required String? whzStatus,
   required String? muacStatus,
-  String? mlStatus,
+  required String? muacMethod,
+  required bool isDirectMeasurement,
 }) {
+  final muacCanTrigger = isDirectMeasurement && muacMethod == 'manual';
   final best = [
     _nutritionStatusRank(_canonicalWhz(whzStatus)),
-    _nutritionStatusRank(_canonicalMuac(muacStatus)),
-    _nutritionStatusRank(_canonicalMl(mlStatus)),
+    _nutritionStatusRank(muacCanTrigger ? _canonicalMuac(muacStatus) : null),
   ].reduce((a, b) => a > b ? a : b);
   return _rankToNutritionStatus(best);
 }
@@ -184,35 +199,46 @@ String? _canonicalMuac(String? s) {
   return 'NORMAL';
 }
 
-/// ML wasting status uses the training labels (see [wastingLabels]). Anything
-/// else (e.g. the 'who_fallback' sentinel) carries no nutrition signal.
-String? _canonicalMl(String? s) {
-  switch (s) {
-    case 'SAM':
-    case 'MAM':
-    case 'Overweight':
-    case 'Risk_Overweight':
-    case 'Normal':
-      return s;
-    default:
-      return null;
-  }
-}
-
 // --- MUAC WHO medians (age_months, median_cm) ---
 
 const List<(int, double)> muacBoys = [
-  (3, 12.5), (6, 14.0), (9, 14.8), (12, 15.2), (18, 15.5), (24, 15.7),
-  (30, 15.8), (36, 15.9), (42, 16.0), (48, 16.1), (54, 16.1), (60, 16.2),
+  (3, 12.5),
+  (6, 14.0),
+  (9, 14.8),
+  (12, 15.2),
+  (18, 15.5),
+  (24, 15.7),
+  (30, 15.8),
+  (36, 15.9),
+  (42, 16.0),
+  (48, 16.1),
+  (54, 16.1),
+  (60, 16.2),
 ];
 
 const List<(int, double)> muacGirls = [
-  (3, 12.3), (6, 13.8), (9, 14.6), (12, 14.9), (18, 15.2), (24, 15.4),
-  (30, 15.5), (36, 15.6), (42, 15.7), (48, 15.7), (54, 15.8), (60, 15.8),
+  (3, 12.3),
+  (6, 13.8),
+  (9, 14.6),
+  (12, 14.9),
+  (18, 15.2),
+  (24, 15.4),
+  (30, 15.5),
+  (36, 15.6),
+  (42, 15.7),
+  (48, 15.7),
+  (54, 15.8),
+  (60, 15.8),
 ];
 
 /// Wasting classifier labels (alphabetical, matching training order)
-const List<String> wastingLabels = ['MAM', 'Normal', 'Overweight', 'Risk_Overweight', 'SAM'];
+const List<String> wastingLabels = [
+  'MAM',
+  'Normal',
+  'Overweight',
+  'Risk_Overweight',
+  'SAM',
+];
 
 /// Body-build adjustment multipliers for WHO median weight.
 /// Slender children weigh ~5% less than median, stocky ~5% more.
@@ -229,8 +255,18 @@ double bodyBuildWeightAdjustment(String build) {
 
 /// 14-feature names in exact order
 const List<String> featureNames = [
-  'age_months', 'sex_binary', 'height_cm', 'shoulder_width_cm',
-  'hip_width_cm', 'torso_length_cm', 'upper_arm_length_cm',
-  'shoulder_height_ratio', 'hip_height_ratio', 'body_build_score',
-  'chest_depth_cm', 'abd_depth_cm', 'chest_depth_ratio', 'abd_depth_ratio',
+  'age_months',
+  'sex_binary',
+  'height_cm',
+  'shoulder_width_cm',
+  'hip_width_cm',
+  'torso_length_cm',
+  'upper_arm_length_cm',
+  'shoulder_height_ratio',
+  'hip_height_ratio',
+  'body_build_score',
+  'chest_depth_cm',
+  'abd_depth_cm',
+  'chest_depth_ratio',
+  'abd_depth_ratio',
 ];

@@ -5,6 +5,16 @@ from config import WastingStatus, canonicalize_wasting_status
 from app.services.muac_service import MUACService
 
 
+def combine(muac, whz):
+    """Combine a tape MUAC arm with WHZ using explicit provenance."""
+    return MUACService.combine_with_whz_status(
+        muac,
+        whz,
+        muac_method="manual" if muac is not None else None,
+        is_direct_measurement=muac is not None,
+    )
+
+
 @pytest.mark.parametrize("legacy, expected", [
     ("Severe Acute Malnutrition (SAM)", WastingStatus.SAM),
     ("Moderate Acute Malnutrition (MAM)", WastingStatus.MAM),
@@ -20,7 +30,10 @@ def test_full_descriptive_legacy_whz_values_migrate(legacy, expected):
 def test_combiner_accepts_only_canonical_values():
     with pytest.raises(ValueError, match="canonical"):
         MUACService.combine_with_whz_status(
-            WastingStatus.NORMAL, "Severe Acute Malnutrition (SAM)"
+            WastingStatus.NORMAL,
+            "Severe Acute Malnutrition (SAM)",
+            muac_method="manual",
+            is_direct_measurement=True,
         )
 
 
@@ -33,15 +46,13 @@ def test_combiner_accepts_only_canonical_values():
     (None, WastingStatus.SAM, "whz"),
 ])
 def test_either_sam_arm_always_produces_final_sam(muac, whz, trigger):
-    result = MUACService.combine_with_whz_status(muac, whz)
+    result = combine(muac, whz)
     assert result.status is WastingStatus.SAM
     assert trigger in result.triggered_by
 
 
 def test_mam_arm_wins_disagreement_with_normal():
-    result = MUACService.combine_with_whz_status(
-        WastingStatus.MAM, WastingStatus.NORMAL
-    )
+    result = combine(WastingStatus.MAM, WastingStatus.NORMAL)
     assert result.status is WastingStatus.MAM
     assert result.triggered_by == ["muac"]
 
@@ -52,4 +63,4 @@ def test_mam_arm_wins_disagreement_with_normal():
     (None, None, WastingStatus.UNKNOWN),
 ])
 def test_missing_arms(muac, whz, expected):
-    assert MUACService.combine_with_whz_status(muac, whz).status is expected
+    assert combine(muac, whz).status is expected

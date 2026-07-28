@@ -133,11 +133,16 @@ void main() {
     });
   });
 
-  // --- WHO 2009/2013 CMAM OR-rule: most-severe of WHZ/MUAC/ML wins -------
+  // --- WHO 2009/2013 CMAM OR-rule: direct MUAC or WHZ wins ---------------
   group('combineNutritionStatus', () {
     test('MUAC SAM escalates over Normal WHZ (false-negative guard)', () {
       expect(
-        combineNutritionStatus(whzStatus: 'NORMAL', muacStatus: 'SAM'),
+        combineNutritionStatus(
+          whzStatus: 'NORMAL',
+          muacStatus: 'SAM',
+          muacMethod: 'manual',
+          isDirectMeasurement: true,
+        ),
         'SAM',
       );
     });
@@ -146,24 +151,31 @@ void main() {
         combineNutritionStatus(
           whzStatus: 'Severe Acute Malnutrition (SAM)',
           muacStatus: 'NORMAL',
+          muacMethod: 'manual',
+          isDirectMeasurement: true,
         ),
         'SAM',
       );
     });
-    test('ML SAM escalates over Normal WHZ with no MUAC', () {
+    test('WHZ-derived MUAC cannot create an independent SAM arm', () {
       expect(
         combineNutritionStatus(
           whzStatus: 'NORMAL',
-          muacStatus: null,
-          mlStatus: 'SAM',
+          muacStatus: 'SAM',
+          muacMethod: 'estimated_from_whz',
+          isDirectMeasurement: false,
         ),
-        'SAM',
+        'NORMAL',
       );
     });
     test('MUAC At Risk (MAM) escalates over Normal WHZ', () {
       expect(
         combineNutritionStatus(
-            whzStatus: 'NORMAL', muacStatus: 'MAM'),
+          whzStatus: 'NORMAL',
+          muacStatus: 'MAM',
+          muacMethod: 'manual',
+          isDirectMeasurement: true,
+        ),
         'MAM',
       );
     });
@@ -172,14 +184,9 @@ void main() {
         combineNutritionStatus(
           whzStatus: 'Moderate Acute Malnutrition (MAM)',
           muacStatus: 'NORMAL',
+          muacMethod: 'manual',
+          isDirectMeasurement: true,
         ),
-        'MAM',
-      );
-    });
-    test('ML MAM escalates over Normal WHZ', () {
-      expect(
-        combineNutritionStatus(
-            whzStatus: 'NORMAL', muacStatus: null, mlStatus: 'MAM'),
         'MAM',
       );
     });
@@ -188,32 +195,53 @@ void main() {
         combineNutritionStatus(
           whzStatus: 'Moderate Acute Malnutrition (MAM)',
           muacStatus: 'SAM',
+          muacMethod: 'manual',
+          isDirectMeasurement: true,
         ),
         'SAM',
       );
     });
     test('MUAC SAM escalates even when WHZ could not be computed (null)', () {
       expect(
-        combineNutritionStatus(whzStatus: null, muacStatus: 'SAM'),
+        combineNutritionStatus(
+          whzStatus: null,
+          muacStatus: 'SAM',
+          muacMethod: 'manual',
+          isDirectMeasurement: true,
+        ),
         'SAM',
       );
     });
     test('all Normal is Normal', () {
       expect(
         combineNutritionStatus(
-            whzStatus: 'NORMAL', muacStatus: 'NORMAL', mlStatus: 'NORMAL'),
+          whzStatus: 'NORMAL',
+          muacStatus: 'NORMAL',
+          muacMethod: 'manual',
+          isDirectMeasurement: true,
+        ),
         'NORMAL',
       );
     });
     test('all null is Unknown', () {
       expect(
-        combineNutritionStatus(whzStatus: null, muacStatus: null),
+        combineNutritionStatus(
+          whzStatus: null,
+          muacStatus: null,
+          muacMethod: null,
+          isDirectMeasurement: false,
+        ),
         'UNKNOWN',
       );
     });
     test('WHZ overweight surfaces when nothing more severe', () {
       expect(
-        combineNutritionStatus(whzStatus: 'OVERWEIGHT', muacStatus: 'NORMAL'),
+        combineNutritionStatus(
+          whzStatus: 'OVERWEIGHT',
+          muacStatus: 'NORMAL',
+          muacMethod: 'manual',
+          isDirectMeasurement: true,
+        ),
         'OVERWEIGHT',
       );
     });
