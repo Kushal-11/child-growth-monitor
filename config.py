@@ -49,6 +49,9 @@ WHO_DATA_FILES = {
 }
 
 # Classification thresholds (WHO standard)
+CLINICAL_MIN_AGE_MONTHS = 0
+CLINICAL_MAX_AGE_MONTHS = 60  # Exclusive: WHO tables cover birth through 59 months.
+
 ZSCORE_CLASSIFICATIONS = {
     "haz": {
         (-99, -3): "Severely Stunted",

@@ -19,7 +19,8 @@ from app.models.child import Child
 from app.models.user import User
 from app.services.auth_service import get_current_user
 from app.models.database import get_db
-from app.schemas.assessment import AssessmentResponse
+from app.schemas.assessment import AssessmentRequest, AssessmentResponse
+from app.services.age_service import AgeService
 from app.services.assessment_service import AssessmentService
 from config import UPLOAD_DIR
 
@@ -31,6 +32,11 @@ router = APIRouter(prefix="/api/v1", tags=["API"])
 def get_assessment_service() -> AssessmentService:
     """Placeholder; overridden at app startup in main.py."""
     raise NotImplementedError
+
+
+def get_age_service() -> AgeService:
+    """Provide the shared stateless clinical-age service."""
+    return AgeService()
 
 
 @router.get("/health")
@@ -55,6 +61,7 @@ async def assess_child(
     location: str = Form(None),
     db: Session = Depends(get_db),
     svc: AssessmentService = Depends(get_assessment_service),
+    age_svc: AgeService = Depends(get_age_service),
 ):
     """Main assessment endpoint. Accepts multipart form with image + metadata."""
     if sex not in ("M", "F"):
@@ -63,7 +70,27 @@ async def assess_child(
     try:
         dob = date.fromisoformat(date_of_birth)
     except ValueError:
-        raise HTTPException(400, "date_of_birth must be ISO format (YYYY-MM-DD)")
+        raise HTTPException(
+            422, "date_of_birth must be ISO format (YYYY-MM-DD)"
+        ) from None
+
+    as_of = date.today()
+    try:
+        # Apply the same Pydantic contract used by JSON callers to multipart data.
+        AssessmentRequest.model_validate(
+            {
+                "child_name": child_name,
+                "date_of_birth": dob,
+                "sex": sex,
+                "weight_kg": weight_kg,
+                "height_cm": height_cm,
+                "guardian_name": guardian_name,
+                "location": location,
+            },
+            context={"age_service": age_svc, "as_of": as_of},
+        )
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
     # Convert height if provided with unit
     final_height_cm = height_cm
@@ -97,6 +124,7 @@ async def assess_child(
         guardian_name=guardian_name,
         location=location,
         side_image=side_image_bytes,
+        as_of=as_of,
     )
     return result
 

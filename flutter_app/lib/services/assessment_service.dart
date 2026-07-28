@@ -217,6 +217,8 @@ class AssessmentService {
       ageMonths: ageMonths,
       summary: summaryStatus,
       measurement: ar.Measurement(
+        effectiveHeightCm: m.effectiveHeightCm,
+        heightMethod: manualHeightCm != null ? 'manual' : 'image_estimated',
         predictedHeightCm: m.effectiveHeightCm,
         predictedWeightKg: effectiveWeight,
         manualHeightCm: manualHeightCm,
