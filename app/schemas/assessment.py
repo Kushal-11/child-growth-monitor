@@ -1,8 +1,10 @@
 """Pydantic schemas for API request/response validation."""
 from datetime import date
-from typing import Optional
+from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
+
+from app.services.age_service import AgeService
 from config import WastingStatus
 
 
@@ -22,13 +24,24 @@ class AssessmentRequest(BaseModel):
         None,
         gt=0,
         le=200,
-        description="Manually entered height in cm. Used as fallback when image-based estimation fails.",
+        description="Manually entered height in cm. Overrides an image-based estimate.",
     )
     guardian_name: Optional[str] = None
     location: Optional[str] = None
 
+    @field_validator("date_of_birth")
+    @classmethod
+    def validate_date_of_birth(cls, value: date, info: ValidationInfo) -> date:
+        """Reject dates that cannot be assessed against the WHO tables."""
+        context = info.context or {}
+        age_service = context.get("age_service") or AgeService()
+        age_service.validate_clinical_age(value, context.get("as_of"))
+        return value
+
 
 class MeasurementDetail(BaseModel):
+    effective_height_cm: Optional[float] = None
+    height_method: str = "unavailable"  # "manual" | "image_estimated" | "unavailable"
     predicted_height_cm: Optional[float] = None
     predicted_weight_kg: Optional[float] = None
     manual_height_cm: Optional[float] = None
@@ -93,3 +106,4 @@ class AssessmentResponse(BaseModel):
     muac: Optional[MUACDetail] = None
     combined_nutrition: CombinedNutritionDetail
     summary: str
+    warnings: List[str] = Field(default_factory=list)

@@ -201,12 +201,11 @@ class ResultScreen extends ConsumerWidget {
           context,
           ref,
           title: t('metric_height', ref),
-          value: result.measurement.predictedHeightCm ??
-              result.measurement.manualHeightCm,
+          value: result.measurement.effectiveHeightCm,
           unit: 'cm',
-          source: result.measurement.manualHeightCm != null
+          source: result.measurement.heightMethod == 'manual'
               ? t('badge_manual', ref)
-              : result.measurement.predictedHeightCm != null
+              : result.measurement.heightMethod == 'image_estimated'
                   ? t('badge_image', ref)
                   : t('badge_undetected', ref),
           zscore: result.nutrition.hazZscore,

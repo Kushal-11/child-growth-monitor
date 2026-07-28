@@ -64,7 +64,7 @@ class TestClassification:
         assert nutrition_svc.classify_haz(-3.5) == "Severely Stunted"
 
     def test_whz_normal(self, nutrition_svc):
-        assert nutrition_svc.classify_whz(0.0) == "Normal"
+        assert nutrition_svc.classify_whz(0.0) is WastingStatus.NORMAL
 
     def test_whz_mam(self, nutrition_svc):
         assert nutrition_svc.classify_whz(-2.5) == WastingStatus.MAM

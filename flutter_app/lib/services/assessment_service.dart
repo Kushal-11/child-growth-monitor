@@ -224,6 +224,8 @@ class AssessmentService {
         confidenceScore: poseConfidence,
       ),
       measurement: ar.Measurement(
+        effectiveHeightCm: m.effectiveHeightCm,
+        heightMethod: manualHeightCm != null ? 'manual' : 'image_estimated',
         predictedHeightCm: m.effectiveHeightCm,
         predictedWeightKg: effectiveWeight,
         manualHeightCm: manualHeightCm,

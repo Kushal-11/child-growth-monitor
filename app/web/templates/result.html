@@ -150,16 +150,15 @@
                         <div class="card metric-card h-100 text-center">
                             <div class="card-body px-2 py-3">
                                 <div class="metric-label">{{ t.metric_height }}</div>
-                                {% if result.measurement.predicted_height_cm %}
+                                {% if result.measurement.effective_height_cm is not none %}
                                     <div class="metric-value">
-                                        {{ "%.1f"|format(result.measurement.predicted_height_cm) }}<span class="metric-unit">{{ t.unit_cm }}</span>
+                                        {{ "%.1f"|format(result.measurement.effective_height_cm) }}<span class="metric-unit">{{ t.unit_cm }}</span>
                                     </div>
-                                    <span class="badge bg-success mt-1">{{ t.badge_image }}</span>
-                                {% elif result.measurement.manual_height_cm %}
-                                    <div class="metric-value">
-                                        {{ "%.1f"|format(result.measurement.manual_height_cm) }}<span class="metric-unit">{{ t.unit_cm }}</span>
-                                    </div>
-                                    <span class="badge bg-info mt-1">{{ t.badge_manual }}</span>
+                                    {% if result.measurement.height_method == 'manual' %}
+                                        <span class="badge bg-info mt-1">{{ t.badge_manual }}</span>
+                                    {% else %}
+                                        <span class="badge bg-success mt-1">{{ t.badge_image }}</span>
+                                    {% endif %}
                                 {% else %}
                                     <div class="metric-value text-muted fs-3">—</div>
                                     <span class="badge bg-warning text-dark mt-1 small">{{ t.badge_undetected }}</span>

@@ -7,11 +7,11 @@ LMS Method:
   Z = ((measurement / M) ** L - 1) / (L * S)    when L != 0
   Z = ln(measurement / M) / S                     when L == 0
 
-For Height-for-Age (HAZ), since the CSV data does not provide L/M/S,
-we use linear interpolation between the provided Z-score boundary values.
+Height-for-Age (HAZ) and Weight-for-Height (WHZ) both use authoritative
+WHO Excel LMS parameters.
 """
 import math
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from config import WastingStatus, ZSCORE_CLASSIFICATIONS
 from app.services.who_data_service import WHODataService
@@ -24,21 +24,11 @@ class NutritionService:
     def compute_haz(
         self, sex: str, age_months: int, height_cm: float
     ) -> Optional[float]:
-        """Compute Height-for-Age Z-score using boundary interpolation."""
-        boundaries = self.who_data.get_haz_boundaries(sex, age_months)
-        if boundaries is None:
+        """Compute Height-for-Age Z-score using WHO LMS parameters."""
+        lms = self.who_data.get_haz_lms(sex, age_months)
+        if lms is None or height_cm <= 0:
             return None
-
-        z_points: List[Tuple[float, float]] = [
-            (-3, boundaries["z_minus_3"]),
-            (-2, boundaries["z_minus_2"]),
-            (-1, boundaries["z_minus_1"]),
-            (0, boundaries["z_0"]),
-            (1, boundaries["z_plus_1"]),
-            (2, boundaries["z_plus_2"]),
-            (3, boundaries["z_plus_3"]),
-        ]
-        return self._interpolate_zscore(height_cm, z_points)
+        return self._lms_zscore(height_cm, *lms)
 
     def compute_whz(
         self, sex: str, age_months: float, height_cm: float, weight_kg: float
@@ -53,47 +43,11 @@ class NutritionService:
     @staticmethod
     def _lms_zscore(measurement: float, L: float, M: float, S: float) -> float:
         """Compute Z-score from measurement using LMS parameters."""
-        if M <= 0 or S <= 0:
-            return 0.0
+        if measurement <= 0 or M <= 0 or S <= 0:
+            raise ValueError("LMS inputs require positive measurement, M, and S")
         if abs(L) < 1e-6:
             return math.log(measurement / M) / S
         return (((measurement / M) ** L) - 1) / (L * S)
-
-    @staticmethod
-    def _interpolate_zscore(
-        value: float, z_points: List[Tuple[float, float]]
-    ) -> float:
-        """Linearly interpolate Z-score from boundary values.
-
-        z_points is a sorted list of (z_score, reference_value) tuples.
-        """
-        # Below the lowest boundary: extrapolate
-        if value <= z_points[0][1]:
-            z0, v0 = z_points[0]
-            z1, v1 = z_points[1]
-            if v1 == v0:
-                return z0
-            return z0 - (v0 - value) / (v1 - v0)
-
-        # Above the highest boundary: extrapolate
-        if value >= z_points[-1][1]:
-            z0, v0 = z_points[-2]
-            z1, v1 = z_points[-1]
-            if v1 == v0:
-                return z1
-            return z1 + (value - v1) / (v1 - v0)
-
-        # Find the two bounding points and interpolate
-        for i in range(len(z_points) - 1):
-            z_low, v_low = z_points[i]
-            z_high, v_high = z_points[i + 1]
-            if v_low <= value <= v_high:
-                if v_high == v_low:
-                    return z_low
-                fraction = (value - v_low) / (v_high - v_low)
-                return z_low + fraction * (z_high - z_low)
-
-        return 0.0
 
     def classify_haz(self, z: float) -> str:
         """Classify HAZ Z-score into nutritional status."""
