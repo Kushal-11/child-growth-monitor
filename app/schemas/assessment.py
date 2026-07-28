@@ -21,13 +21,15 @@ class AssessmentRequest(BaseModel):
         None,
         gt=0,
         le=200,
-        description="Manually entered height in cm. Used as fallback when image-based estimation fails.",
+        description="Manually entered height in cm. Overrides an image-based estimate.",
     )
     guardian_name: Optional[str] = None
     location: Optional[str] = None
 
 
 class MeasurementDetail(BaseModel):
+    effective_height_cm: Optional[float] = None
+    height_method: str = "unavailable"  # "manual" | "image_estimated" | "unavailable"
     predicted_height_cm: Optional[float] = None
     predicted_weight_kg: Optional[float] = None
     manual_height_cm: Optional[float] = None
