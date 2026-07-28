@@ -49,7 +49,7 @@ def _payload():
     return {
         "local_uuid": "11111111-1111-1111-1111-111111111111",
         "child_name": "Kid", "date_of_birth": "2024-01-01", "sex": "M",
-        "age_months": "12.0", "visit_date": "2026-06-01T00:00:00",
+        "age_months": "29.0", "visit_date": "2026-06-01T00:00:00",
         "manual_height_cm": "75.0", "manual_weight_kg": "9.0",
         "entry_method": "manual",
     }
@@ -136,7 +136,7 @@ def test_sync_rejects_empty_submission(ctx):
     r = client.post("/api/v1/sync", data={
         "local_uuid": "55555555-5555-5555-5555-555555555555",
         "child_name": "X", "date_of_birth": "2024-01-01", "sex": "M",
-        "age_months": "12.0", "visit_date": "2026-06-01T00:00:00",
+        "age_months": "29.0", "visit_date": "2026-06-01T00:00:00",
         "entry_method": "manual",
     }, headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 400

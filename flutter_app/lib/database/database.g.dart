@@ -1440,6 +1440,39 @@ class $MeasurementsTable extends Measurements
   late final GeneratedColumn<String> combinedProtocolVersion =
       GeneratedColumn<String>('combined_protocol_version', aliasedName, true,
           type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _poshanStatusMeta =
+      const VerificationMeta('poshanStatus');
+  @override
+  late final GeneratedColumn<String> poshanStatus = GeneratedColumn<String>(
+      'poshan_status', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _poshanTriggeredByMeta =
+      const VerificationMeta('poshanTriggeredBy');
+  @override
+  late final GeneratedColumn<String> poshanTriggeredBy =
+      GeneratedColumn<String>('poshan_triggered_by', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _classificationMethodMeta =
+      const VerificationMeta('classificationMethod');
+  @override
+  late final GeneratedColumn<String> classificationMethod =
+      GeneratedColumn<String>('classification_method', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _classificationRationaleMeta =
+      const VerificationMeta('classificationRationale');
+  @override
+  late final GeneratedColumn<String> classificationRationale =
+      GeneratedColumn<String>('classification_rationale', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _poshanCompleteMeta =
+      const VerificationMeta('poshanComplete');
+  @override
+  late final GeneratedColumn<bool> poshanComplete = GeneratedColumn<bool>(
+      'poshan_complete', aliasedName, true,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("poshan_complete" IN (0, 1))'));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -1492,7 +1525,12 @@ class $MeasurementsTable extends Measurements
         combinedRationale,
         combinedMethod,
         combinedConfidenceScore,
-        combinedProtocolVersion
+        combinedProtocolVersion,
+        poshanStatus,
+        poshanTriggeredBy,
+        classificationMethod,
+        classificationRationale,
+        poshanComplete
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1797,6 +1835,36 @@ class $MeasurementsTable extends Measurements
               data['combined_protocol_version']!,
               _combinedProtocolVersionMeta));
     }
+    if (data.containsKey('poshan_status')) {
+      context.handle(
+          _poshanStatusMeta,
+          poshanStatus.isAcceptableOrUnknown(
+              data['poshan_status']!, _poshanStatusMeta));
+    }
+    if (data.containsKey('poshan_triggered_by')) {
+      context.handle(
+          _poshanTriggeredByMeta,
+          poshanTriggeredBy.isAcceptableOrUnknown(
+              data['poshan_triggered_by']!, _poshanTriggeredByMeta));
+    }
+    if (data.containsKey('classification_method')) {
+      context.handle(
+          _classificationMethodMeta,
+          classificationMethod.isAcceptableOrUnknown(
+              data['classification_method']!, _classificationMethodMeta));
+    }
+    if (data.containsKey('classification_rationale')) {
+      context.handle(
+          _classificationRationaleMeta,
+          classificationRationale.isAcceptableOrUnknown(
+              data['classification_rationale']!, _classificationRationaleMeta));
+    }
+    if (data.containsKey('poshan_complete')) {
+      context.handle(
+          _poshanCompleteMeta,
+          poshanComplete.isAcceptableOrUnknown(
+              data['poshan_complete']!, _poshanCompleteMeta));
+    }
     return context;
   }
 
@@ -1920,6 +1988,17 @@ class $MeasurementsTable extends Measurements
       combinedProtocolVersion: attachedDatabase.typeMapping.read(
           DriftSqlType.string,
           data['${effectivePrefix}combined_protocol_version']),
+      poshanStatus: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}poshan_status']),
+      poshanTriggeredBy: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}poshan_triggered_by']),
+      classificationMethod: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}classification_method']),
+      classificationRationale: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}classification_rationale']),
+      poshanComplete: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}poshan_complete']),
     );
   }
 
@@ -1981,6 +2060,11 @@ class Measurement extends DataClass implements Insertable<Measurement> {
   final String? combinedMethod;
   final double? combinedConfidenceScore;
   final String? combinedProtocolVersion;
+  final String? poshanStatus;
+  final String? poshanTriggeredBy;
+  final String? classificationMethod;
+  final String? classificationRationale;
+  final bool? poshanComplete;
   const Measurement(
       {required this.id,
       required this.visitId,
@@ -2032,7 +2116,12 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       this.combinedRationale,
       this.combinedMethod,
       this.combinedConfidenceScore,
-      this.combinedProtocolVersion});
+      this.combinedProtocolVersion,
+      this.poshanStatus,
+      this.poshanTriggeredBy,
+      this.classificationMethod,
+      this.classificationRationale,
+      this.poshanComplete});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -2192,6 +2281,22 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       map['combined_protocol_version'] =
           Variable<String>(combinedProtocolVersion);
     }
+    if (!nullToAbsent || poshanStatus != null) {
+      map['poshan_status'] = Variable<String>(poshanStatus);
+    }
+    if (!nullToAbsent || poshanTriggeredBy != null) {
+      map['poshan_triggered_by'] = Variable<String>(poshanTriggeredBy);
+    }
+    if (!nullToAbsent || classificationMethod != null) {
+      map['classification_method'] = Variable<String>(classificationMethod);
+    }
+    if (!nullToAbsent || classificationRationale != null) {
+      map['classification_rationale'] =
+          Variable<String>(classificationRationale);
+    }
+    if (!nullToAbsent || poshanComplete != null) {
+      map['poshan_complete'] = Variable<bool>(poshanComplete);
+    }
     return map;
   }
 
@@ -2342,6 +2447,21 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       combinedProtocolVersion: combinedProtocolVersion == null && nullToAbsent
           ? const Value.absent()
           : Value(combinedProtocolVersion),
+      poshanStatus: poshanStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(poshanStatus),
+      poshanTriggeredBy: poshanTriggeredBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(poshanTriggeredBy),
+      classificationMethod: classificationMethod == null && nullToAbsent
+          ? const Value.absent()
+          : Value(classificationMethod),
+      classificationRationale: classificationRationale == null && nullToAbsent
+          ? const Value.absent()
+          : Value(classificationRationale),
+      poshanComplete: poshanComplete == null && nullToAbsent
+          ? const Value.absent()
+          : Value(poshanComplete),
     );
   }
 
@@ -2419,6 +2539,14 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           serializer.fromJson<double?>(json['combinedConfidenceScore']),
       combinedProtocolVersion:
           serializer.fromJson<String?>(json['combinedProtocolVersion']),
+      poshanStatus: serializer.fromJson<String?>(json['poshanStatus']),
+      poshanTriggeredBy:
+          serializer.fromJson<String?>(json['poshanTriggeredBy']),
+      classificationMethod:
+          serializer.fromJson<String?>(json['classificationMethod']),
+      classificationRationale:
+          serializer.fromJson<String?>(json['classificationRationale']),
+      poshanComplete: serializer.fromJson<bool?>(json['poshanComplete']),
     );
   }
   @override
@@ -2486,6 +2614,12 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           serializer.toJson<double?>(combinedConfidenceScore),
       'combinedProtocolVersion':
           serializer.toJson<String?>(combinedProtocolVersion),
+      'poshanStatus': serializer.toJson<String?>(poshanStatus),
+      'poshanTriggeredBy': serializer.toJson<String?>(poshanTriggeredBy),
+      'classificationMethod': serializer.toJson<String?>(classificationMethod),
+      'classificationRationale':
+          serializer.toJson<String?>(classificationRationale),
+      'poshanComplete': serializer.toJson<bool?>(poshanComplete),
     };
   }
 
@@ -2540,7 +2674,12 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           Value<String?> combinedRationale = const Value.absent(),
           Value<String?> combinedMethod = const Value.absent(),
           Value<double?> combinedConfidenceScore = const Value.absent(),
-          Value<String?> combinedProtocolVersion = const Value.absent()}) =>
+          Value<String?> combinedProtocolVersion = const Value.absent(),
+          Value<String?> poshanStatus = const Value.absent(),
+          Value<String?> poshanTriggeredBy = const Value.absent(),
+          Value<String?> classificationMethod = const Value.absent(),
+          Value<String?> classificationRationale = const Value.absent(),
+          Value<bool?> poshanComplete = const Value.absent()}) =>
       Measurement(
         id: id ?? this.id,
         visitId: visitId ?? this.visitId,
@@ -2654,6 +2793,19 @@ class Measurement extends DataClass implements Insertable<Measurement> {
         combinedProtocolVersion: combinedProtocolVersion.present
             ? combinedProtocolVersion.value
             : this.combinedProtocolVersion,
+        poshanStatus:
+            poshanStatus.present ? poshanStatus.value : this.poshanStatus,
+        poshanTriggeredBy: poshanTriggeredBy.present
+            ? poshanTriggeredBy.value
+            : this.poshanTriggeredBy,
+        classificationMethod: classificationMethod.present
+            ? classificationMethod.value
+            : this.classificationMethod,
+        classificationRationale: classificationRationale.present
+            ? classificationRationale.value
+            : this.classificationRationale,
+        poshanComplete:
+            poshanComplete.present ? poshanComplete.value : this.poshanComplete,
       );
   Measurement copyWithCompanion(MeasurementsCompanion data) {
     return Measurement(
@@ -2787,6 +2939,21 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       combinedProtocolVersion: data.combinedProtocolVersion.present
           ? data.combinedProtocolVersion.value
           : this.combinedProtocolVersion,
+      poshanStatus: data.poshanStatus.present
+          ? data.poshanStatus.value
+          : this.poshanStatus,
+      poshanTriggeredBy: data.poshanTriggeredBy.present
+          ? data.poshanTriggeredBy.value
+          : this.poshanTriggeredBy,
+      classificationMethod: data.classificationMethod.present
+          ? data.classificationMethod.value
+          : this.classificationMethod,
+      classificationRationale: data.classificationRationale.present
+          ? data.classificationRationale.value
+          : this.classificationRationale,
+      poshanComplete: data.poshanComplete.present
+          ? data.poshanComplete.value
+          : this.poshanComplete,
     );
   }
 
@@ -2843,7 +3010,12 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           ..write('combinedRationale: $combinedRationale, ')
           ..write('combinedMethod: $combinedMethod, ')
           ..write('combinedConfidenceScore: $combinedConfidenceScore, ')
-          ..write('combinedProtocolVersion: $combinedProtocolVersion')
+          ..write('combinedProtocolVersion: $combinedProtocolVersion, ')
+          ..write('poshanStatus: $poshanStatus, ')
+          ..write('poshanTriggeredBy: $poshanTriggeredBy, ')
+          ..write('classificationMethod: $classificationMethod, ')
+          ..write('classificationRationale: $classificationRationale, ')
+          ..write('poshanComplete: $poshanComplete')
           ..write(')'))
         .toString();
   }
@@ -2900,7 +3072,12 @@ class Measurement extends DataClass implements Insertable<Measurement> {
         combinedRationale,
         combinedMethod,
         combinedConfidenceScore,
-        combinedProtocolVersion
+        combinedProtocolVersion,
+        poshanStatus,
+        poshanTriggeredBy,
+        classificationMethod,
+        classificationRationale,
+        poshanComplete
       ]);
   @override
   bool operator ==(Object other) =>
@@ -2956,7 +3133,12 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           other.combinedRationale == this.combinedRationale &&
           other.combinedMethod == this.combinedMethod &&
           other.combinedConfidenceScore == this.combinedConfidenceScore &&
-          other.combinedProtocolVersion == this.combinedProtocolVersion);
+          other.combinedProtocolVersion == this.combinedProtocolVersion &&
+          other.poshanStatus == this.poshanStatus &&
+          other.poshanTriggeredBy == this.poshanTriggeredBy &&
+          other.classificationMethod == this.classificationMethod &&
+          other.classificationRationale == this.classificationRationale &&
+          other.poshanComplete == this.poshanComplete);
 }
 
 class MeasurementsCompanion extends UpdateCompanion<Measurement> {
@@ -3011,6 +3193,11 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
   final Value<String?> combinedMethod;
   final Value<double?> combinedConfidenceScore;
   final Value<String?> combinedProtocolVersion;
+  final Value<String?> poshanStatus;
+  final Value<String?> poshanTriggeredBy;
+  final Value<String?> classificationMethod;
+  final Value<String?> classificationRationale;
+  final Value<bool?> poshanComplete;
   const MeasurementsCompanion({
     this.id = const Value.absent(),
     this.visitId = const Value.absent(),
@@ -3063,6 +3250,11 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     this.combinedMethod = const Value.absent(),
     this.combinedConfidenceScore = const Value.absent(),
     this.combinedProtocolVersion = const Value.absent(),
+    this.poshanStatus = const Value.absent(),
+    this.poshanTriggeredBy = const Value.absent(),
+    this.classificationMethod = const Value.absent(),
+    this.classificationRationale = const Value.absent(),
+    this.poshanComplete = const Value.absent(),
   });
   MeasurementsCompanion.insert({
     this.id = const Value.absent(),
@@ -3116,6 +3308,11 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     this.combinedMethod = const Value.absent(),
     this.combinedConfidenceScore = const Value.absent(),
     this.combinedProtocolVersion = const Value.absent(),
+    this.poshanStatus = const Value.absent(),
+    this.poshanTriggeredBy = const Value.absent(),
+    this.classificationMethod = const Value.absent(),
+    this.classificationRationale = const Value.absent(),
+    this.poshanComplete = const Value.absent(),
   }) : visitId = Value(visitId);
   static Insertable<Measurement> custom({
     Expression<int>? id,
@@ -3169,6 +3366,11 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     Expression<String>? combinedMethod,
     Expression<double>? combinedConfidenceScore,
     Expression<String>? combinedProtocolVersion,
+    Expression<String>? poshanStatus,
+    Expression<String>? poshanTriggeredBy,
+    Expression<String>? classificationMethod,
+    Expression<String>? classificationRationale,
+    Expression<bool>? poshanComplete,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3235,6 +3437,13 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
         'combined_confidence_score': combinedConfidenceScore,
       if (combinedProtocolVersion != null)
         'combined_protocol_version': combinedProtocolVersion,
+      if (poshanStatus != null) 'poshan_status': poshanStatus,
+      if (poshanTriggeredBy != null) 'poshan_triggered_by': poshanTriggeredBy,
+      if (classificationMethod != null)
+        'classification_method': classificationMethod,
+      if (classificationRationale != null)
+        'classification_rationale': classificationRationale,
+      if (poshanComplete != null) 'poshan_complete': poshanComplete,
     });
   }
 
@@ -3289,7 +3498,12 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
       Value<String?>? combinedRationale,
       Value<String?>? combinedMethod,
       Value<double?>? combinedConfidenceScore,
-      Value<String?>? combinedProtocolVersion}) {
+      Value<String?>? combinedProtocolVersion,
+      Value<String?>? poshanStatus,
+      Value<String?>? poshanTriggeredBy,
+      Value<String?>? classificationMethod,
+      Value<String?>? classificationRationale,
+      Value<bool?>? poshanComplete}) {
     return MeasurementsCompanion(
       id: id ?? this.id,
       visitId: visitId ?? this.visitId,
@@ -3352,6 +3566,12 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
           combinedConfidenceScore ?? this.combinedConfidenceScore,
       combinedProtocolVersion:
           combinedProtocolVersion ?? this.combinedProtocolVersion,
+      poshanStatus: poshanStatus ?? this.poshanStatus,
+      poshanTriggeredBy: poshanTriggeredBy ?? this.poshanTriggeredBy,
+      classificationMethod: classificationMethod ?? this.classificationMethod,
+      classificationRationale:
+          classificationRationale ?? this.classificationRationale,
+      poshanComplete: poshanComplete ?? this.poshanComplete,
     );
   }
 
@@ -3524,6 +3744,23 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
       map['combined_protocol_version'] =
           Variable<String>(combinedProtocolVersion.value);
     }
+    if (poshanStatus.present) {
+      map['poshan_status'] = Variable<String>(poshanStatus.value);
+    }
+    if (poshanTriggeredBy.present) {
+      map['poshan_triggered_by'] = Variable<String>(poshanTriggeredBy.value);
+    }
+    if (classificationMethod.present) {
+      map['classification_method'] =
+          Variable<String>(classificationMethod.value);
+    }
+    if (classificationRationale.present) {
+      map['classification_rationale'] =
+          Variable<String>(classificationRationale.value);
+    }
+    if (poshanComplete.present) {
+      map['poshan_complete'] = Variable<bool>(poshanComplete.value);
+    }
     return map;
   }
 
@@ -3580,7 +3817,12 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
           ..write('combinedRationale: $combinedRationale, ')
           ..write('combinedMethod: $combinedMethod, ')
           ..write('combinedConfidenceScore: $combinedConfidenceScore, ')
-          ..write('combinedProtocolVersion: $combinedProtocolVersion')
+          ..write('combinedProtocolVersion: $combinedProtocolVersion, ')
+          ..write('poshanStatus: $poshanStatus, ')
+          ..write('poshanTriggeredBy: $poshanTriggeredBy, ')
+          ..write('classificationMethod: $classificationMethod, ')
+          ..write('classificationRationale: $classificationRationale, ')
+          ..write('poshanComplete: $poshanComplete')
           ..write(')'))
         .toString();
   }
@@ -4929,6 +5171,11 @@ typedef $$MeasurementsTableCreateCompanionBuilder = MeasurementsCompanion
   Value<String?> combinedMethod,
   Value<double?> combinedConfidenceScore,
   Value<String?> combinedProtocolVersion,
+  Value<String?> poshanStatus,
+  Value<String?> poshanTriggeredBy,
+  Value<String?> classificationMethod,
+  Value<String?> classificationRationale,
+  Value<bool?> poshanComplete,
 });
 typedef $$MeasurementsTableUpdateCompanionBuilder = MeasurementsCompanion
     Function({
@@ -4983,6 +5230,11 @@ typedef $$MeasurementsTableUpdateCompanionBuilder = MeasurementsCompanion
   Value<String?> combinedMethod,
   Value<double?> combinedConfidenceScore,
   Value<String?> combinedProtocolVersion,
+  Value<String?> poshanStatus,
+  Value<String?> poshanTriggeredBy,
+  Value<String?> classificationMethod,
+  Value<String?> classificationRationale,
+  Value<bool?> poshanComplete,
 });
 
 final class $$MeasurementsTableReferences
@@ -5193,6 +5445,25 @@ class $$MeasurementsTableFilterComposer
 
   ColumnFilters<String> get combinedProtocolVersion => $composableBuilder(
       column: $table.combinedProtocolVersion,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get poshanStatus => $composableBuilder(
+      column: $table.poshanStatus, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get poshanTriggeredBy => $composableBuilder(
+      column: $table.poshanTriggeredBy,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get classificationMethod => $composableBuilder(
+      column: $table.classificationMethod,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get classificationRationale => $composableBuilder(
+      column: $table.classificationRationale,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get poshanComplete => $composableBuilder(
+      column: $table.poshanComplete,
       builder: (column) => ColumnFilters(column));
 
   $$VisitsTableFilterComposer get visitId {
@@ -5413,6 +5684,26 @@ class $$MeasurementsTableOrderingComposer
       column: $table.combinedProtocolVersion,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get poshanStatus => $composableBuilder(
+      column: $table.poshanStatus,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get poshanTriggeredBy => $composableBuilder(
+      column: $table.poshanTriggeredBy,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get classificationMethod => $composableBuilder(
+      column: $table.classificationMethod,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get classificationRationale => $composableBuilder(
+      column: $table.classificationRationale,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get poshanComplete => $composableBuilder(
+      column: $table.poshanComplete,
+      builder: (column) => ColumnOrderings(column));
+
   $$VisitsTableOrderingComposer get visitId {
     final $$VisitsTableOrderingComposer composer = $composerBuilder(
         composer: this,
@@ -5593,6 +5884,21 @@ class $$MeasurementsTableAnnotationComposer
   GeneratedColumn<String> get combinedProtocolVersion => $composableBuilder(
       column: $table.combinedProtocolVersion, builder: (column) => column);
 
+  GeneratedColumn<String> get poshanStatus => $composableBuilder(
+      column: $table.poshanStatus, builder: (column) => column);
+
+  GeneratedColumn<String> get poshanTriggeredBy => $composableBuilder(
+      column: $table.poshanTriggeredBy, builder: (column) => column);
+
+  GeneratedColumn<String> get classificationMethod => $composableBuilder(
+      column: $table.classificationMethod, builder: (column) => column);
+
+  GeneratedColumn<String> get classificationRationale => $composableBuilder(
+      column: $table.classificationRationale, builder: (column) => column);
+
+  GeneratedColumn<bool> get poshanComplete => $composableBuilder(
+      column: $table.poshanComplete, builder: (column) => column);
+
   $$VisitsTableAnnotationComposer get visitId {
     final $$VisitsTableAnnotationComposer composer = $composerBuilder(
         composer: this,
@@ -5688,6 +5994,11 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             Value<String?> combinedMethod = const Value.absent(),
             Value<double?> combinedConfidenceScore = const Value.absent(),
             Value<String?> combinedProtocolVersion = const Value.absent(),
+            Value<String?> poshanStatus = const Value.absent(),
+            Value<String?> poshanTriggeredBy = const Value.absent(),
+            Value<String?> classificationMethod = const Value.absent(),
+            Value<String?> classificationRationale = const Value.absent(),
+            Value<bool?> poshanComplete = const Value.absent(),
           }) =>
               MeasurementsCompanion(
             id: id,
@@ -5741,6 +6052,11 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             combinedMethod: combinedMethod,
             combinedConfidenceScore: combinedConfidenceScore,
             combinedProtocolVersion: combinedProtocolVersion,
+            poshanStatus: poshanStatus,
+            poshanTriggeredBy: poshanTriggeredBy,
+            classificationMethod: classificationMethod,
+            classificationRationale: classificationRationale,
+            poshanComplete: poshanComplete,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -5794,6 +6110,11 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             Value<String?> combinedMethod = const Value.absent(),
             Value<double?> combinedConfidenceScore = const Value.absent(),
             Value<String?> combinedProtocolVersion = const Value.absent(),
+            Value<String?> poshanStatus = const Value.absent(),
+            Value<String?> poshanTriggeredBy = const Value.absent(),
+            Value<String?> classificationMethod = const Value.absent(),
+            Value<String?> classificationRationale = const Value.absent(),
+            Value<bool?> poshanComplete = const Value.absent(),
           }) =>
               MeasurementsCompanion.insert(
             id: id,
@@ -5847,6 +6168,11 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             combinedMethod: combinedMethod,
             combinedConfidenceScore: combinedConfidenceScore,
             combinedProtocolVersion: combinedProtocolVersion,
+            poshanStatus: poshanStatus,
+            poshanTriggeredBy: poshanTriggeredBy,
+            classificationMethod: classificationMethod,
+            classificationRationale: classificationRationale,
+            poshanComplete: poshanComplete,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (

@@ -92,6 +92,17 @@ def canonicalize_wasting_status(value):
 CLINICAL_MIN_AGE_MONTHS = 0
 CLINICAL_MAX_AGE_MONTHS = 60  # Exclusive: WHO tables cover birth through 59 months.
 
+# Poshan Setu v1 programme thresholds. Each BMI tuple is
+# (SAM upper bound, Normal lower bound); values between them are MAM.
+POSHAN_BMI_THRESHOLDS = {
+    "M": (13.0, 13.7),
+    "F": (12.8, 13.5),
+}
+POSHAN_MUAC_SAM_MAX_CM = 11.5
+POSHAN_MUAC_NORMAL_MIN_CM = 12.5
+POSHAN_MUAC_MIN_AGE_MONTHS = 6.0
+POSHAN_MUAC_MAX_AGE_MONTHS = 60.0
+
 ZSCORE_CLASSIFICATIONS = {
     "haz": {
         (-99, -3): "Severely Stunted",

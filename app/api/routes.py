@@ -248,6 +248,13 @@ def get_child(
                 "combined_method": m.combined_method,
                 "combined_confidence_score": m.combined_confidence_score,
                 "combined_protocol_version": m.combined_protocol_version,
+                "poshan_status": m.poshan_status,
+                "poshan_triggered_by": _decode_string_list(
+                    m.poshan_triggered_by
+                ),
+                "classification_method": m.classification_method,
+                "classification_rationale": m.classification_rationale,
+                "poshan_complete": m.poshan_complete,
             }
         visits.append(visit_data)
 

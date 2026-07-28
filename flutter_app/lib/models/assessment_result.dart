@@ -9,6 +9,7 @@ class AssessmentResult {
     this.mlPrediction,
     this.muac,
     required this.combinedNutrition,
+    this.poshan = const PoshanDetail(),
   });
 
   final String childName;
@@ -20,6 +21,7 @@ class AssessmentResult {
   final MlPrediction? mlPrediction;
   final MuacDetail? muac;
   final CombinedNutritionDetail combinedNutrition;
+  final PoshanDetail poshan;
 
   factory AssessmentResult.fromJson(Map<String, dynamic> json) {
     return AssessmentResult(
@@ -44,6 +46,47 @@ class AssessmentResult {
       combinedNutrition: CombinedNutritionDetail.fromJson(
         json['combined_nutrition'] as Map<String, dynamic>? ?? const {},
       ),
+      poshan: PoshanDetail.fromJson(
+        json['poshan'] as Map<String, dynamic>? ?? const {},
+      ),
+    );
+  }
+}
+
+class PoshanDetail {
+  const PoshanDetail({
+    this.bmi,
+    this.bmiStatus = 'Indeterminate',
+    this.muacStatus = 'Indeterminate',
+    this.finalStatus = 'Indeterminate',
+    this.triggeredBy = const [],
+    this.classificationMethod = 'poshan_setu_v1',
+    this.rationale = '',
+    this.complete = false,
+  });
+
+  final double? bmi;
+  final String bmiStatus;
+  final String muacStatus;
+  final String finalStatus;
+  final List<String> triggeredBy;
+  final String classificationMethod;
+  final String rationale;
+  final bool complete;
+
+  factory PoshanDetail.fromJson(Map<String, dynamic> json) {
+    return PoshanDetail(
+      bmi: (json['bmi'] as num?)?.toDouble(),
+      bmiStatus: json['bmi_status'] as String? ?? 'Indeterminate',
+      muacStatus: json['muac_status'] as String? ?? 'Indeterminate',
+      finalStatus: json['final_status'] as String? ?? 'Indeterminate',
+      triggeredBy: (json['triggered_by'] as List<dynamic>? ?? const [])
+          .map((value) => value.toString())
+          .toList(),
+      classificationMethod:
+          json['classification_method'] as String? ?? 'poshan_setu_v1',
+      rationale: json['rationale'] as String? ?? '',
+      complete: json['complete'] as bool? ?? false,
     );
   }
 }
@@ -195,8 +238,8 @@ class MlPrediction {
       mamProbability: (json['mam_probability'] as num?)?.toDouble(),
       normalProbability: (json['normal_probability'] as num?)?.toDouble(),
       riskProbability: (json['risk_probability'] as num?)?.toDouble(),
-      overweightProbability: (json['overweight_probability'] as num?)
-          ?.toDouble(),
+      overweightProbability:
+          (json['overweight_probability'] as num?)?.toDouble(),
       wastingStatus: json['wasting_status'] as String?,
       wastingMethod: json['wasting_method'] as String?,
     );

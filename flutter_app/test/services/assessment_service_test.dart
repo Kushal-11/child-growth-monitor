@@ -19,24 +19,24 @@ import '../fixtures/who_test_data.dart';
 class _StubPose implements PoseSource {
   @override
   Future<BodySegments> segmentsFor(String _) async => const BodySegments(
-    headHeightPx: 100,
-    torsoLengthPx: 240,
-    legLengthPx: 380,
-    shoulderWidthPx: 160,
-    hipWidthPx: 140,
-    upperArmLengthPx: 120,
-    totalHeightPx: 800,
-    headTopY: 0,
-    chinY: 100,
-    shoulderMidpointY: 200,
-    hipMidpointY: 440,
-    heelY: 800,
-    headConfidence: 1,
-    torsoConfidence: 1,
-    legConfidence: 1,
-    hipConfidence: 1,
-    armConfidence: 1,
-  );
+        headHeightPx: 100,
+        torsoLengthPx: 240,
+        legLengthPx: 380,
+        shoulderWidthPx: 160,
+        hipWidthPx: 140,
+        upperArmLengthPx: 120,
+        totalHeightPx: 800,
+        headTopY: 0,
+        chinY: 100,
+        shoulderMidpointY: 200,
+        hipMidpointY: 440,
+        heelY: 800,
+        headConfidence: 1,
+        torsoConfidence: 1,
+        legConfidence: 1,
+        hipConfidence: 1,
+        armConfidence: 1,
+      );
   @override
   Future<SideViewSegments?> sideSegmentsFor(String _) async => null;
   @override
@@ -46,24 +46,24 @@ class _StubPose implements PoseSource {
 class _DegradedPose implements PoseSource {
   @override
   Future<BodySegments> segmentsFor(String _) async => const BodySegments(
-    headHeightPx: null,
-    torsoLengthPx: null,
-    legLengthPx: null,
-    shoulderWidthPx: null,
-    hipWidthPx: null,
-    upperArmLengthPx: null,
-    totalHeightPx: null,
-    headTopY: null,
-    chinY: null,
-    shoulderMidpointY: null,
-    hipMidpointY: null,
-    heelY: null,
-    headConfidence: 0,
-    torsoConfidence: 0,
-    legConfidence: 0,
-    hipConfidence: 0,
-    armConfidence: 0,
-  );
+        headHeightPx: null,
+        torsoLengthPx: null,
+        legLengthPx: null,
+        shoulderWidthPx: null,
+        hipWidthPx: null,
+        upperArmLengthPx: null,
+        totalHeightPx: null,
+        headTopY: null,
+        chinY: null,
+        shoulderMidpointY: null,
+        hipMidpointY: null,
+        heelY: null,
+        headConfidence: 0,
+        torsoConfidence: 0,
+        legConfidence: 0,
+        hipConfidence: 0,
+        armConfidence: 0,
+      );
   @override
   Future<SideViewSegments?> sideSegmentsFor(String _) async => null;
   @override
@@ -96,7 +96,8 @@ class _StubMl extends MlInferenceService {
   bool weightWithinBounds({
     required double predictedKg,
     required double whoMedianKg,
-  }) => true;
+  }) =>
+      true;
 }
 
 void main() {
@@ -252,7 +253,11 @@ void main() {
       isTrue,
       reason: 'precondition: WHZ itself is not SAM in this scenario',
     );
-    expect(result.summary, 'NORMAL');
+    expect(
+      result.summary,
+      'Indeterminate',
+      reason: 'estimated ML/WHO evidence cannot certify a Poshan result',
+    );
   });
 
   test('runAssessment tags created child with ownerUserId', () async {

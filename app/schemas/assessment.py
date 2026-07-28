@@ -111,6 +111,19 @@ class CombinedNutritionDetail(BaseModel):
     confidence_score: Optional[float] = None
 
 
+class PoshanDetail(BaseModel):
+    """Final programme verdict from eligible measured BMI and tape MUAC."""
+
+    bmi: Optional[float] = None
+    bmi_status: str
+    muac_status: str
+    final_status: str
+    triggered_by: list[str]
+    classification_method: str = "poshan_setu_v1"
+    rationale: str
+    complete: bool
+
+
 class AssessmentResponse(BaseModel):
     child_name: str
     sex: str
@@ -120,5 +133,6 @@ class AssessmentResponse(BaseModel):
     ml_prediction: Optional[MLPrediction] = None
     muac: Optional[MUACDetail] = None
     combined_nutrition: CombinedNutritionDetail
+    poshan: PoshanDetail
     summary: str
     warnings: List[str] = Field(default_factory=list)

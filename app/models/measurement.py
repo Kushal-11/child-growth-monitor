@@ -86,6 +86,13 @@ class MeasurementResult(Base):
     combined_confidence_score = Column(Float, nullable=True)
     combined_protocol_version = Column(String(50), nullable=True)
 
+    # Final provenance-gated Poshan Setu programme classification.
+    poshan_status = Column(String(30), nullable=True)
+    poshan_triggered_by = Column(String(100), nullable=True)  # JSON list
+    classification_method = Column(String(50), nullable=True)
+    classification_rationale = Column(Text, nullable=True)
+    poshan_complete = Column(Boolean, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     visit = relationship("Visit", back_populates="measurement")

@@ -55,6 +55,16 @@ const double mlWeightUpperBound = 1.80;
 /// Days per month for age calculation
 const double daysPerMonth = 30.4375;
 
+/// Poshan Setu v1 programme thresholds.
+const Map<String, (double, double)> poshanBmiThresholds = {
+  'M': (13.0, 13.7),
+  'F': (12.8, 13.5),
+};
+const double poshanMuacSamMaxCm = 11.5;
+const double poshanMuacNormalMinCm = 12.5;
+const double poshanMuacMinAgeMonths = 6.0;
+const double poshanMuacMaxAgeMonths = 60.0;
+
 /// Expected shoulder-to-height ratios by age (for body build classification)
 double expectedShoulderRatio(double ageMonths) {
   if (ageMonths < 24) return 0.200;
