@@ -31,6 +31,11 @@ from config import UPLOAD_DIR
 router = APIRouter(prefix="/api/v1", tags=["API"])
 
 
+def _safe_upload_name(filename: Optional[str]) -> str:
+    """Discard any client-supplied directory components."""
+    return Path(filename or "capture.jpg").name
+
+
 def _decode_string_list(value: Optional[str]) -> list[str]:
     """Decode legacy JSON evidence without breaking child history."""
     if not value:
@@ -117,7 +122,7 @@ async def assess_child(
 
     # Save front image
     UPLOAD_DIR.mkdir(exist_ok=True)
-    safe_original_name = Path(image.filename or "capture.jpg").name
+    safe_original_name = _safe_upload_name(image.filename)
     filename = f"{uuid.uuid4().hex}_{safe_original_name}"
     file_path = UPLOAD_DIR / filename
     with open(file_path, "wb") as f:

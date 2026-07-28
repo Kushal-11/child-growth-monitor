@@ -133,6 +133,26 @@ def test_manual_height_controls_every_downstream_calculation(
     _assert_manual_height_reaches_all_consumers(service, muac_calls)
 
 
+@pytest.mark.parametrize(
+    ("ml_weight", "expected_weight"),
+    [
+        (4.5, 4.5),
+        (18.0, 18.0),
+        (4.49, 10.0),
+        (18.01, 10.0),
+    ],
+)
+def test_ml_weight_gate_uses_inclusive_configured_who_median_bounds(
+    monkeypatch, db_session, ml_weight, expected_weight
+):
+    service, _ = _service_with_spies(monkeypatch)
+    service.ml_svc.predict.return_value.estimated_weight_kg = ml_weight
+
+    result = _assess(service, db_session)
+
+    assert result.measurement.effective_weight_kg == expected_weight
+
+
 def test_api_returns_effective_manual_height_and_uses_it_downstream(
     monkeypatch, db_session
 ):

@@ -274,14 +274,6 @@
                     </div>
                 </div>
 
-                <div class="alert {% if result.combined_nutrition.status == 'SAM' %}alert-danger{% elif result.combined_nutrition.status == 'MAM' %}alert-warning{% else %}alert-success{% endif %} mb-3">
-                    <strong>BMI + MUAC classification: {{ result.combined_nutrition.status }}</strong>
-                    {% if result.nutrition.bmi is not none %}
-                        <span class="ms-2">BMI {{ "%.2f"|format(result.nutrition.bmi) }} ({{ result.nutrition.bmi_status }})</span>
-                    {% endif %}
-                    <div class="small">{{ result.combined_nutrition.rationale }}</div>
-                </div>
-
                 {% if result.ml_prediction and result.ml_prediction.wasting_method != "unavailable" %}
                 <div class="card mb-3">
                     <div class="card-header fw-semibold small py-2">

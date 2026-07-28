@@ -41,12 +41,6 @@ class MeasurementResult(Base):
     # Classifications
     haz_status = Column(String(50), nullable=True)
     whz_status = Column(String(50), nullable=True)
-    bmi = Column(Float, nullable=True)
-    bmi_status = Column(String(20), nullable=True)
-    combined_status = Column(String(20), nullable=True)
-    combined_triggered_by = Column(String(100), nullable=True)
-    height_method = Column(String(50), nullable=True)
-    weight_method = Column(String(50), nullable=True)
 
     # Metadata
     confidence_score = Column(Float, nullable=True)

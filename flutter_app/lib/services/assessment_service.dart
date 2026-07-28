@@ -363,17 +363,6 @@ class AssessmentService {
         requiresConfirmation: muacResult.requiresConfirmation,
         referralGuidance: muacResult.referralGuidance,
       ),
-      combinedNutrition: ar.CombinedNutritionDetail(
-        status: programmeStatus,
-        triggeredBy: [
-          if (bmiStatus == programmeStatus) 'bmi',
-          if ((muacResult.muacStatus == programmeStatus) ||
-              (programmeStatus == 'MAM' &&
-                  muacResult.muacStatus == 'At Risk (MAM)')) 'muac',
-        ],
-        rationale: 'Worst result from BMI or MUAC',
-        protocol: 'programme_bmi_muac_v1',
-      ),
     );
   }
 

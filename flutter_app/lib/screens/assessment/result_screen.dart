@@ -223,18 +223,6 @@ class ResultScreen extends ConsumerWidget {
           zscore: result.nutrition.hazZscore,
           status: result.nutrition.hazStatus,
         ),
-        if (result.nutrition.bmi != null) ...[
-          const SizedBox(height: 8),
-          _metricCard(
-            context,
-            ref,
-            title: 'BMI',
-            value: result.nutrition.bmi,
-            unit: 'kg/m²',
-            source: 'BMI + MUAC protocol',
-            status: result.nutrition.bmiStatus,
-          ),
-        ],
         const SizedBox(height: 8),
         _metricCard(
           context,

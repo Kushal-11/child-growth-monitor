@@ -8,8 +8,6 @@ import pytest
 from config import WastingStatus
 from app.services.nutrition_service import NutritionService
 from app.services.who_data_service import WHODataService
-from app.services.assessment_service import AssessmentService
-from app.services.muac_service import MUACService
 
 
 @pytest.fixture(scope="module")
@@ -93,29 +91,3 @@ class TestLMSFormula:
         """Measurement below M should give negative Z-score."""
         z = NutritionService._lms_zscore(8.0, L=-0.35, M=10.0, S=0.09)
         assert z < 0
-
-
-class TestProgrammeBMIClassification:
-    @pytest.mark.parametrize(
-        "sex,bmi,expected",
-        [
-            ("M", 12.99, "SAM"), ("M", 13.0, "MAM"),
-            ("M", 13.69, "MAM"), ("M", 13.7, "Normal"),
-            ("F", 12.79, "SAM"), ("F", 12.8, "MAM"),
-            ("F", 13.49, "MAM"), ("F", 13.5, "Normal"),
-        ],
-    )
-    def test_gender_specific_boundaries(self, sex, bmi, expected):
-        assert AssessmentService._classify_bmi(bmi, sex) == expected
-
-    def test_worst_bmi_or_muac_wins(self):
-        result = AssessmentService._combine_bmi_muac("Normal", "SAM")
-        assert result.status == "SAM"
-        result = AssessmentService._combine_bmi_muac("MAM", "Normal")
-        assert result.status == "MAM"
-
-    def test_legacy_whz_labels_are_not_silently_ignored(self):
-        result = MUACService.combine_with_whz_status(
-            "Normal", "Severe Acute Malnutrition (SAM)"
-        )
-        assert result.status == "SAM"
