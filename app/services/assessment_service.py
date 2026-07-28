@@ -5,10 +5,12 @@ Ties together measurement (image processing) and nutrition (Z-score) services.
 Handles the full flow: image -> measurements -> WHO lookup -> classification.
 
 Height resolution priority:
-  1. Image-based (WHO statistical + anthropometric ratios)
-  2. Manual height_cm input (fallback when image detection fails)
+  1. Manual height_cm input
+  2. Validated image-based estimate (WHO statistical + anthropometric ratios)
+  3. Unavailable
 """
-from datetime import date, datetime
+from datetime import date
+from math import isfinite
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -23,7 +25,7 @@ from app.schemas.assessment import (
     MUACDetail,
     NutritionDetail,
 )
-from app.services.age_service import validate_clinical_age
+from app.services.age_service import AgeService
 from app.services.measurement_service import MeasurementOutput, MeasurementService
 from app.services.ml_service import MLService
 from app.services.muac_service import MUACService
@@ -32,11 +34,16 @@ from app.services.who_data_service import WHODataService
 
 
 class AssessmentService:
-    def __init__(self, who_data: WHODataService):
+    age_svc = AgeService()
+
+    def __init__(
+        self, who_data: WHODataService, age_service: AgeService | None = None
+    ):
         self.measurement_svc = MeasurementService()
         self.nutrition_svc = NutritionService(who_data)
         self.who_data = who_data
         self.ml_svc = MLService()
+        self.age_svc = age_service or AgeService()
 
     def assess(
         self,
@@ -51,12 +58,13 @@ class AssessmentService:
         location: Optional[str] = None,
         muac_cm: Optional[float] = None,
         side_image: Optional[bytes] = None,
+        as_of: date | None = None,
     ) -> AssessmentResponse:
         """Run full assessment pipeline and persist results."""
 
         # 1. Compute age in months
-        today = datetime.utcnow().date()
-        age = validate_clinical_age(dob, today)
+        as_of = as_of or date.today()
+        age = self.age_svc.validate_clinical_age(dob, as_of)
         age_months = age.months
 
         # 2. Process image for height estimation using hybrid approach
@@ -69,10 +77,11 @@ class AssessmentService:
         )
 
         # 3. Determine effective height
-        # Priority: image-based prediction > manual input
-        effective_height = meas.predicted_height_cm
-        if effective_height is None and height_cm is not None:
-            effective_height = height_cm
+        # Manual measurements are authoritative.  Keep this resolution in one
+        # place so every downstream consumer receives exactly the same height.
+        effective_height, height_method = self._resolve_effective_height(
+            height_cm, meas.predicted_height_cm
+        )
 
         # 3b. Process side-view image for AP depth features (optional)
         side_segments = None
@@ -215,8 +224,7 @@ class AssessmentService:
             child_name,
             age_months,
             effective_height,
-            meas.predicted_height_cm,
-            height_cm,
+            height_method,
             effective_weight,
             haz_status,
             whz_status,
@@ -253,6 +261,8 @@ class AssessmentService:
             sex=sex,
             age_months=round(age_months, 1),
             measurement=MeasurementDetail(
+                effective_height_cm=effective_height,
+                height_method=height_method,
                 predicted_height_cm=meas.predicted_height_cm,
                 predicted_weight_kg=estimated_weight,
                 manual_height_cm=height_cm,
@@ -294,6 +304,21 @@ class AssessmentService:
         )
 
     @staticmethod
+    def _resolve_effective_height(
+        manual_height: Optional[float], predicted_height: Optional[float]
+    ) -> tuple[Optional[float], str]:
+        """Resolve the authoritative height and expose its provenance."""
+        if manual_height is not None and isfinite(manual_height) and manual_height > 0:
+            return manual_height, "manual"
+        if (
+            predicted_height is not None
+            and isfinite(predicted_height)
+            and predicted_height > 0
+        ):
+            return predicted_height, "image_estimated"
+        return None, "unavailable"
+
+    @staticmethod
     def _get_or_create_child(
         db: Session,
         name: str,
@@ -326,7 +351,7 @@ class AssessmentService:
 
     @staticmethod
     def _build_summary(
-        name, age_months, effective_height, predicted_height, manual_height,
+        name, age_months, effective_height, height_method,
         weight, haz_status, whz_status, ref_detected,
         muac_cm=None, muac_status=None,
     ) -> str:
@@ -334,10 +359,10 @@ class AssessmentService:
         lines = [f"Assessment for {name} ({age_months:.1f} months old):"]
 
         if effective_height is not None:
-            if predicted_height is not None:
-                lines.append(f"  Height: {effective_height:.1f} cm (from image)")
-            elif manual_height is not None:
+            if height_method == "manual":
                 lines.append(f"  Height: {effective_height:.1f} cm (manual input)")
+            elif height_method == "image_estimated":
+                lines.append(f"  Height: {effective_height:.1f} cm (from image)")
         else:
             lines.append("  Height: Could not be determined.")
             if not ref_detected:

@@ -105,7 +105,9 @@ class TestAssessEndpoint:
             ((date.today() - timedelta(days=6 * 365)).isoformat(), "0 through 59 months"),
         ],
     )
-    def test_invalid_clinical_age_returns_422(self, client, dob, message):
+    def test_invalid_clinical_age_returns_422(
+        self, client: TestClient, dob: str, message: str
+    ) -> None:
         response = client.post(
             "/api/v1/assess",
             data={"child_name": "Test", "date_of_birth": dob, "sex": "F"},

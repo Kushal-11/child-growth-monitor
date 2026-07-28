@@ -43,6 +43,8 @@ class AssessmentResult {
 
 class Measurement {
   Measurement({
+    this.effectiveHeightCm,
+    this.heightMethod = 'unavailable',
     this.predictedHeightCm,
     this.predictedWeightKg,
     this.manualHeightCm,
@@ -55,6 +57,8 @@ class Measurement {
     this.abdDepthCm,
   });
 
+  final double? effectiveHeightCm;
+  final String heightMethod;
   final double? predictedHeightCm;
   final double? predictedWeightKg;
   final double? manualHeightCm;
@@ -68,6 +72,8 @@ class Measurement {
 
   factory Measurement.fromJson(Map<String, dynamic> json) {
     return Measurement(
+      effectiveHeightCm: (json['effective_height_cm'] as num?)?.toDouble(),
+      heightMethod: json['height_method'] as String? ?? 'unavailable',
       predictedHeightCm: (json['predicted_height_cm'] as num?)?.toDouble(),
       predictedWeightKg: (json['predicted_weight_kg'] as num?)?.toDouble(),
       manualHeightCm: (json['manual_height_cm'] as num?)?.toDouble(),
