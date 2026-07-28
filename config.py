@@ -40,9 +40,8 @@ POSE_MIN_PRESENCE_CONFIDENCE = 0.5
 
 # WHO data file mappings
 WHO_DATA_FILES = {
-    "haz_0_59m": DATA_DIR / "who_haz_0_59m.csv",
-    "wfh_0_59m": DATA_DIR / "who_wfh_0_59m.csv",
-    "whz_reference": DATA_DIR / "who_whz_reference.csv",
+    # Lossless text packaging avoids binary-patch rejection by the PR API.
+    "lhfa_0_5": DATA_DIR / "lhfa_children_0-to-5-years_lms.xlsx.b64",
     "wfh_boys_2_5": DATA_DIR / "wfh_boys_2-to-5-years_zscores.xlsx",
     "wfh_girls_2_5": DATA_DIR / "wfh_girls_2-to-5-years_zscores.xlsx",
     "wfl_boys_0_2": DATA_DIR / "wfl_boys_0-to-2-years_zscores.xlsx",

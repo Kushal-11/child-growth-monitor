@@ -1,6 +1,6 @@
 """Pydantic schemas for API request/response validation."""
 from datetime import date
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -81,3 +81,4 @@ class AssessmentResponse(BaseModel):
     ml_prediction: Optional[MLPrediction] = None
     muac: Optional[MUACDetail] = None
     summary: str
+    warnings: List[str] = Field(default_factory=list)
