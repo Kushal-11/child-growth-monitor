@@ -23,6 +23,7 @@ from app.schemas.assessment import (
     MUACDetail,
     NutritionDetail,
 )
+from app.services.age_service import validate_clinical_age
 from app.services.measurement_service import MeasurementOutput, MeasurementService
 from app.services.ml_service import MLService
 from app.services.muac_service import MUACService
@@ -55,7 +56,8 @@ class AssessmentService:
 
         # 1. Compute age in months
         today = datetime.utcnow().date()
-        age_months = self._compute_age_months(dob, today)
+        age = validate_clinical_age(dob, today)
+        age_months = age.months
 
         # 2. Process image for height estimation using hybrid approach
         # Pass age, sex, and WHO data for statistical estimation
@@ -131,7 +133,7 @@ class AssessmentService:
 
         if effective_height is not None:
             haz_z = self.nutrition_svc.compute_haz(
-                sex, int(round(age_months)), effective_height
+                sex, age.completed_months, effective_height
             )
             if haz_z is not None:
                 haz_status = self.nutrition_svc.classify_haz(haz_z)
@@ -290,12 +292,6 @@ class AssessmentService:
             ),
             summary=summary,
         )
-
-    @staticmethod
-    def _compute_age_months(dob: date, today: date) -> float:
-        """Compute age in fractional months."""
-        delta = today - dob
-        return delta.days / 30.4375
 
     @staticmethod
     def _get_or_create_child(

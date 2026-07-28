@@ -19,7 +19,8 @@ from app.models.child import Child
 from app.models.user import User
 from app.services.auth_service import get_current_user
 from app.models.database import get_db
-from app.schemas.assessment import AssessmentResponse
+from app.schemas.assessment import AssessmentRequest, AssessmentResponse
+from app.services.age_service import validate_clinical_age
 from app.services.assessment_service import AssessmentService
 from config import UPLOAD_DIR
 
@@ -63,7 +64,22 @@ async def assess_child(
     try:
         dob = date.fromisoformat(date_of_birth)
     except ValueError:
-        raise HTTPException(400, "date_of_birth must be ISO format (YYYY-MM-DD)")
+        raise HTTPException(422, "date_of_birth must be ISO format (YYYY-MM-DD)")
+
+    try:
+        validate_clinical_age(dob)
+        # Apply the same Pydantic contract used by JSON callers to multipart data.
+        AssessmentRequest(
+            child_name=child_name,
+            date_of_birth=dob,
+            sex=sex,
+            weight_kg=weight_kg,
+            height_cm=height_cm,
+            guardian_name=guardian_name,
+            location=location,
+        )
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
     # Convert height if provided with unit
     final_height_cm = height_cm

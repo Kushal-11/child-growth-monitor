@@ -4,6 +4,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from datetime import date, timedelta
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -95,6 +97,22 @@ class TestAssessEndpoint:
             files={"image": ("test.png", io.BytesIO(png_bytes), "image/png")},
         )
         assert response.status_code == 400
+
+    @pytest.mark.parametrize(
+        ("dob", "message"),
+        [
+            ((date.today() + timedelta(days=1)).isoformat(), "cannot be in the future"),
+            ((date.today() - timedelta(days=6 * 365)).isoformat(), "0 through 59 months"),
+        ],
+    )
+    def test_invalid_clinical_age_returns_422(self, client, dob, message):
+        response = client.post(
+            "/api/v1/assess",
+            data={"child_name": "Test", "date_of_birth": dob, "sex": "F"},
+            files={"image": ("test.png", b"not-read-before-validation", "image/png")},
+        )
+        assert response.status_code == 422
+        assert message in response.json()["detail"]
 
 
 class TestWebUI:
