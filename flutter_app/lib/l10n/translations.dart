@@ -208,6 +208,17 @@ const Map<String, Map<String, String>> translations = {
     'mr':
         'पूर्ण मूल्यांकनासाठी मोजलेली उंची, काट्यावरील वजन आणि टेपने मोजलेले MUAC भरा.',
   },
+  'banner_estimates_ready_title': {
+    'en': 'Photo Estimates Ready',
+    'mr': 'फोटो अंदाज तयार आहेत',
+  },
+  'banner_estimates_ready_msg': {
+    'en': 'Review the calculated height, weight, and MUAC below. Direct '
+        'measurements are optional confirmation and are required only for a '
+        'complete clinical classification.',
+    'mr': 'खाली गणना केलेली उंची, वजन आणि MUAC पहा. प्रत्यक्ष मोजमापे ऐच्छिक '
+        'पुष्टीसाठी आहेत आणि केवळ पूर्ण clinical वर्गीकरणासाठी आवश्यक आहेत.',
+  },
   'months_unit': {'en': 'months', 'mr': 'महिने'},
   'pose_confidence': {
     'en': 'Pose detection confidence',
@@ -218,8 +229,16 @@ const Map<String, Map<String, String>> translations = {
   'metric_weight': {'en': 'Weight', 'mr': 'वजन'},
   'metric_muac': {'en': 'MUAC', 'mr': 'MUAC'},
   'child_measurements_title': {
-    'en': 'Child measurements',
-    'mr': 'मुलाचे प्रत्यक्ष मोजमाप',
+    'en': 'Direct measurements (optional confirmation)',
+    'mr': 'प्रत्यक्ष मोजमापे (ऐच्छिक पुष्टी)',
+  },
+  'no_direct_measurements': {
+    'en': 'No direct measurements entered',
+    'mr': 'प्रत्यक्ष मोजमापे भरलेली नाहीत',
+  },
+  'direct_measurements_optional': {
+    'en': 'Use a scale, stadiometer, or MUAC tape later if available.',
+    'mr': 'उपलब्ध असल्यास नंतर काटा, स्टॅडिओमीटर किंवा MUAC टेप वापरा.',
   },
   'not_measured': {'en': 'Not measured', 'mr': 'मोजलेले नाही'},
   'not_assessed': {'en': 'Not assessed', 'mr': 'मूल्यांकन झाले नाही'},
@@ -266,13 +285,40 @@ const Map<String, Map<String, String>> translations = {
     'mr': 'प्राथमिक अंदाज — प्रत्यक्ष मोजमाप नाहीत',
   },
   'screening_estimates_body': {
-    'en': 'A regular photo has no absolute centimetre or kilogram scale. '
-        'The child measurement cards remain Not measured until height, scale '
-        'weight, and tape MUAC are entered.',
-    'mr':
-        'सामान्य फोटोमध्ये सेंटीमीटर किंवा किलोग्रामचे प्रत्यक्ष प्रमाण नसते. '
-            'उंची, काट्यावरील वजन आणि टेपने MUAC भरल्याशिवाय मुलाची मोजमापे '
-            '“मोजलेले नाही” अशीच राहतील.',
+    'en': 'The app estimates height, weight, and MUAC from the child photo, '
+        'pose, age, sex, and its on-device model. These are useful screening '
+        'values, but are not the same as a stadiometer, scale, or MUAC tape.',
+    'mr': 'अ‍ॅप मुलाचा फोटो, पोझ, वय, लिंग आणि डिव्हाइसवरील मॉडेल वापरून उंची, '
+        'वजन आणि MUAC चा अंदाज देते. ही मूल्ये तपासणीसाठी उपयुक्त आहेत, '
+        'पण ती स्टॅडिओमीटर, काटा किंवा MUAC टेपची प्रत्यक्ष मोजमापे नाहीत.',
+  },
+  'app_estimates_title': {
+    'en': 'App photo estimates',
+    'mr': 'अ‍ॅप फोटो अंदाज',
+  },
+  'app_estimates_subtitle': {
+    'en': 'Calculated for this child from the uploaded photos.',
+    'mr': 'अपलोड केलेल्या फोटोंवरून या मुलासाठी गणना केलेली मूल्ये.',
+  },
+  'badge_pose_age_estimate': {
+    'en': 'Pose + age/sex',
+    'mr': 'पोझ + वय/लिंग',
+  },
+  'badge_landmark_estimate': {
+    'en': 'Arm landmarks',
+    'mr': 'हाताचे लँडमार्क',
+  },
+  'badge_whz_estimate': {
+    'en': 'WHZ estimate',
+    'mr': 'WHZ अंदाज',
+  },
+  'estimate_confidence': {
+    'en': 'Input confidence:',
+    'mr': 'इनपुट विश्वास:',
+  },
+  'estimate_range': {
+    'en': 'Estimated range:',
+    'mr': 'अंदाजित श्रेणी:',
   },
   'analysis_pose_who': {
     'en': 'Analysis: pose landmarks + WHO age reference',
@@ -298,6 +344,13 @@ const Map<String, Map<String, String>> translations = {
         'Confirm with a physical MUAC tape for clinical decisions.',
     'mr': 'WHZ वरून अंदाजित मूल्य — थेट टेप मोजमाप नाही. '
         'Clinical निर्णयांसाठी भौतिक MUAC टेपने पुष्टी करा.',
+  },
+  'muac_note_landmark_text': {
+    'en': 'Value estimated from visible arm and shoulder landmarks — not a '
+        'direct tape measurement. Confirm with a physical MUAC tape for '
+        'clinical decisions.',
+    'mr': 'दिसणाऱ्या हात आणि खांद्याच्या लँडमार्कवरून अंदाजित मूल्य — थेट '
+        'टेप मोजमाप नाही. Clinical निर्णयांसाठी भौतिक MUAC टेपने पुष्टी करा.',
   },
   'assess_another': {
     'en': 'Assess Another Child',

@@ -49,6 +49,10 @@ class ResultScreen extends ConsumerWidget {
             ],
             const SizedBox(height: 16),
             _photoSection(context, ref, result),
+            if (_hasPhotoEstimates(result)) ...[
+              const SizedBox(height: 16),
+              _photoEstimateSection(context, ref, result),
+            ],
             const SizedBox(height: 16),
             _metricCards(context, ref, result),
             if (!result.whoReferenceTargets.isEmpty) ...[
@@ -61,7 +65,7 @@ class ResultScreen extends ConsumerWidget {
             ],
             if (result.muac?.requiresConfirmation == true) ...[
               const SizedBox(height: 12),
-              _muacNote(context, ref),
+              _muacNote(context, ref, result.muac!),
             ],
             const SizedBox(height: 24),
             _actionButtons(context, ref),
@@ -104,6 +108,10 @@ class ResultScreen extends ConsumerWidget {
       title = t('banner_normal_title', ref);
       message = t('banner_normal_msg', ref);
       color = Colors.green;
+    } else if (_hasPhotoEstimates(result)) {
+      title = t('banner_estimates_ready_title', ref);
+      message = t('banner_estimates_ready_msg', ref);
+      color = Colors.teal;
     } else {
       title = t('banner_unknown_title', ref);
       message = t('banner_unknown_msg', ref);
@@ -217,6 +225,8 @@ class ResultScreen extends ConsumerWidget {
     final measuredBmi = heightIsDirect && weightIsDirect
         ? result.poshan.bmi?.toStringAsFixed(2)
         : null;
+    final hasAnyDirectMeasurement =
+        heightIsDirect || weightIsDirect || muacIsDirect;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,40 +252,44 @@ class ResultScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 8),
-        _metricCard(
-          context,
-          ref,
-          title: t('metric_height', ref),
-          value: heightIsDirect ? result.measurement.effectiveHeightCm : null,
-          unit: 'cm',
-          source: heightIsDirect
-              ? _heightSource(ref, result.measurement)
-              : t('not_measured', ref),
-          zscore: heightIsDirect ? result.nutrition.hazZscore : null,
-          status: heightIsDirect ? result.nutrition.hazStatus : null,
-        ),
-        const SizedBox(height: 8),
-        _metricCard(
-          context,
-          ref,
-          title: t('metric_weight', ref),
-          value: weightIsDirect ? result.measurement.manualWeightKg : null,
-          unit: 'kg',
-          source: weightIsDirect
-              ? _weightSource(ref, result.measurement)
-              : t('not_measured', ref),
-          zscore: heightIsDirect && weightIsDirect
-              ? result.nutrition.whzZscore
-              : null,
-          status: heightIsDirect && weightIsDirect
-              ? result.nutrition.whzStatus
-              : null,
-          extras: weightIsDirect
-              ? _weightExtras(context, ref, result.measurement)
-              : null,
-        ),
-        const SizedBox(height: 8),
-        _muacCard(context, ref, result.muac),
+        if (!hasAnyDirectMeasurement)
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.straighten),
+              title: Text(t('no_direct_measurements', ref)),
+              subtitle: Text(t('direct_measurements_optional', ref)),
+            ),
+          ),
+        if (heightIsDirect) ...[
+          _metricCard(
+            context,
+            ref,
+            title: t('metric_height', ref),
+            value: result.measurement.effectiveHeightCm,
+            unit: 'cm',
+            source: _heightSource(ref, result.measurement),
+            zscore: result.nutrition.hazZscore,
+            status: result.nutrition.hazStatus,
+          ),
+        ],
+        if (weightIsDirect) ...[
+          if (heightIsDirect) const SizedBox(height: 8),
+          _metricCard(
+            context,
+            ref,
+            title: t('metric_weight', ref),
+            value: result.measurement.manualWeightKg,
+            unit: 'kg',
+            source: _weightSource(ref, result.measurement),
+            zscore: heightIsDirect ? result.nutrition.whzZscore : null,
+            status: heightIsDirect ? result.nutrition.whzStatus : null,
+            extras: _weightExtras(context, ref, result.measurement),
+          ),
+        ],
+        if (muacIsDirect) ...[
+          if (heightIsDirect || weightIsDirect) const SizedBox(height: 8),
+          _muacCard(context, ref, result.muac),
+        ],
       ],
     );
   }
@@ -285,6 +299,115 @@ class ResultScreen extends ConsumerWidget {
     return measurement.heightMethod != 'manual' ||
         measurement.weightMethod != 'manual' ||
         result.muac?.isDirectMeasurement != true;
+  }
+
+  bool _hasPhotoEstimates(AssessmentResult result) {
+    final measurement = result.measurement;
+    final hasHeight = !{
+          'manual',
+          'reference_object',
+        }.contains(measurement.heightMethod) &&
+        measurement.effectiveHeightCm != null;
+    final hasWeight = measurement.weightMethod != 'manual' &&
+        (measurement.effectiveWeightKg ?? measurement.predictedWeightKg) !=
+            null;
+    final hasMuac =
+        result.muac?.isDirectMeasurement != true && result.muac?.muacCm != null;
+    return hasHeight || hasWeight || hasMuac;
+  }
+
+  Widget _photoEstimateSection(
+    BuildContext context,
+    WidgetRef ref,
+    AssessmentResult result,
+  ) {
+    final measurement = result.measurement;
+    final heightIsEstimated = !{
+          'manual',
+          'reference_object',
+        }.contains(measurement.heightMethod) &&
+        measurement.effectiveHeightCm != null;
+    final estimatedWeight =
+        measurement.effectiveWeightKg ?? measurement.predictedWeightKg;
+    final weightIsEstimated =
+        measurement.weightMethod != 'manual' && estimatedWeight != null;
+    final muac = result.muac;
+    final muacIsEstimated =
+        muac?.isDirectMeasurement != true && muac?.muacCm != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t('app_estimates_title', ref),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          t('app_estimates_subtitle', ref),
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 8),
+        if (heightIsEstimated) ...[
+          _metricCard(
+            context,
+            ref,
+            title: t('metric_height', ref),
+            value: measurement.effectiveHeightCm,
+            unit: 'cm',
+            source: t('badge_pose_age_estimate', ref),
+            zscore: null,
+            status: null,
+            extras: _confidenceText(
+              context,
+              ref,
+              measurement.heightConfidence ?? measurement.confidenceScore,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (weightIsEstimated) ...[
+          _metricCard(
+            context,
+            ref,
+            title: t('metric_weight', ref),
+            value: estimatedWeight,
+            unit: 'kg',
+            source: _weightSource(ref, measurement),
+            zscore: null,
+            status: null,
+            extras: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_confidenceText(
+                  context,
+                  ref,
+                  measurement.weightConfidence,
+                )
+                    case final confidence?)
+                  confidence,
+                if (_weightExtras(context, ref, measurement)
+                    case final dimensions?)
+                  dimensions,
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (muacIsEstimated)
+          _metricCard(
+            context,
+            ref,
+            title: t('metric_muac', ref),
+            value: muac!.muacCm,
+            unit: 'cm',
+            source: _muacEstimateSource(ref, muac),
+            zscore: null,
+            status: null,
+            extras: _muacEstimateExtras(context, ref, muac),
+          ),
+      ],
+    );
   }
 
   Widget _estimateDisclosure(BuildContext context, WidgetRef ref) {
@@ -340,6 +463,49 @@ class ResultScreen extends ConsumerWidget {
       default:
         return t('badge_undetected', ref);
     }
+  }
+
+  String _muacEstimateSource(WidgetRef ref, MuacDetail muac) {
+    return muac.muacMethod == 'landmark_estimated'
+        ? t('badge_landmark_estimate', ref)
+        : t('badge_whz_estimate', ref);
+  }
+
+  Widget? _confidenceText(
+    BuildContext context,
+    WidgetRef ref,
+    double? confidence,
+  ) {
+    if (confidence == null) return null;
+    return Text(
+      '${t('estimate_confidence', ref)} '
+      '${(confidence * 100).toStringAsFixed(0)}%',
+      style: Theme.of(context).textTheme.bodySmall,
+    );
+  }
+
+  Widget? _muacEstimateExtras(
+    BuildContext context,
+    WidgetRef ref,
+    MuacDetail muac,
+  ) {
+    final lower = muac.uncertaintyLowerCm;
+    final upper = muac.uncertaintyUpperCm;
+    if (lower == null && upper == null && muac.confidence == null) return null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (lower != null && upper != null)
+          Text(
+            '${t('estimate_range', ref)} '
+            '${lower.toStringAsFixed(1)}–${upper.toStringAsFixed(1)} cm',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        if (_confidenceText(context, ref, muac.confidence)
+            case final confidence?)
+          confidence,
+      ],
+    );
   }
 
   Widget? _weightExtras(BuildContext context, WidgetRef ref, Measurement m) {
@@ -639,7 +805,14 @@ class ResultScreen extends ConsumerWidget {
     );
   }
 
-  Widget _muacNote(BuildContext context, WidgetRef ref) {
+  Widget _muacNote(
+    BuildContext context,
+    WidgetRef ref,
+    MuacDetail muac,
+  ) {
+    final noteKey = muac.muacMethod == 'landmark_estimated'
+        ? 'muac_note_landmark_text'
+        : 'muac_note_text';
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -663,7 +836,7 @@ class ResultScreen extends ConsumerWidget {
                     text: '${t('muac_note_strong', ref)} ',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  TextSpan(text: t('muac_note_text', ref)),
+                  TextSpan(text: t(noteKey, ref)),
                 ],
               ),
             ),

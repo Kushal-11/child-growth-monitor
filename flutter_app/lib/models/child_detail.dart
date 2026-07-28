@@ -63,6 +63,10 @@ class ChildVisitMeasurement {
   ChildVisitMeasurement({
     this.predictedHeightCm,
     this.predictedWeightKg,
+    this.heightMethod,
+    this.weightMethod,
+    this.muacCm,
+    this.muacMethod,
     this.hazZscore,
     this.whzZscore,
     this.hazStatus,
@@ -72,6 +76,10 @@ class ChildVisitMeasurement {
 
   final double? predictedHeightCm;
   final double? predictedWeightKg;
+  final String? heightMethod;
+  final String? weightMethod;
+  final double? muacCm;
+  final String? muacMethod;
   final double? hazZscore;
   final double? whzZscore;
   final String? hazStatus;
@@ -82,6 +90,10 @@ class ChildVisitMeasurement {
     return ChildVisitMeasurement(
       predictedHeightCm: (json['predicted_height_cm'] as num?)?.toDouble(),
       predictedWeightKg: (json['predicted_weight_kg'] as num?)?.toDouble(),
+      heightMethod: json['height_method'] as String?,
+      weightMethod: json['weight_method'] as String?,
+      muacCm: (json['muac_cm'] as num?)?.toDouble(),
+      muacMethod: json['muac_method'] as String?,
       hazZscore: (json['haz_zscore'] as num?)?.toDouble(),
       whzZscore: (json['whz_zscore'] as num?)?.toDouble(),
       hazStatus: json['haz_status'] as String?,

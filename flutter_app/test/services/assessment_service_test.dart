@@ -163,7 +163,8 @@ void main() {
     expect(stored.combinedProtocolVersion, AssessmentService.protocolVersion);
     expect(stored.muacRequiresConfirmation, isTrue);
     expect(stored.muacIsDirectMeasurement, isFalse);
-    expect(stored.muacCalibrationVersion, 'who-median-formula-v1');
+    expect(stored.muacMethod, 'landmark_estimated');
+    expect(stored.muacCalibrationVersion, 'unvalidated-paired-tape-v0');
   });
 
   test('ML failure produces a result labelled who_fallback', () async {

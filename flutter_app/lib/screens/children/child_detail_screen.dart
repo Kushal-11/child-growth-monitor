@@ -32,8 +32,7 @@ class ChildDetailScreen extends ConsumerWidget {
                     style: const TextStyle(color: Colors.red)),
                 const SizedBox(height: 8),
                 OutlinedButton(
-                  onPressed: () =>
-                      ref.invalidate(childDetailProvider(childId)),
+                  onPressed: () => ref.invalidate(childDetailProvider(childId)),
                   child: const Text('Retry'),
                 ),
               ],
@@ -85,8 +84,7 @@ class ChildDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _profileCard(
-      BuildContext context, WidgetRef ref, ChildDetail child) {
+  Widget _profileCard(BuildContext context, WidgetRef ref, ChildDetail child) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -99,11 +97,11 @@ class ChildDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             _profileRow(t('label_dob', ref), child.dateOfBirth),
-            _profileRow(t('label_sex', ref), child.sex == 'M' ? 'Male' : 'Female'),
+            _profileRow(
+                t('label_sex', ref), child.sex == 'M' ? 'Male' : 'Female'),
             _profileRow(t('label_guardian', ref), child.guardianName ?? '—'),
             _profileRow(t('label_location', ref), child.location ?? '—'),
-            _profileRow(
-                t('total_visits', ref), child.visits.length.toString()),
+            _profileRow(t('total_visits', ref), child.visits.length.toString()),
           ],
         ),
       ),
@@ -137,8 +135,7 @@ class ChildDetailScreen extends ConsumerWidget {
     return withData >= 2;
   }
 
-  Widget _growthChart(
-      BuildContext context, WidgetRef ref, ChildDetail child) {
+  Widget _growthChart(BuildContext context, WidgetRef ref, ChildDetail child) {
     final visitsWithData = child.visits
         .where((v) =>
             v.measurement?.predictedHeightCm != null ||
@@ -208,24 +205,24 @@ class ChildDetailScreen extends ConsumerWidget {
                     leftTitles: AxisTitles(
                       axisNameWidget: Text(
                         t('chart_height_cm', ref),
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.blue),
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.blue),
                       ),
                       sideTitles: SideTitles(
                         showTitles: true,
                         reservedSize: 40,
                         getTitlesWidget: (value, meta) => Text(
                           value.toStringAsFixed(0),
-                          style: const TextStyle(
-                              fontSize: 10, color: Colors.blue),
+                          style:
+                              const TextStyle(fontSize: 10, color: Colors.blue),
                         ),
                       ),
                     ),
                     rightTitles: AxisTitles(
                       axisNameWidget: Text(
                         t('chart_weight_kg', ref),
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.orange),
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.orange),
                       ),
                       sideTitles: SideTitles(
                         showTitles: true,
@@ -250,8 +247,8 @@ class ChildDetailScreen extends ConsumerWidget {
                     touchTooltipData: LineTouchTooltipData(
                       getTooltipItems: (touchedSpots) {
                         return touchedSpots.map((spot) {
-                          final isHeight = spot.barIndex == 0 &&
-                              heightSpots.isNotEmpty;
+                          final isHeight =
+                              spot.barIndex == 0 && heightSpots.isNotEmpty;
                           return LineTooltipItem(
                             '${spot.y.toStringAsFixed(1)} ${isHeight ? 'cm' : 'kg'}',
                             TextStyle(
@@ -296,8 +293,7 @@ class ChildDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _visitHistory(
-      BuildContext context, WidgetRef ref, ChildDetail child) {
+  Widget _visitHistory(BuildContext context, WidgetRef ref, ChildDetail child) {
     final visits = child.visits.reversed.toList();
 
     return Card(
@@ -343,21 +339,32 @@ class ChildDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 2),
           if (m != null)
-            Row(
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text(
-                  '${t('th_height_cm', ref)}: ${m.predictedHeightCm?.toStringAsFixed(1) ?? '—'}',
+                  '${t('th_height_cm', ref)}'
+                  '${_estimateSuffix(ref, m.heightMethod)}: '
+                  '${m.predictedHeightCm?.toStringAsFixed(1) ?? '—'}',
                   style: const TextStyle(fontSize: 13),
                 ),
-                const SizedBox(width: 12),
                 Text(
-                  '${t('th_weight_kg', ref)}: ${m.predictedWeightKg?.toStringAsFixed(1) ?? '—'}',
+                  '${t('th_weight_kg', ref)}'
+                  '${_estimateSuffix(ref, m.weightMethod)}: '
+                  '${m.predictedWeightKg?.toStringAsFixed(1) ?? '—'}',
                   style: const TextStyle(fontSize: 13),
                 ),
-                const Spacer(),
+                if (m.muacCm != null)
+                  Text(
+                    '${t('metric_muac', ref)}'
+                    '${_estimateSuffix(ref, m.muacMethod)}: '
+                    '${m.muacCm!.toStringAsFixed(1)} cm',
+                    style: const TextStyle(fontSize: 13),
+                  ),
                 if (m.hazStatus != null) ...[
                   StatusBadge(status: m.hazStatus),
-                  const SizedBox(width: 4),
                 ],
                 if (m.whzStatus != null) StatusBadge(status: m.whzStatus),
               ],
@@ -371,5 +378,11 @@ class ChildDetailScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  String _estimateSuffix(WidgetRef ref, String? method) {
+    const directMethods = {'manual', 'reference_object'};
+    if (method == null || directMethods.contains(method)) return '';
+    return ' (${t('badge_est', ref)})';
   }
 }

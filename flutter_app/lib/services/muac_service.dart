@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../constants/config.dart';
 
 class MuacResult {
@@ -31,11 +33,19 @@ class MuacResult {
 }
 
 class MuacService {
+  static const landmarkModelVersion = 'landmark-ratio-v1';
+  static const landmarkCalibrationVersion = 'unvalidated-paired-tape-v0';
+
   static MuacResult estimate({
     required double ageMonths,
     required String sex,
     required double? whz,
     double? manualMuacCm,
+    double? upperArmLengthCm,
+    double? shoulderWidthCm,
+    double? heightCm,
+    double? landmarkVisibility,
+    double? muacMedianCm,
   }) {
     final ageInRange = ageMonths >= 6.0 && ageMonths <= 59.9;
 
@@ -51,6 +61,43 @@ class MuacService {
         calibrationVersion: 'direct-tape',
         isDirectMeasurement: true,
       );
+    }
+
+    if (upperArmLengthCm != null &&
+        shoulderWidthCm != null &&
+        heightCm != null) {
+      final estimate = _estimateFromLandmarks(
+        ageMonths: ageMonths,
+        sex: sex,
+        upperArmLengthCm: upperArmLengthCm,
+        shoulderWidthCm: shoulderWidthCm,
+        heightCm: heightCm,
+        muacMedianCm: muacMedianCm,
+      );
+      if (estimate != null) {
+        final confidence = (landmarkVisibility ?? 0.5).clamp(0.0, 1.0);
+        final halfWidth = math.max(0.6, 2.0 * (1.0 - confidence));
+        return MuacResult(
+          muacCm: double.parse(estimate.toStringAsFixed(1)),
+          // This pathway is useful as an app estimate but is not yet
+          // validated against paired tape measurements for classification.
+          muacStatus: null,
+          muacMethod: 'landmark_estimated',
+          ageInRange: ageInRange,
+          confidence: double.parse(confidence.toStringAsFixed(2)),
+          uncertaintyLowerCm: double.parse(
+            (estimate - halfWidth).toStringAsFixed(1),
+          ),
+          uncertaintyUpperCm: double.parse(
+            (estimate + halfWidth).toStringAsFixed(1),
+          ),
+          modelVersion: landmarkModelVersion,
+          calibrationVersion: landmarkCalibrationVersion,
+          requiresConfirmation: true,
+          referralGuidance:
+              'Photo-landmark MUAC estimate; confirm with a tape for clinical decisions.',
+        );
+      }
     }
 
     if (whz == null) {
@@ -102,5 +149,37 @@ class MuacService {
       }
     }
     return table.last.$2;
+  }
+
+  static double? _estimateFromLandmarks({
+    required double ageMonths,
+    required String sex,
+    required double upperArmLengthCm,
+    required double shoulderWidthCm,
+    required double heightCm,
+    double? muacMedianCm,
+  }) {
+    if (upperArmLengthCm <= 0 || shoulderWidthCm <= 0 || heightCm <= 0) {
+      return null;
+    }
+
+    final (armRatio, shoulderRatio) = switch (ageMonths) {
+      < 12 => (0.150, 0.193),
+      < 24 => (0.155, 0.207),
+      < 48 => (0.160, 0.212),
+      _ => (0.165, 0.218),
+    };
+    final expectedArm = heightCm * armRatio;
+    final expectedShoulder = heightCm * shoulderRatio;
+    final armFactor = math.pow(upperArmLengthCm / expectedArm, 0.30);
+    final shoulderFactor = math.pow(
+      shoulderWidthCm / expectedShoulder,
+      0.50,
+    );
+    final median = muacMedianCm ?? medianForAge(ageMonths, sex);
+    final estimate = median * armFactor * shoulderFactor;
+
+    if (estimate < 7 || estimate > 22) return null;
+    return estimate;
   }
 }

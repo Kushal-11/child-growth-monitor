@@ -195,15 +195,19 @@ void main() {
 
     expect(find.text('Screening estimates — not direct measurements'),
         findsOneWidget);
-    expect(find.text('Not measured'), findsWidgets);
+    expect(find.text('Photo Estimates Ready'), findsOneWidget);
+    expect(find.text('App photo estimates'), findsOneWidget);
+    expect(find.text('Not measured'), findsNothing);
+    expect(find.text('No direct measurements entered'), findsOneWidget);
     expect(find.text('WHO reference targets'), findsOneWidget);
-    expect(find.text('102.1 cm'), findsOneWidget);
+    expect(find.text('102.1 cm'), findsNWidgets(2));
     expect(find.text('15.5 kg'), findsOneWidget);
     expect(find.text('15.8 cm'), findsOneWidget);
-    expect(find.text('15.2 kg'), findsNothing);
-    expect(find.text('15.0 cm'), findsNothing);
-    expect(find.text('WHO age estimate'), findsNothing);
-    expect(find.text('ML estimate'), findsNothing);
+    expect(find.text('15.2 kg'), findsOneWidget);
+    expect(find.text('15.0 cm'), findsOneWidget);
+    expect(find.text('Pose + age/sex'), findsOneWidget);
+    expect(find.text('ML estimate'), findsOneWidget);
+    expect(find.text('WHZ estimate'), findsOneWidget);
     expect(find.text('Image'), findsNothing);
   });
 }

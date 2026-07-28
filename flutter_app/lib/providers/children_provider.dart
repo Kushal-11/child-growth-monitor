@@ -46,9 +46,17 @@ final childDetailProvider =
     final visits = visitRows.map((pair) {
       final v = pair.visit;
       final m = pair.measurement;
-      final directHeight = m?.manualHeightCm ??
-          (m?.heightMethod == 'reference_object' ? m?.effectiveHeightCm : null);
-      final directWeight = m?.manualWeightKg;
+      final displayedHeight =
+          m?.manualHeightCm ?? m?.effectiveHeightCm ?? m?.predictedHeightCm;
+      final displayedWeight =
+          m?.manualWeightKg ?? m?.effectiveWeightKg ?? m?.predictedWeightKg;
+      final heightMethod =
+          m?.heightMethod ?? (m?.manualHeightCm != null ? 'manual' : null);
+      final weightMethod =
+          m?.weightMethod ?? (m?.manualWeightKg != null ? 'manual' : null);
+      final heightIsDirect =
+          heightMethod == 'manual' || heightMethod == 'reference_object';
+      final weightIsDirect = weightMethod == 'manual';
       return ChildVisit(
         visitId: v.id,
         visitDate: v.visitDate.toIso8601String(),
@@ -56,19 +64,19 @@ final childDetailProvider =
         measurement: m == null
             ? null
             : ChildVisitMeasurement(
-                // Growth history must contain child measurements, never WHO,
-                // ML, or WHZ-derived estimates presented as measured values.
-                predictedHeightCm: directHeight,
-                predictedWeightKg: directWeight,
-                hazZscore: directHeight != null ? m.hazZscore : null,
-                whzZscore: directHeight != null && directWeight != null
-                    ? m.whzZscore
-                    : null,
-                hazStatus: directHeight != null ? m.hazStatus : null,
-                whzStatus: directHeight != null && directWeight != null
-                    ? m.whzStatus
-                    : null,
-                confidenceScore: null,
+                predictedHeightCm: displayedHeight,
+                predictedWeightKg: displayedWeight,
+                heightMethod: heightMethod,
+                weightMethod: weightMethod,
+                muacCm: m.muacCm,
+                muacMethod: m.muacMethod,
+                hazZscore: heightIsDirect ? m.hazZscore : null,
+                whzZscore:
+                    heightIsDirect && weightIsDirect ? m.whzZscore : null,
+                hazStatus: heightIsDirect ? m.hazStatus : null,
+                whzStatus:
+                    heightIsDirect && weightIsDirect ? m.whzStatus : null,
+                confidenceScore: m.confidenceScore,
               ),
       );
     }).toList();

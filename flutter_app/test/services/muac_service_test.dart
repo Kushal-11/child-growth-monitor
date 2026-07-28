@@ -25,6 +25,28 @@ void main() {
     expect(r.confidence, 0.4);
   });
 
+  test('uses pose landmarks before WHZ when body proportions are available',
+      () {
+    final r = MuacService.estimate(
+      ageMonths: 24,
+      sex: 'M',
+      whz: -1.5,
+      heightCm: 87,
+      upperArmLengthCm: 87 * 0.160,
+      shoulderWidthCm: 87 * 0.212,
+      landmarkVisibility: 0.95,
+      muacMedianCm: 15.75,
+    );
+
+    expect(r.muacCm, closeTo(15.8, 0.1));
+    expect(r.muacMethod, 'landmark_estimated');
+    expect(r.muacStatus, isNull);
+    expect(r.confidence, 0.95);
+    expect(r.uncertaintyLowerCm, closeTo(15.2, 0.1));
+    expect(r.uncertaintyUpperCm, closeTo(16.4, 0.1));
+    expect(r.requiresConfirmation, isTrue);
+  });
+
   test('age out of range returns null status', () {
     final r = MuacService.estimate(ageMonths: 3, sex: 'M', whz: 0.0);
     expect(r.ageInRange, false);

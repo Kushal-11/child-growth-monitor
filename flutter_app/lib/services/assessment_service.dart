@@ -160,11 +160,17 @@ class AssessmentService {
           )
         : null;
 
+    final whoReferenceTargets = _who.getReferenceTargets(sex, ageMonths);
     final muacResult = MuacService.estimate(
       ageMonths: ageMonths,
       sex: sex,
       whz: whz,
       manualMuacCm: manualMuacCm,
+      upperArmLengthCm: m.upperArmLengthCm,
+      shoulderWidthCm: m.shoulderWidthCm,
+      heightCm: m.effectiveHeightCm,
+      landmarkVisibility: poseConfidence,
+      muacMedianCm: whoReferenceTargets.muacForAge?.target,
     );
 
     final hazStatus = haz != null ? classifyHaz(haz) : null;
@@ -310,7 +316,7 @@ class AssessmentService {
         rationale: poshan.rationale,
         complete: poshan.complete,
       ),
-      whoReferenceTargets: _who.getReferenceTargets(sex, ageMonths),
+      whoReferenceTargets: whoReferenceTargets,
       measurement: ar.Measurement(
         effectiveHeightCm: m.effectiveHeightCm,
         heightMethod: heightMethod,
