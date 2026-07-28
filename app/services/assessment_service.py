@@ -5,10 +5,12 @@ Ties together measurement (image processing) and nutrition (Z-score) services.
 Handles the full flow: image -> measurements -> WHO lookup -> classification.
 
 Height resolution priority:
-  1. Image-based (WHO statistical + anthropometric ratios)
-  2. Manual height_cm input (fallback when image detection fails)
+  1. Manual height_cm input
+  2. Validated image-based estimate (WHO statistical + anthropometric ratios)
+  3. Unavailable
 """
 from datetime import date, datetime
+from math import isfinite
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -67,10 +69,11 @@ class AssessmentService:
         )
 
         # 3. Determine effective height
-        # Priority: image-based prediction > manual input
-        effective_height = meas.predicted_height_cm
-        if effective_height is None and height_cm is not None:
-            effective_height = height_cm
+        # Manual measurements are authoritative.  Keep this resolution in one
+        # place so every downstream consumer receives exactly the same height.
+        effective_height, height_method = self._resolve_effective_height(
+            height_cm, meas.predicted_height_cm
+        )
 
         # 3b. Process side-view image for AP depth features (optional)
         side_segments = None
@@ -213,8 +216,7 @@ class AssessmentService:
             child_name,
             age_months,
             effective_height,
-            meas.predicted_height_cm,
-            height_cm,
+            height_method,
             effective_weight,
             haz_status,
             whz_status,
@@ -251,6 +253,8 @@ class AssessmentService:
             sex=sex,
             age_months=round(age_months, 1),
             measurement=MeasurementDetail(
+                effective_height_cm=effective_height,
+                height_method=height_method,
                 predicted_height_cm=meas.predicted_height_cm,
                 predicted_weight_kg=estimated_weight,
                 manual_height_cm=height_cm,
@@ -298,6 +302,21 @@ class AssessmentService:
         return delta.days / 30.4375
 
     @staticmethod
+    def _resolve_effective_height(
+        manual_height: Optional[float], predicted_height: Optional[float]
+    ) -> tuple[Optional[float], str]:
+        """Resolve the authoritative height and expose its provenance."""
+        if manual_height is not None and isfinite(manual_height) and manual_height > 0:
+            return manual_height, "manual"
+        if (
+            predicted_height is not None
+            and isfinite(predicted_height)
+            and predicted_height > 0
+        ):
+            return predicted_height, "image_estimated"
+        return None, "unavailable"
+
+    @staticmethod
     def _get_or_create_child(
         db: Session,
         name: str,
@@ -330,7 +349,7 @@ class AssessmentService:
 
     @staticmethod
     def _build_summary(
-        name, age_months, effective_height, predicted_height, manual_height,
+        name, age_months, effective_height, height_method,
         weight, haz_status, whz_status, ref_detected,
         muac_cm=None, muac_status=None,
     ) -> str:
@@ -338,10 +357,10 @@ class AssessmentService:
         lines = [f"Assessment for {name} ({age_months:.1f} months old):"]
 
         if effective_height is not None:
-            if predicted_height is not None:
-                lines.append(f"  Height: {effective_height:.1f} cm (from image)")
-            elif manual_height is not None:
+            if height_method == "manual":
                 lines.append(f"  Height: {effective_height:.1f} cm (manual input)")
+            elif height_method == "image_estimated":
+                lines.append(f"  Height: {effective_height:.1f} cm (from image)")
         else:
             lines.append("  Height: Could not be determined.")
             if not ref_detected:
