@@ -97,6 +97,7 @@ def _assess(service, db_session):
         sex="F",
         height_cm=MANUAL_HEIGHT,
         side_image=b"side",
+        as_of=date(2026, 7, 28),
     )
 
 

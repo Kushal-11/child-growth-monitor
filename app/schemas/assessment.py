@@ -2,7 +2,9 @@
 from datetime import date
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
+
+from app.services.age_service import AgeService
 
 
 class AssessmentRequest(BaseModel):
@@ -25,6 +27,15 @@ class AssessmentRequest(BaseModel):
     )
     guardian_name: Optional[str] = None
     location: Optional[str] = None
+
+    @field_validator("date_of_birth")
+    @classmethod
+    def validate_date_of_birth(cls, value: date, info: ValidationInfo) -> date:
+        """Reject dates that cannot be assessed against the WHO tables."""
+        context = info.context or {}
+        age_service = context.get("age_service") or AgeService()
+        age_service.validate_clinical_age(value, context.get("as_of"))
+        return value
 
 
 class MeasurementDetail(BaseModel):

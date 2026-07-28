@@ -9,7 +9,7 @@ Height resolution priority:
   2. Validated image-based estimate (WHO statistical + anthropometric ratios)
   3. Unavailable
 """
-from datetime import date, datetime
+from datetime import date
 from math import isfinite
 from typing import Optional
 
@@ -25,6 +25,7 @@ from app.schemas.assessment import (
     MUACDetail,
     NutritionDetail,
 )
+from app.services.age_service import AgeService
 from app.services.measurement_service import MeasurementOutput, MeasurementService
 from app.services.ml_service import MLService
 from app.services.muac_service import MUACService
@@ -33,11 +34,16 @@ from app.services.who_data_service import WHODataService
 
 
 class AssessmentService:
-    def __init__(self, who_data: WHODataService):
+    age_svc = AgeService()
+
+    def __init__(
+        self, who_data: WHODataService, age_service: AgeService | None = None
+    ):
         self.measurement_svc = MeasurementService()
         self.nutrition_svc = NutritionService(who_data)
         self.who_data = who_data
         self.ml_svc = MLService()
+        self.age_svc = age_service or AgeService()
 
     def assess(
         self,
@@ -52,12 +58,14 @@ class AssessmentService:
         location: Optional[str] = None,
         muac_cm: Optional[float] = None,
         side_image: Optional[bytes] = None,
+        as_of: date | None = None,
     ) -> AssessmentResponse:
         """Run full assessment pipeline and persist results."""
 
         # 1. Compute age in months
-        today = datetime.utcnow().date()
-        age_months = self._compute_age_months(dob, today)
+        as_of = as_of or date.today()
+        age = self.age_svc.validate_clinical_age(dob, as_of)
+        age_months = age.months
 
         # 2. Process image for height estimation using hybrid approach
         # Pass age, sex, and WHO data for statistical estimation
@@ -134,7 +142,7 @@ class AssessmentService:
 
         if effective_height is not None:
             haz_z = self.nutrition_svc.compute_haz(
-                sex, int(round(age_months)), effective_height
+                sex, age.completed_months, effective_height
             )
             if haz_z is not None:
                 haz_status = self.nutrition_svc.classify_haz(haz_z)
@@ -294,12 +302,6 @@ class AssessmentService:
             ),
             summary=summary,
         )
-
-    @staticmethod
-    def _compute_age_months(dob: date, today: date) -> float:
-        """Compute age in fractional months."""
-        delta = today - dob
-        return delta.days / 30.4375
 
     @staticmethod
     def _resolve_effective_height(
