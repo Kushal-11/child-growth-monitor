@@ -28,6 +28,22 @@ NEW_COLUMNS = [
     ("muac_cm", "REAL"),
     ("muac_status", "TEXT"),
     ("muac_method", "TEXT"),
+    ("effective_height_cm", "REAL"),
+    ("effective_weight_kg", "REAL"),
+    ("height_method", "TEXT"),
+    ("weight_method", "TEXT"),
+    ("estimation_method", "TEXT"),
+    ("bmi", "REAL"),
+    ("bmi_status", "TEXT"),
+    ("height_confidence", "REAL"),
+    ("weight_confidence", "REAL"),
+    ("classification_confidence", "REAL"),
+    ("ml_wasting_method", "TEXT"),
+    ("muac_age_in_range", "INTEGER"),
+    ("combined_status", "TEXT"),
+    ("triggering_indicators", "TEXT"),
+    ("rationale", "TEXT"),
+    ("protocol_version", "TEXT"),
 ]
 
 

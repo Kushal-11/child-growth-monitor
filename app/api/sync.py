@@ -4,6 +4,7 @@ Mobile clients run the full assessment on-device, then upload the result here.
 The server skips ML, dedups by local_uuid, and stores the image + measurement.
 """
 import shutil
+import json
 import uuid as uuid_lib
 from datetime import date, datetime
 from typing import Optional
@@ -53,12 +54,23 @@ async def sync_assessment(
     haz_status: Optional[str] = Form(None),
     whz_status: Optional[str] = Form(None),
     confidence_score: Optional[float] = Form(None),
+    effective_height_cm: Optional[float] = Form(None),
+    effective_weight_kg: Optional[float] = Form(None),
+    height_method: Optional[str] = Form(None),
+    weight_method: Optional[str] = Form(None),
+    estimation_method: Optional[str] = Form(None),
+    bmi: Optional[float] = Form(None),
+    bmi_status: Optional[str] = Form(None),
+    height_confidence: Optional[float] = Form(None),
+    weight_confidence: Optional[float] = Form(None),
+    classification_confidence: Optional[float] = Form(None),
     body_build: Optional[str] = Form(None),
     side_view_used: str = Form("false"),
     chest_depth_cm: Optional[float] = Form(None),
     abd_depth_cm: Optional[float] = Form(None),
     ml_estimated_weight_kg: Optional[float] = Form(None),
     ml_wasting_status: Optional[str] = Form(None),
+    ml_wasting_method: Optional[str] = Form(None),
     sam_probability: Optional[float] = Form(None),
     mam_probability: Optional[float] = Form(None),
     normal_probability: Optional[float] = Form(None),
@@ -67,6 +79,11 @@ async def sync_assessment(
     muac_cm: Optional[float] = Form(None),
     muac_status: Optional[str] = Form(None),
     muac_method: Optional[str] = Form(None),
+    muac_age_in_range: str = Form("false"),
+    combined_status: Optional[str] = Form(None),
+    triggering_indicators: str = Form("[]"),
+    rationale: Optional[str] = Form(None),
+    protocol_version: Optional[str] = Form(None),
     entry_method: str = Form("assessment"),
     is_archived: str = Form("false"),
     guardian_name: Optional[str] = Form(None),
@@ -146,6 +163,13 @@ async def sync_assessment(
     db.add(visit)
     db.flush()
 
+    try:
+        triggers = json.loads(triggering_indicators)
+        if not isinstance(triggers, list) or not all(isinstance(v, str) for v in triggers):
+            raise ValueError
+    except (json.JSONDecodeError, ValueError):
+        raise HTTPException(400, "triggering_indicators must be a JSON array of strings")
+
     measurement = MeasurementResult(
         visit_id=visit.id,
         predicted_height_cm=predicted_height_cm,
@@ -157,12 +181,23 @@ async def sync_assessment(
         haz_status=haz_status,
         whz_status=whz_status,
         confidence_score=confidence_score,
+        effective_height_cm=effective_height_cm,
+        effective_weight_kg=effective_weight_kg,
+        height_method=height_method,
+        weight_method=weight_method,
+        estimation_method=estimation_method,
+        bmi=bmi,
+        bmi_status=bmi_status,
+        height_confidence=height_confidence,
+        weight_confidence=weight_confidence,
+        classification_confidence=classification_confidence,
         body_build=body_build,
         side_view_used=(side_view_used.lower() in ("true", "1", "yes")),
         chest_depth_cm=chest_depth_cm,
         abd_depth_cm=abd_depth_cm,
         ml_estimated_weight_kg=ml_estimated_weight_kg,
         ml_wasting_status=ml_wasting_status,
+        ml_wasting_method=ml_wasting_method,
         sam_probability=sam_probability,
         mam_probability=mam_probability,
         normal_probability=normal_probability,
@@ -171,6 +206,11 @@ async def sync_assessment(
         muac_cm=muac_cm,
         muac_status=muac_status,
         muac_method=muac_method,
+        muac_age_in_range=(muac_age_in_range.lower() in ("true", "1", "yes")),
+        combined_status=combined_status,
+        triggering_indicators=json.dumps(triggers),
+        rationale=rationale,
+        protocol_version=protocol_version,
     )
     db.add(measurement)
     try:

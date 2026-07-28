@@ -8,11 +8,20 @@ class Measurements extends Table {
   RealColumn get predictedWeightKg => real().nullable()();
   RealColumn get manualHeightCm => real().nullable()();
   RealColumn get manualWeightKg => real().nullable()();
+  RealColumn get effectiveHeightCm => real().nullable()();
+  RealColumn get effectiveWeightKg => real().nullable()();
+  TextColumn get heightMethod => text().nullable()();
+  TextColumn get weightMethod => text().nullable()();
+  RealColumn get bmi => real().nullable()();
+  TextColumn get bmiStatus => text().nullable()();
   RealColumn get hazZscore => real().nullable()();
   RealColumn get whzZscore => real().nullable()();
   TextColumn get hazStatus => text().nullable()();
   TextColumn get whzStatus => text().nullable()();
   RealColumn get confidenceScore => real().nullable()();
+  RealColumn get heightConfidence => real().nullable()();
+  RealColumn get weightConfidence => real().nullable()();
+  RealColumn get classificationConfidence => real().nullable()();
   TextColumn get bodyBuild => text().nullable()();
   TextColumn get estimationMethod => text().nullable()();
   BoolColumn get sideViewUsed => boolean().withDefault(const Constant(false))();
@@ -25,7 +34,13 @@ class Measurements extends Table {
   RealColumn get riskOverweightProbability => real().nullable()();
   RealColumn get overweightProbability => real().nullable()();
   TextColumn get wastingStatus => text().nullable()();
+  TextColumn get wastingMethod => text().nullable()();
   RealColumn get muacCm => real().nullable()();
   TextColumn get muacStatus => text().nullable()();
   TextColumn get muacMethod => text().nullable()();
+  BoolColumn get muacAgeInRange => boolean().nullable()();
+  TextColumn get combinedStatus => text().nullable()();
+  TextColumn get triggeringIndicators => text().nullable()();
+  TextColumn get rationale => text().nullable()();
+  TextColumn get protocolVersion => text().nullable()();
 }

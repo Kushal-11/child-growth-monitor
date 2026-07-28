@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import '../constants/config.dart';
@@ -29,6 +31,7 @@ class PoseDetectionFailedException implements Exception {
 typedef ImagePersister = Future<String> Function(String tempPath);
 
 class AssessmentService {
+  static const protocolVersion = 'WHO-CMAM-OR-2009/2013-v1';
   AssessmentService({
     required ChildDao childDao,
     required VisitDao visitDao,
@@ -157,6 +160,28 @@ class AssessmentService {
     final hazStatus = haz != null ? classifyHaz(haz) : null;
     final whzStatus = whz != null ? classifyWhz(whz) : null;
 
+    final summaryStatus = combineNutritionStatus(
+      whzStatus: whzStatus,
+      muacStatus: muacResult.muacStatus,
+      mlStatus: prediction?.wastingStatus,
+    );
+    final triggers = <String>[
+      if (muacResult.muacStatus == 'SAM' || muacResult.muacStatus == 'At Risk (MAM)') 'muac',
+      if (whzStatus == 'SAM' || whzStatus == 'MAM' || whzStatus == 'Overweight' || whzStatus == 'Risk_Overweight') 'whz',
+      if (prediction?.wastingStatus == 'SAM' || prediction?.wastingStatus == 'MAM') 'ml',
+    ];
+    final rationale = triggers.isEmpty
+        ? 'No MUAC, WHZ, or ML flag triggered'
+        : '$summaryStatus flagged by ${triggers.join(' or ')}';
+    final bmi = effectiveWeight == null
+        ? null
+        : effectiveWeight / ((m.effectiveHeightCm / 100) * (m.effectiveHeightCm / 100));
+    final weightMethod = manualWeightKg != null
+        ? 'manual'
+        : prediction?.estimatedWeightKg == effectiveWeight
+            ? 'ml_estimated'
+            : 'who_median_estimated';
+
     final child = await _childDao.findOrCreate(
       name: childName,
       dateOfBirth: dateOfBirth,
@@ -177,11 +202,20 @@ class AssessmentService {
         predictedWeightKg: Value(effectiveWeight),
         manualHeightCm: Value(manualHeightCm),
         manualWeightKg: Value(manualWeightKg),
+        effectiveHeightCm: Value(m.effectiveHeightCm),
+        effectiveWeightKg: Value(effectiveWeight),
+        heightMethod: Value(m.estimationMethod),
+        weightMethod: Value(weightMethod),
+        bmi: Value(bmi),
+        bmiStatus: Value(whzStatus),
         hazZscore: Value(haz),
         whzZscore: Value(whz),
         hazStatus: Value(hazStatus),
         whzStatus: Value(whzStatus),
         confidenceScore: Value(poseConfidence),
+        heightConfidence: Value(poseConfidence),
+        weightConfidence: Value(manualWeightKg != null ? 1.0 : poseConfidence),
+        classificationConfidence: Value(muacResult.muacStatus != null ? 1.0 : poseConfidence),
         bodyBuild: Value(m.bodyBuild),
         estimationMethod: Value(m.estimationMethod),
         sideViewUsed: Value(m.sideViewUsed),
@@ -195,9 +229,15 @@ class AssessmentService {
         overweightProbability: Value(prediction?.overweightProbability),
         wastingStatus:
             Value(prediction?.wastingStatus ?? 'who_fallback'),
+        wastingMethod: Value(prediction == null ? 'unavailable' : 'ml_classifier'),
         muacCm: Value(muacResult.muacCm),
         muacStatus: Value(muacResult.muacStatus),
         muacMethod: Value(muacResult.muacMethod),
+        muacAgeInRange: Value(muacResult.ageInRange),
+        combinedStatus: Value(summaryStatus),
+        triggeringIndicators: Value(jsonEncode(triggers)),
+        rationale: Value(rationale),
+        protocolVersion: const Value(protocolVersion),
       ),
     );
     await _syncQueueDao.enqueue(visitId);
@@ -205,12 +245,6 @@ class AssessmentService {
     // WHO CMAM OR-rule: the headline verdict must escalate to SAM/MAM if WHZ,
     // MUAC, OR the ML wasting classifier flags it — using WHZ alone hid tape-
     // measured and ML-detected wasting behind a "Normal" summary.
-    final summaryStatus = combineNutritionStatus(
-      whzStatus: whzStatus,
-      muacStatus: muacResult.muacStatus,
-      mlStatus: prediction?.wastingStatus,
-    );
-
     return ar.AssessmentResult(
       childName: childName,
       sex: sex,

@@ -19,7 +19,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -48,6 +48,23 @@ class AppDatabase extends _$AppDatabase {
               await migrator.addColumn(visits, visits.ownerUserId);
               await migrator.addColumn(visits, visits.entryMethod);
             }
+          }
+          if (from < 4) {
+            await migrator.addColumn(measurements, measurements.effectiveHeightCm);
+            await migrator.addColumn(measurements, measurements.effectiveWeightKg);
+            await migrator.addColumn(measurements, measurements.heightMethod);
+            await migrator.addColumn(measurements, measurements.weightMethod);
+            await migrator.addColumn(measurements, measurements.bmi);
+            await migrator.addColumn(measurements, measurements.bmiStatus);
+            await migrator.addColumn(measurements, measurements.heightConfidence);
+            await migrator.addColumn(measurements, measurements.weightConfidence);
+            await migrator.addColumn(measurements, measurements.classificationConfidence);
+            await migrator.addColumn(measurements, measurements.wastingMethod);
+            await migrator.addColumn(measurements, measurements.muacAgeInRange);
+            await migrator.addColumn(measurements, measurements.combinedStatus);
+            await migrator.addColumn(measurements, measurements.triggeringIndicators);
+            await migrator.addColumn(measurements, measurements.rationale);
+            await migrator.addColumn(measurements, measurements.protocolVersion);
           }
         },
       );

@@ -37,6 +37,12 @@ class MeasurementDetail(BaseModel):
     confidence_score: Optional[float] = None
     annotated_image: Optional[str] = None  # filename of pose-annotated image
     estimation_method: str = "none"  # "who_statistical", "reference_object", "manual", "none"
+    effective_height_cm: Optional[float] = None
+    effective_weight_kg: Optional[float] = None
+    height_method: Optional[str] = None
+    weight_method: Optional[str] = None
+    height_confidence: Optional[float] = None
+    weight_confidence: Optional[float] = None
     body_build: Optional[str] = None  # "slender", "average", "stocky", or None
     # Side-view depth measurements (None when no side photo provided)
     side_view_used: bool = False
@@ -50,6 +56,13 @@ class NutritionDetail(BaseModel):
     haz_status: Optional[str] = None
     whz_status: Optional[str] = None
     age_months: float
+    bmi: Optional[float] = None
+    bmi_status: Optional[str] = None
+    combined_status: Optional[str] = None
+    triggering_indicators: list[str] = Field(default_factory=list)
+    rationale: Optional[str] = None
+    protocol_version: Optional[str] = None
+    classification_confidence: Optional[float] = None
 
 
 class MLPrediction(BaseModel):

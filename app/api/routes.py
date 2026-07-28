@@ -9,6 +9,7 @@ Endpoints:
 """
 import shutil
 import uuid
+import json
 from datetime import date
 from typing import Optional
 
@@ -155,12 +156,45 @@ def get_child(
             visit_data["measurement"] = {
                 "predicted_height_cm": m.predicted_height_cm,
                 "predicted_weight_kg": m.predicted_weight_kg,
+                "manual_height_cm": m.manual_height_cm,
                 "manual_weight_kg": m.manual_weight_kg,
+                "reference_object_detected": m.reference_object_detected == "true",
+                "scale_factor": m.scale_factor,
                 "haz_zscore": m.haz_zscore,
                 "whz_zscore": m.whz_zscore,
                 "haz_status": m.haz_status,
                 "whz_status": m.whz_status,
                 "confidence_score": m.confidence_score,
+                "effective_height_cm": m.effective_height_cm,
+                "effective_weight_kg": m.effective_weight_kg,
+                "height_method": m.height_method,
+                "weight_method": m.weight_method,
+                "estimation_method": m.estimation_method,
+                "bmi": m.bmi,
+                "bmi_status": m.bmi_status,
+                "height_confidence": m.height_confidence,
+                "weight_confidence": m.weight_confidence,
+                "classification_confidence": m.classification_confidence,
+                "body_build": m.body_build,
+                "side_view_used": m.side_view_used,
+                "chest_depth_cm": m.chest_depth_cm,
+                "abd_depth_cm": m.abd_depth_cm,
+                "ml_estimated_weight_kg": m.ml_estimated_weight_kg,
+                "ml_wasting_status": m.ml_wasting_status,
+                "ml_wasting_method": m.ml_wasting_method,
+                "sam_probability": m.sam_probability,
+                "mam_probability": m.mam_probability,
+                "normal_probability": m.normal_probability,
+                "risk_probability": m.risk_probability,
+                "overweight_probability": m.overweight_probability,
+                "muac_cm": m.muac_cm,
+                "muac_status": m.muac_status,
+                "muac_method": m.muac_method,
+                "muac_age_in_range": m.muac_age_in_range,
+                "combined_status": m.combined_status,
+                "triggering_indicators": json.loads(m.triggering_indicators or "[]"),
+                "rationale": m.rationale,
+                "protocol_version": m.protocol_version,
             }
         visits.append(visit_data)
 

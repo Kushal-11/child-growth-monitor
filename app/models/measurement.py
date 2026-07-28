@@ -1,7 +1,7 @@
 """MeasurementResult model storing assessment outputs."""
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.models.database import Base
@@ -18,6 +18,17 @@ class MeasurementResult(Base):
     predicted_weight_kg = Column(Float, nullable=True)  # estimated from WHO median
     manual_height_cm = Column(Float, nullable=True)  # if manually entered
     manual_weight_kg = Column(Float, nullable=True)  # if manually entered
+    effective_height_cm = Column(Float, nullable=True)
+    effective_weight_kg = Column(Float, nullable=True)
+    height_method = Column(String(50), nullable=True)
+    weight_method = Column(String(50), nullable=True)
+    estimation_method = Column(String(50), nullable=True)
+
+    # Derived anthropometry.  BMI status uses the same WHO weight-for-height
+    # classification as the clinical wasting result; the protocol version
+    # below makes that interpretation explicit for historical records.
+    bmi = Column(Float, nullable=True)
+    bmi_status = Column(String(50), nullable=True)
 
     # Calibration info
     reference_object_detected = Column(String(10), default="false")
@@ -33,6 +44,9 @@ class MeasurementResult(Base):
 
     # Metadata
     confidence_score = Column(Float, nullable=True)
+    height_confidence = Column(Float, nullable=True)
+    weight_confidence = Column(Float, nullable=True)
+    classification_confidence = Column(Float, nullable=True)
 
     # Body build + side view (from on-device measurement)
     body_build = Column(String(50), nullable=True)  # slender / average / stocky
@@ -43,6 +57,7 @@ class MeasurementResult(Base):
     # ML wasting classifier output (5-class softmax)
     ml_estimated_weight_kg = Column(Float, nullable=True)
     ml_wasting_status = Column(String(50), nullable=True)
+    ml_wasting_method = Column(String(50), nullable=True)
     sam_probability = Column(Float, nullable=True)
     mam_probability = Column(Float, nullable=True)
     normal_probability = Column(Float, nullable=True)
@@ -53,6 +68,14 @@ class MeasurementResult(Base):
     muac_cm = Column(Float, nullable=True)
     muac_status = Column(String(50), nullable=True)
     muac_method = Column(String(50), nullable=True)  # manual / estimated_from_whz
+    muac_age_in_range = Column(Boolean, nullable=True)
+
+    # Final decision evidence.  triggering_indicators is JSON text so the
+    # ordered list survives SQLite, API history, and mobile synchronization.
+    combined_status = Column(String(50), nullable=True)
+    triggering_indicators = Column(Text, nullable=True)
+    rationale = Column(Text, nullable=True)
+    protocol_version = Column(String(50), nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
 

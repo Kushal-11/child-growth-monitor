@@ -61,6 +61,16 @@ def _payload():
         "ml_wasting_status": "Normal",
         "ml_estimated_weight_kg": "9.4",
         "confidence_score": "0.85",
+        "effective_height_cm": "78.0",
+        "effective_weight_kg": "9.5",
+        "height_method": "who_statistical",
+        "weight_method": "ml_estimated",
+        "estimation_method": "who_statistical",
+        "bmi": "15.61",
+        "bmi_status": "Normal",
+        "height_confidence": "0.85",
+        "weight_confidence": "0.81",
+        "classification_confidence": "0.92",
         "body_build": "average",
         "side_view_used": "false",
         "sam_probability": "0.02",
@@ -68,6 +78,12 @@ def _payload():
         "normal_probability": "0.85",
         "risk_probability": "0.02",
         "overweight_probability": "0.01",
+        "ml_wasting_method": "ml_classifier",
+        "muac_age_in_range": "true",
+        "combined_status": "Normal",
+        "triggering_indicators": "[]",
+        "rationale": "No MUAC or WHZ flag triggered",
+        "protocol_version": "WHO-CMAM-OR-2009/2013-v1",
     }
 
 
@@ -155,12 +171,52 @@ def test_sync_persists_all_mobile_fields():
         assert m.risk_probability == 0.02
         assert m.overweight_probability == 0.01
         assert m.confidence_score == 0.85
+        assert m.effective_height_cm == 78.0
+        assert m.effective_weight_kg == 9.5
+        assert m.height_method == "who_statistical"
+        assert m.weight_method == "ml_estimated"
+        assert m.estimation_method == "who_statistical"
+        assert m.bmi == 15.61
+        assert m.bmi_status == "Normal"
+        assert m.height_confidence == 0.85
+        assert m.weight_confidence == 0.81
+        assert m.classification_confidence == 0.92
+        assert m.ml_wasting_method == "ml_classifier"
+        assert m.muac_age_in_range is True
+        assert m.combined_status == "Normal"
+        assert m.triggering_indicators == "[]"
+        assert m.rationale == "No MUAC or WHZ flag triggered"
+        assert m.protocol_version == "WHO-CMAM-OR-2009/2013-v1"
         assert m.predicted_height_cm == 78.0
         assert m.predicted_weight_kg == 9.5
         assert m.haz_zscore == -1.0
         assert m.whz_zscore == -0.5
     finally:
         db.close()
+
+    # Reload through the history API (the Flutter-compatible read contract)
+    # and compare every decision/evidence field with the synchronized payload.
+    history = client.get("/api/v1/children", headers=AUTH_HEADERS)
+    child_id = next(c["id"] for c in history.json() if c["name"] == body["child_name"])
+    detail = client.get(f"/api/v1/children/{child_id}", headers=AUTH_HEADERS)
+    assert detail.status_code == 200
+    restored = next(
+        v["measurement"] for v in detail.json()["visits"]
+        if v["visit_id"] == visit_id
+    )
+    for key in (
+        "haz_status", "whz_status", "muac_status", "muac_method",
+        "ml_wasting_status", "ml_wasting_method", "height_method",
+        "weight_method", "estimation_method", "bmi_status", "combined_status",
+        "confidence_score", "height_confidence", "weight_confidence",
+        "classification_confidence", "sam_probability", "mam_probability",
+        "normal_probability", "risk_probability", "overweight_probability",
+        "rationale", "protocol_version",
+    ):
+        expected = body[key]
+        if key.endswith("confidence") or key.endswith("probability") or key == "confidence_score":
+            expected = float(expected)
+        assert restored[key] == expected, key
 
 
 def test_sync_concurrent_duplicate_returns_already_synced(monkeypatch):
