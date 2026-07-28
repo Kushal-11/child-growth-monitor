@@ -46,6 +46,9 @@ final childDetailProvider =
     final visits = visitRows.map((pair) {
       final v = pair.visit;
       final m = pair.measurement;
+      final directHeight = m?.manualHeightCm ??
+          (m?.heightMethod == 'reference_object' ? m?.effectiveHeightCm : null);
+      final directWeight = m?.manualWeightKg;
       return ChildVisit(
         visitId: v.id,
         visitDate: v.visitDate.toIso8601String(),
@@ -53,15 +56,19 @@ final childDetailProvider =
         measurement: m == null
             ? null
             : ChildVisitMeasurement(
-                // Fall back to manual values when predicted are null so manual
-                // visits surface in the detail row and growth chart.
-                predictedHeightCm: m.predictedHeightCm ?? m.manualHeightCm,
-                predictedWeightKg: m.predictedWeightKg ?? m.manualWeightKg,
-                hazZscore: m.hazZscore,
-                whzZscore: m.whzZscore,
-                hazStatus: m.hazStatus,
-                whzStatus: m.whzStatus,
-                confidenceScore: m.confidenceScore,
+                // Growth history must contain child measurements, never WHO,
+                // ML, or WHZ-derived estimates presented as measured values.
+                predictedHeightCm: directHeight,
+                predictedWeightKg: directWeight,
+                hazZscore: directHeight != null ? m.hazZscore : null,
+                whzZscore: directHeight != null && directWeight != null
+                    ? m.whzZscore
+                    : null,
+                hazStatus: directHeight != null ? m.hazStatus : null,
+                whzStatus: directHeight != null && directWeight != null
+                    ? m.whzStatus
+                    : null,
+                confidenceScore: null,
               ),
       );
     }).toList();

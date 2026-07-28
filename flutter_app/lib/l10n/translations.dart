@@ -214,8 +214,36 @@ const Map<String, Map<String, String>> translations = {
     'mr': 'पोझ शोध विश्वास',
   },
   'metric_height': {'en': 'Height', 'mr': 'उंची'},
+  'metric_length': {'en': 'Length', 'mr': 'लांबी'},
   'metric_weight': {'en': 'Weight', 'mr': 'वजन'},
   'metric_muac': {'en': 'MUAC', 'mr': 'MUAC'},
+  'child_measurements_title': {
+    'en': 'Child measurements',
+    'mr': 'मुलाचे प्रत्यक्ष मोजमाप',
+  },
+  'not_measured': {'en': 'Not measured', 'mr': 'मोजलेले नाही'},
+  'not_assessed': {'en': 'Not assessed', 'mr': 'मूल्यांकन झाले नाही'},
+  'measured_bmi_label': {'en': 'Measured BMI', 'mr': 'मोजलेला BMI'},
+  'tape_muac_label': {'en': 'Tape MUAC', 'mr': 'टेपने मोजलेले MUAC'},
+  'stunting_label': {'en': 'Stunting (HAZ)', 'mr': 'खुंटलेली वाढ (HAZ)'},
+  'who_reference_title': {
+    'en': 'WHO reference targets',
+    'mr': 'WHO संदर्भ लक्ष्य मूल्ये',
+  },
+  'who_reference_range': {
+    'en': 'WHO −2 to +2 SD:',
+    'mr': 'WHO −2 ते +2 SD:',
+  },
+  'who_reference_disclaimer': {
+    'en': 'Target = WHO median (z=0) for the same sex and exact age. '
+        'The range is the WHO −2 to +2 SD reference interval. These are '
+        'official comparison standards, not measurements of this child.',
+    'mr': 'लक्ष्य = समान लिंग आणि अचूक वयासाठी WHO मध्यक (z=0). '
+        'श्रेणी WHO −2 ते +2 SD संदर्भ अंतर आहे. ही अधिकृत तुलना मूल्ये आहेत; '
+        'या मुलाची प्रत्यक्ष मोजमापे नाहीत.',
+  },
+  'boy': {'en': 'Boy', 'mr': 'मुलगा'},
+  'girl': {'en': 'Girl', 'mr': 'मुलगी'},
   'badge_image': {'en': 'Image', 'mr': 'प्रतिमा'},
   'badge_manual': {'en': 'Manual', 'mr': 'हस्तलिखित'},
   'badge_who_age_estimate': {
@@ -238,12 +266,13 @@ const Map<String, Map<String, String>> translations = {
     'mr': 'प्राथमिक अंदाज — प्रत्यक्ष मोजमाप नाहीत',
   },
   'screening_estimates_body': {
-    'en': 'A photo has no absolute centimetre scale. Height may use the WHO age median; '
-        'weight may use ML; MUAC may be derived from WHZ. Do not use these estimates '
-        'as a Normal clinical result.',
-    'mr': 'फोटोमध्ये सेंटीमीटरचे प्रत्यक्ष प्रमाण नसते. उंचीसाठी WHO वय-मध्यक, '
-        'वजनासाठी ML आणि MUAC साठी WHZ-आधारित अंदाज वापरला जाऊ शकतो. '
-        'या अंदाजांवरून वैद्यकीयदृष्ट्या सामान्य निकाल मानू नका.',
+    'en': 'A regular photo has no absolute centimetre or kilogram scale. '
+        'The child measurement cards remain Not measured until height, scale '
+        'weight, and tape MUAC are entered.',
+    'mr':
+        'सामान्य फोटोमध्ये सेंटीमीटर किंवा किलोग्रामचे प्रत्यक्ष प्रमाण नसते. '
+            'उंची, काट्यावरील वजन आणि टेपने MUAC भरल्याशिवाय मुलाची मोजमापे '
+            '“मोजलेले नाही” अशीच राहतील.',
   },
   'analysis_pose_who': {
     'en': 'Analysis: pose landmarks + WHO age reference',
@@ -253,8 +282,8 @@ const Map<String, Map<String, String>> translations = {
   'abd_depth': {'en': 'Abd:', 'mr': 'पोट:'},
   'ml_wasting_title': {'en': 'ML Wasting Detection', 'mr': 'ML कुपोषण शोध'},
   'ml_wasting_sub': {
-    'en': '— camera-based body proportions',
-    'mr': '— कॅमेरा आधारित शरीर प्रमाण',
+    'en': '— experimental camera screening, not a child measurement',
+    'mr': '— प्रायोगिक कॅमेरा तपासणी; मुलाचे प्रत्यक्ष मोजमाप नाही',
   },
   'sam_probability': {'en': 'SAM probability', 'mr': 'SAM संभाव्यता'},
   'mam_probability': {'en': 'MAM probability', 'mr': 'MAM संभाव्यता'},

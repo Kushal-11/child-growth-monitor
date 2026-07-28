@@ -310,6 +310,7 @@ class AssessmentService {
         rationale: poshan.rationale,
         complete: poshan.complete,
       ),
+      whoReferenceTargets: _who.getReferenceTargets(sex, ageMonths),
       measurement: ar.Measurement(
         effectiveHeightCm: m.effectiveHeightCm,
         heightMethod: heightMethod,

@@ -8,6 +8,7 @@ import 'package:child_growth_monitor_app/database/database.dart'
 import 'package:child_growth_monitor_app/providers/database_provider.dart';
 import 'package:child_growth_monitor_app/providers/assessment_provider.dart';
 import 'package:child_growth_monitor_app/models/assessment_result.dart';
+import 'package:child_growth_monitor_app/models/who_reference_targets.dart';
 import 'package:child_growth_monitor_app/screens/assessment/result_screen.dart';
 
 /// A tape-measured SAM child (MUAC < 11.5) whose WHZ reads Normal — the exact
@@ -83,6 +84,23 @@ AssessmentResult _estimatedOnly() => AssessmentResult(
         muacStatus: 'Indeterminate',
         finalStatus: 'Indeterminate',
         rationale: 'Measured BMI and tape MUAC evidence is incomplete.',
+      ),
+      whoReferenceTargets: const WhoReferenceTargets(
+        heightForAge: WhoReferenceValue(
+          target: 102.1,
+          lower2Sd: 94.5,
+          upper2Sd: 109.7,
+        ),
+        weightForAge: WhoReferenceValue(
+          target: 15.5,
+          lower2Sd: 12.0,
+          upper2Sd: 20.0,
+        ),
+        muacForAge: WhoReferenceValue(
+          target: 15.8,
+          lower2Sd: 13.5,
+          upper2Sd: 18.6,
+        ),
       ),
       measurement: Measurement(
         effectiveHeightCm: 102.1,
@@ -177,8 +195,15 @@ void main() {
 
     expect(find.text('Screening estimates — not direct measurements'),
         findsOneWidget);
-    expect(find.text('WHO age estimate'), findsWidgets);
-    expect(find.text('ML estimate'), findsOneWidget);
+    expect(find.text('Not measured'), findsWidgets);
+    expect(find.text('WHO reference targets'), findsOneWidget);
+    expect(find.text('102.1 cm'), findsOneWidget);
+    expect(find.text('15.5 kg'), findsOneWidget);
+    expect(find.text('15.8 cm'), findsOneWidget);
+    expect(find.text('15.2 kg'), findsNothing);
+    expect(find.text('15.0 cm'), findsNothing);
+    expect(find.text('WHO age estimate'), findsNothing);
+    expect(find.text('ML estimate'), findsNothing);
     expect(find.text('Image'), findsNothing);
   });
 }

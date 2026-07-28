@@ -1,12 +1,14 @@
 /// Unified WHO reference data loader for offline growth assessment.
 ///
-/// Loads CSV and Excel WHO growth standard files into in-memory tables.
+/// Loads official WHO Excel growth-standard files into in-memory tables.
 /// Provides lookup methods for Z-score computation that match the Python
 /// backend exactly.
 ///
 /// Data source priority:
+///   - Excel files for length/height-for-age, weight-for-age and
+///     arm-circumference-for-age reference targets
 ///   - Excel files (L-M-S parameters) for WFH/WFL (0-2y and 2-5y)
-///   - CSV file for HAZ (0-59 months)
+///   - Existing CSV file for the legacy HAZ calculation path
 library;
 
 import 'dart:io';
@@ -15,6 +17,8 @@ import 'dart:math';
 import 'package:csv/csv.dart';
 import 'package:excel/excel.dart';
 import 'package:flutter/services.dart' show rootBundle;
+
+import '../models/who_reference_targets.dart';
 
 /// A single HAZ row from the CSV file.
 class _HazRow {
@@ -55,6 +59,18 @@ class WhoDataService {
   /// WFH LMS rows keyed by sex ('M' or 'F'), sorted by indexValue.
   Map<String, List<_LmsRow>> _wfhLms = {};
 
+  /// Length-for-age LMS rows keyed by sex, indexed by age in months.
+  Map<String, List<_LmsRow>> _lfaLms = {};
+
+  /// Height-for-age LMS rows keyed by sex, indexed by age in months.
+  Map<String, List<_LmsRow>> _hfaLms = {};
+
+  /// Weight-for-age LMS rows keyed by sex, indexed by age in months.
+  Map<String, List<_LmsRow>> _wfaLms = {};
+
+  /// Arm-circumference-for-age LMS rows keyed by sex, indexed by age in months.
+  Map<String, List<_LmsRow>> _acfaLms = {};
+
   bool _loaded = false;
 
   bool get isLoaded => _loaded;
@@ -65,13 +81,34 @@ class WhoDataService {
 
   /// Load all WHO data from bundled Flutter assets.
   Future<void> loadFromAssets() async {
-    final hazCsv = await rootBundle.loadString('assets/who_data/who_haz_0_59m.csv');
+    final hazCsv =
+        await rootBundle.loadString('assets/who_data/who_haz_0_59m.csv');
     _parseHazCsv(hazCsv);
 
-    final wflBoys = await rootBundle.load('assets/who_data/who_wfl_boys_0_2.xlsx');
-    final wflGirls = await rootBundle.load('assets/who_data/who_wfl_girls_0_2.xlsx');
-    final wfhBoys = await rootBundle.load('assets/who_data/who_wfh_boys_2_5.xlsx');
-    final wfhGirls = await rootBundle.load('assets/who_data/who_wfh_girls_2_5.xlsx');
+    final wflBoys =
+        await rootBundle.load('assets/who_data/who_wfl_boys_0_2.xlsx');
+    final wflGirls =
+        await rootBundle.load('assets/who_data/who_wfl_girls_0_2.xlsx');
+    final wfhBoys =
+        await rootBundle.load('assets/who_data/who_wfh_boys_2_5.xlsx');
+    final wfhGirls =
+        await rootBundle.load('assets/who_data/who_wfh_girls_2_5.xlsx');
+    final lfaBoys =
+        await rootBundle.load('assets/who_data/who_lhfa_boys_0_2.xlsx');
+    final lfaGirls =
+        await rootBundle.load('assets/who_data/who_lhfa_girls_0_2.xlsx');
+    final hfaBoys =
+        await rootBundle.load('assets/who_data/who_lhfa_boys_2_5.xlsx');
+    final hfaGirls =
+        await rootBundle.load('assets/who_data/who_lhfa_girls_2_5.xlsx');
+    final wfaBoys =
+        await rootBundle.load('assets/who_data/who_wfa_boys_0_5.xlsx');
+    final wfaGirls =
+        await rootBundle.load('assets/who_data/who_wfa_girls_0_5.xlsx');
+    final acfaBoys =
+        await rootBundle.load('assets/who_data/who_acfa_boys_3_5.xlsx');
+    final acfaGirls =
+        await rootBundle.load('assets/who_data/who_acfa_girls_3_5.xlsx');
 
     _wflLms = {
       'M': _parseExcelLms(wflBoys.buffer.asUint8List()),
@@ -80,6 +117,22 @@ class WhoDataService {
     _wfhLms = {
       'M': _parseExcelLms(wfhBoys.buffer.asUint8List()),
       'F': _parseExcelLms(wfhGirls.buffer.asUint8List()),
+    };
+    _lfaLms = {
+      'M': _parseExcelLms(lfaBoys.buffer.asUint8List()),
+      'F': _parseExcelLms(lfaGirls.buffer.asUint8List()),
+    };
+    _hfaLms = {
+      'M': _parseExcelLms(hfaBoys.buffer.asUint8List()),
+      'F': _parseExcelLms(hfaGirls.buffer.asUint8List()),
+    };
+    _wfaLms = {
+      'M': _parseExcelLms(wfaBoys.buffer.asUint8List()),
+      'F': _parseExcelLms(wfaGirls.buffer.asUint8List()),
+    };
+    _acfaLms = {
+      'M': _parseExcelLms(acfaBoys.buffer.asUint8List()),
+      'F': _parseExcelLms(acfaGirls.buffer.asUint8List()),
     };
 
     _loaded = true;
@@ -97,6 +150,14 @@ class WhoDataService {
     required String wflGirlsPath,
     required String wfhBoysPath,
     required String wfhGirlsPath,
+    String? lfaBoysPath,
+    String? lfaGirlsPath,
+    String? hfaBoysPath,
+    String? hfaGirlsPath,
+    String? wfaBoysPath,
+    String? wfaGirlsPath,
+    String? acfaBoysPath,
+    String? acfaGirlsPath,
   }) async {
     final hazCsv = await File(hazCsvPath).readAsString();
     _parseHazCsv(hazCsv);
@@ -109,6 +170,30 @@ class WhoDataService {
       'M': _parseExcelLms(await File(wfhBoysPath).readAsBytes()),
       'F': _parseExcelLms(await File(wfhGirlsPath).readAsBytes()),
     };
+    if (lfaBoysPath != null && lfaGirlsPath != null) {
+      _lfaLms = {
+        'M': _parseExcelLms(await File(lfaBoysPath).readAsBytes()),
+        'F': _parseExcelLms(await File(lfaGirlsPath).readAsBytes()),
+      };
+    }
+    if (hfaBoysPath != null && hfaGirlsPath != null) {
+      _hfaLms = {
+        'M': _parseExcelLms(await File(hfaBoysPath).readAsBytes()),
+        'F': _parseExcelLms(await File(hfaGirlsPath).readAsBytes()),
+      };
+    }
+    if (wfaBoysPath != null && wfaGirlsPath != null) {
+      _wfaLms = {
+        'M': _parseExcelLms(await File(wfaBoysPath).readAsBytes()),
+        'F': _parseExcelLms(await File(wfaGirlsPath).readAsBytes()),
+      };
+    }
+    if (acfaBoysPath != null && acfaGirlsPath != null) {
+      _acfaLms = {
+        'M': _parseExcelLms(await File(acfaBoysPath).readAsBytes()),
+        'F': _parseExcelLms(await File(acfaGirlsPath).readAsBytes()),
+      };
+    }
 
     _loaded = true;
   }
@@ -238,6 +323,24 @@ class WhoDataService {
     return boundaries?[0];
   }
 
+  /// Return official WHO reference values for a child of [sex] and [ageMonths].
+  ///
+  /// The target is the WHO median (z=0), with the -2 to +2 z-score interval
+  /// supplied as context. These values are population references and must not
+  /// be treated as measurements of the child.
+  WhoReferenceTargets getReferenceTargets(String sex, double ageMonths) {
+    if (ageMonths < 0) return const WhoReferenceTargets();
+
+    final normalizedSex = _normalizeSex(sex);
+    final heightDataset = ageMonths < 24 ? _lfaLms : _hfaLms;
+
+    return WhoReferenceTargets(
+      heightForAge: _referenceAt(heightDataset[normalizedSex], ageMonths),
+      weightForAge: _referenceAt(_wfaLms[normalizedSex], ageMonths),
+      muacForAge: _referenceAt(_acfaLms[normalizedSex], ageMonths),
+    );
+  }
+
   /// Get approximate standard deviation of height for a given age.
   ///
   /// Computed as (z_0 - z_minus_1). Returns null if age is out of range.
@@ -359,6 +462,14 @@ class WhoDataService {
     return (pow(measurement / m, l) - 1) / (l * s);
   }
 
+  /// Convert an LMS z-score back to its measurement value.
+  static double lmsMeasurement(double z, double l, double m, double s) {
+    if (l.abs() < 1e-6) {
+      return m * exp(s * z);
+    }
+    return m * pow(1 + l * s * z, 1 / l);
+  }
+
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
@@ -373,6 +484,64 @@ class WhoDataService {
       return double.tryParse(cleaned);
     }
     return null;
+  }
+
+  static WhoReferenceValue? _referenceAt(
+    List<_LmsRow>? rows,
+    double indexValue,
+  ) {
+    final lms = _interpolateLms(rows, indexValue);
+    if (lms == null) return null;
+    final (l, m, s) = lms;
+    return WhoReferenceValue(
+      target: m,
+      lower2Sd: lmsMeasurement(-2, l, m, s),
+      upper2Sd: lmsMeasurement(2, l, m, s),
+    );
+  }
+
+  static (double, double, double)? _interpolateLms(
+    List<_LmsRow>? rows,
+    double indexValue,
+  ) {
+    if (rows == null || rows.isEmpty) return null;
+    if (indexValue < rows.first.indexValue ||
+        indexValue > rows.last.indexValue) {
+      return null;
+    }
+
+    _LmsRow? below;
+    _LmsRow? above;
+    for (final row in rows) {
+      if ((row.indexValue - indexValue).abs() < 1e-9) {
+        return (row.l, row.m, row.s);
+      }
+      if (row.indexValue < indexValue) below = row;
+      if (row.indexValue > indexValue) {
+        above = row;
+        break;
+      }
+    }
+    if (below == null || above == null) return null;
+
+    final fraction =
+        (indexValue - below.indexValue) / (above.indexValue - below.indexValue);
+    return (
+      below.l + fraction * (above.l - below.l),
+      below.m + fraction * (above.m - below.m),
+      below.s + fraction * (above.s - below.s),
+    );
+  }
+
+  static String _normalizeSex(String sex) {
+    final normalized = sex.trim().toUpperCase();
+    if (normalized == 'M' || normalized == 'MALE' || normalized == 'BOY') {
+      return 'M';
+    }
+    if (normalized == 'F' || normalized == 'FEMALE' || normalized == 'GIRL') {
+      return 'F';
+    }
+    return normalized;
   }
 
   static int? _toInt(dynamic v) {

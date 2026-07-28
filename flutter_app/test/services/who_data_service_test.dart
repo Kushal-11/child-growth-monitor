@@ -14,6 +14,14 @@ void main() {
       wflGirlsPath: 'test/fixtures/who_wfl_girls_0_2.xlsx',
       wfhBoysPath: 'test/fixtures/who_wfh_boys_2_5.xlsx',
       wfhGirlsPath: 'test/fixtures/who_wfh_girls_2_5.xlsx',
+      lfaBoysPath: 'assets/who_data/who_lhfa_boys_0_2.xlsx',
+      lfaGirlsPath: 'assets/who_data/who_lhfa_girls_0_2.xlsx',
+      hfaBoysPath: 'assets/who_data/who_lhfa_boys_2_5.xlsx',
+      hfaGirlsPath: 'assets/who_data/who_lhfa_girls_2_5.xlsx',
+      wfaBoysPath: 'assets/who_data/who_wfa_boys_0_5.xlsx',
+      wfaGirlsPath: 'assets/who_data/who_wfa_girls_0_5.xlsx',
+      acfaBoysPath: 'assets/who_data/who_acfa_boys_3_5.xlsx',
+      acfaGirlsPath: 'assets/who_data/who_acfa_girls_3_5.xlsx',
     );
   });
 
@@ -46,6 +54,48 @@ void main() {
 
     test('returns null for age beyond 60', () {
       expect(svc.getMedianHeightForAge('M', 61), isNull);
+    });
+  });
+
+  group('official WHO reference targets', () {
+    test('returns sex-specific median and reference interval', () {
+      final targets = svc.getReferenceTargets('F', 0);
+
+      expect(targets.heightForAge, isNotNull);
+      expect(targets.heightForAge!.target, closeTo(49.1477, 0.0001));
+      expect(targets.heightForAge!.lower2Sd, closeTo(45.422, 0.01));
+      expect(targets.heightForAge!.upper2Sd, closeTo(52.872, 0.01));
+
+      expect(targets.weightForAge, isNotNull);
+      expect(targets.weightForAge!.target, closeTo(3.2322, 0.0001));
+      expect(targets.weightForAge!.lower2Sd, closeTo(2.4, 0.05));
+      expect(targets.weightForAge!.upper2Sd, closeTo(4.2, 0.05));
+
+      expect(targets.muacForAge, isNull);
+    });
+
+    test('interpolates exact age and uses official ACFA table', () {
+      final atSixMonths = svc.getReferenceTargets('M', 6);
+      expect(atSixMonths.muacForAge, isNotNull);
+      expect(atSixMonths.muacForAge!.target, closeTo(14.2389, 0.0001));
+      expect(atSixMonths.muacForAge!.lower2Sd, closeTo(12.2, 0.05));
+      expect(atSixMonths.muacForAge!.upper2Sd, closeTo(16.5, 0.05));
+
+      final fractional = svc.getReferenceTargets('girl', 46.8);
+      final month46 = svc.getReferenceTargets('F', 46);
+      final month47 = svc.getReferenceTargets('F', 47);
+      expect(
+        fractional.weightForAge!.target,
+        inInclusiveRange(
+          month46.weightForAge!.target,
+          month47.weightForAge!.target,
+        ),
+      );
+    });
+
+    test('returns no targets beyond the WHO under-five table', () {
+      final targets = svc.getReferenceTargets('M', 61);
+      expect(targets.isEmpty, isTrue);
     });
   });
 

@@ -104,11 +104,15 @@ void main() {
   late AppDatabase db;
   late AssessmentService svc;
   late _StubMl ml;
+  late WhoDataService who;
+
+  setUpAll(() async {
+    who = WhoDataService();
+    await loadWhoForTests(who);
+  });
 
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    final who = WhoDataService();
-    await loadWhoForTests(who);
     ml = _StubMl();
     svc = AssessmentService(
       childDao: ChildDao(db),
@@ -150,6 +154,9 @@ void main() {
     expect(stored.effectiveWeightKg, result.measurement.predictedWeightKg);
     expect(stored.heightMethod, 'who_statistical');
     expect(result.measurement.heightMethod, 'who_statistical');
+    expect(result.whoReferenceTargets.heightForAge, isNotNull);
+    expect(result.whoReferenceTargets.weightForAge, isNotNull);
+    expect(result.whoReferenceTargets.muacForAge, isNotNull);
     expect(stored.weightMethod, 'ml_estimated');
     expect(stored.combinedStatus, result.combinedNutrition.status);
     expect(stored.combinedMethod, 'who_muac_whz_or_rule');

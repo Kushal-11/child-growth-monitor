@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../l10n/l10n_provider.dart';
 import '../../models/assessment_result.dart';
+import '../../models/who_reference_targets.dart';
 import '../../providers/assessment_provider.dart';
 import '../shared/app_scaffold.dart';
 import '../shared/status_badge.dart';
@@ -50,6 +51,10 @@ class ResultScreen extends ConsumerWidget {
             _photoSection(context, ref, result),
             const SizedBox(height: 16),
             _metricCards(context, ref, result),
+            if (!result.whoReferenceTargets.isEmpty) ...[
+              const SizedBox(height: 16),
+              _whoReferenceCard(context, ref, result),
+            ],
             if (result.mlPrediction != null) ...[
               const SizedBox(height: 16),
               _mlSection(context, ref, result.mlPrediction!),
@@ -71,7 +76,11 @@ class ResultScreen extends ConsumerWidget {
     WidgetRef ref,
     AssessmentResult result,
   ) {
-    final haz = result.nutrition.hazStatus;
+    final heightIsDirect = {
+      'manual',
+      'reference_object',
+    }.contains(result.measurement.heightMethod);
+    final haz = heightIsDirect ? result.nutrition.hazStatus : null;
 
     final poshan = result.poshan.finalStatus;
 
@@ -204,18 +213,30 @@ class ResultScreen extends ConsumerWidget {
       'reference_object',
     }.contains(result.measurement.heightMethod);
     final weightIsDirect = result.measurement.weightMethod == 'manual';
+    final muacIsDirect = result.muac?.isDirectMeasurement == true;
+    final measuredBmi = heightIsDirect && weightIsDirect
+        ? result.poshan.bmi?.toStringAsFixed(2)
+        : null;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Text(
+          t('child_measurements_title', ref),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
         Card(
           child: ListTile(
             title: const Text('Poshan Setu v1 classification'),
             subtitle: Text(
-              'Measured BMI: ${result.poshan.bmi?.toStringAsFixed(2) ?? '—'} '
-              '(${result.poshan.bmiStatus}) · Measured MUAC: '
-              '${result.poshan.muacStatus}\nEstimated WHO/MUAC screening: '
-              '${result.combinedNutrition.status} · Stunting (HAZ): '
-              '${result.nutrition.hazStatus ?? 'Insufficient data'}',
+              '${t('measured_bmi_label', ref)}: '
+              '${measuredBmi ?? t('not_assessed', ref)}'
+              '${measuredBmi != null ? ' (${result.poshan.bmiStatus})' : ''}'
+              ' · ${t('tape_muac_label', ref)}: '
+              '${muacIsDirect ? result.poshan.muacStatus : t('not_assessed', ref)}'
+              '\n${t('stunting_label', ref)}: '
+              '${heightIsDirect ? result.nutrition.hazStatus ?? t('not_assessed', ref) : t('not_assessed', ref)}',
             ),
             trailing: StatusBadge(status: result.poshan.finalStatus),
           ),
@@ -225,9 +246,11 @@ class ResultScreen extends ConsumerWidget {
           context,
           ref,
           title: t('metric_height', ref),
-          value: result.measurement.effectiveHeightCm,
+          value: heightIsDirect ? result.measurement.effectiveHeightCm : null,
           unit: 'cm',
-          source: _heightSource(ref, result.measurement),
+          source: heightIsDirect
+              ? _heightSource(ref, result.measurement)
+              : t('not_measured', ref),
           zscore: heightIsDirect ? result.nutrition.hazZscore : null,
           status: heightIsDirect ? result.nutrition.hazStatus : null,
         ),
@@ -236,17 +259,20 @@ class ResultScreen extends ConsumerWidget {
           context,
           ref,
           title: t('metric_weight', ref),
-          value: result.measurement.predictedWeightKg ??
-              result.measurement.manualWeightKg,
+          value: weightIsDirect ? result.measurement.manualWeightKg : null,
           unit: 'kg',
-          source: _weightSource(ref, result.measurement),
+          source: weightIsDirect
+              ? _weightSource(ref, result.measurement)
+              : t('not_measured', ref),
           zscore: heightIsDirect && weightIsDirect
               ? result.nutrition.whzZscore
               : null,
           status: heightIsDirect && weightIsDirect
               ? result.nutrition.whzStatus
               : null,
-          extras: _weightExtras(context, ref, result.measurement),
+          extras: weightIsDirect
+              ? _weightExtras(context, ref, result.measurement)
+              : null,
         ),
         const SizedBox(height: 8),
         _muacCard(context, ref, result.muac),
@@ -384,7 +410,9 @@ class ResultScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    value != null ? '${value.toStringAsFixed(1)} $unit' : '—',
+                    value != null
+                        ? '${value.toStringAsFixed(1)} $unit'
+                        : t('not_measured', ref),
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   if (zscore != null)
@@ -416,16 +444,25 @@ class ResultScreen extends ConsumerWidget {
         status: null,
       );
     }
-    final source = muac.muacMethod == 'manual'
-        ? t('badge_tape', ref)
-        : t('badge_est', ref);
+    if (!muac.isDirectMeasurement) {
+      return _metricCard(
+        context,
+        ref,
+        title: t('metric_muac', ref),
+        value: null,
+        unit: 'cm',
+        source: t('not_measured', ref),
+        zscore: null,
+        status: null,
+      );
+    }
     return _metricCard(
       context,
       ref,
       title: t('metric_muac', ref),
       value: muac.muacCm,
       unit: 'cm',
-      source: source,
+      source: t('badge_tape', ref),
       zscore: null,
       status: muac.muacStatus,
     );
@@ -464,15 +501,116 @@ class ResultScreen extends ConsumerWidget {
               ml.normalProbability,
               Colors.green,
             ),
-            if (ml.estimatedWeightKg != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                '${t('ml_estimated_weight', ref)} ${ml.estimatedWeightKg!.toStringAsFixed(2)} kg',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _whoReferenceCard(
+    BuildContext context,
+    WidgetRef ref,
+    AssessmentResult result,
+  ) {
+    final targets = result.whoReferenceTargets;
+    final sexLabel =
+        result.sex.toUpperCase() == 'M' ? t('boy', ref) : t('girl', ref);
+
+    return Card(
+      color: Theme.of(context).colorScheme.primaryContainer.withValues(
+            alpha: 0.35,
+          ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              t('who_reference_title', ref),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '$sexLabel · ${result.ageMonths.toStringAsFixed(1)} '
+              '${t('months_unit', ref)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            if (targets.heightForAge != null)
+              _referenceRow(
+                context,
+                ref,
+                label: result.ageMonths < 24
+                    ? t('metric_length', ref)
+                    : t('metric_height', ref),
+                value: targets.heightForAge!,
+                unit: 'cm',
+              ),
+            if (targets.weightForAge != null)
+              _referenceRow(
+                context,
+                ref,
+                label: t('metric_weight', ref),
+                value: targets.weightForAge!,
+                unit: 'kg',
+              ),
+            if (targets.muacForAge != null)
+              _referenceRow(
+                context,
+                ref,
+                label: t('metric_muac', ref),
+                value: targets.muacForAge!,
+                unit: 'cm',
+              ),
+            const Divider(height: 20),
+            Text(
+              t('who_reference_disclaimer', ref),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _referenceRow(
+    BuildContext context,
+    WidgetRef ref, {
+    required String label,
+    required WhoReferenceValue value,
+    required String unit,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${value.target.toStringAsFixed(1)} $unit',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              Text(
+                '${t('who_reference_range', ref)} '
+                '${value.lower2Sd.toStringAsFixed(1)}–'
+                '${value.upper2Sd.toStringAsFixed(1)} $unit',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

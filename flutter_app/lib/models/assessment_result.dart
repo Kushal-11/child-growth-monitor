@@ -1,3 +1,5 @@
+import 'who_reference_targets.dart';
+
 class AssessmentResult {
   AssessmentResult({
     required this.childName,
@@ -10,6 +12,7 @@ class AssessmentResult {
     this.muac,
     required this.combinedNutrition,
     this.poshan = const PoshanDetail(),
+    this.whoReferenceTargets = const WhoReferenceTargets(),
   });
 
   final String childName;
@@ -22,6 +25,7 @@ class AssessmentResult {
   final MuacDetail? muac;
   final CombinedNutritionDetail combinedNutrition;
   final PoshanDetail poshan;
+  final WhoReferenceTargets whoReferenceTargets;
 
   factory AssessmentResult.fromJson(Map<String, dynamic> json) {
     return AssessmentResult(
@@ -48,6 +52,9 @@ class AssessmentResult {
       ),
       poshan: PoshanDetail.fromJson(
         json['poshan'] as Map<String, dynamic>? ?? const {},
+      ),
+      whoReferenceTargets: WhoReferenceTargets.fromJson(
+        json['who_reference_targets'] as Map<String, dynamic>? ?? const {},
       ),
     );
   }
