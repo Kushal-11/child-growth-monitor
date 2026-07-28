@@ -69,6 +69,46 @@ AssessmentResult _manualHeightWins() => AssessmentResult(
       nutrition: Nutrition(ageMonths: 30),
     );
 
+AssessmentResult _estimatedOnly() => AssessmentResult(
+      childName: 'Asha',
+      sex: 'F',
+      ageMonths: 46.8,
+      summary: 'Indeterminate',
+      combinedNutrition: const CombinedNutritionDetail(
+        status: 'NORMAL',
+        rationale: 'No direct MUAC or WHZ flag triggered',
+      ),
+      poshan: const PoshanDetail(
+        bmiStatus: 'Indeterminate',
+        muacStatus: 'Indeterminate',
+        finalStatus: 'Indeterminate',
+        rationale: 'Measured BMI and tape MUAC evidence is incomplete.',
+      ),
+      measurement: Measurement(
+        effectiveHeightCm: 102.1,
+        heightMethod: 'who_statistical',
+        predictedHeightCm: 102.1,
+        predictedWeightKg: 15.15,
+        effectiveWeightKg: 15.15,
+        weightMethod: 'ml_estimated',
+        confidenceScore: 0.995,
+        estimationMethod: 'who_statistical',
+      ),
+      nutrition: Nutrition(
+        hazZscore: 0,
+        whzZscore: -0.5,
+        hazStatus: 'Normal',
+        whzStatus: 'NORMAL',
+        ageMonths: 46.8,
+      ),
+      muac: MuacDetail(
+        muacCm: 15,
+        muacMethod: 'estimated_from_whz',
+        ageInRange: true,
+        requiresConfirmation: true,
+      ),
+    );
+
 void main() {
   testWidgets('banner shows SAM when eligible Poshan MUAC is SAM',
       (tester) async {
@@ -115,5 +155,30 @@ void main() {
     expect(find.text('80.0 cm'), findsOneWidget);
     expect(find.text('95.0 cm'), findsNothing);
     expect(find.text('Manual'), findsWidgets);
+  });
+
+  testWidgets('estimated results disclose their actual provenance',
+      (tester) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+      assessmentResultProvider.overrideWith((ref) => _estimatedOnly()),
+    ]);
+    addTearDown(() {
+      container.dispose();
+      db.close();
+    });
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: ResultScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Screening estimates — not direct measurements'),
+        findsOneWidget);
+    expect(find.text('WHO age estimate'), findsWidgets);
+    expect(find.text('ML estimate'), findsOneWidget);
+    expect(find.text('Image'), findsNothing);
   });
 }

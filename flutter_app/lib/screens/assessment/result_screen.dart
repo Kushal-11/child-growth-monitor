@@ -42,6 +42,10 @@ class ResultScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _statusBanner(context, ref, result),
+            if (_usesEstimatedEvidence(result)) ...[
+              const SizedBox(height: 12),
+              _estimateDisclosure(context, ref),
+            ],
             const SizedBox(height: 16),
             _photoSection(context, ref, result),
             const SizedBox(height: 16),
@@ -152,7 +156,7 @@ class ResultScreen extends ConsumerWidget {
     WidgetRef ref,
     AssessmentResult result,
   ) {
-    final annotatedImage = result.measurement.estimationMethod;
+    final estimationMethod = result.measurement.estimationMethod;
     final confidence = result.measurement.confidenceScore;
 
     return Card(
@@ -177,9 +181,11 @@ class ResultScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
             ],
-            if (annotatedImage != null)
+            if (estimationMethod != null)
               Text(
-                'Method: $annotatedImage',
+                estimationMethod == 'who_statistical'
+                    ? t('analysis_pose_who', ref)
+                    : 'Method: $estimationMethod',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
           ],
@@ -193,15 +199,21 @@ class ResultScreen extends ConsumerWidget {
     WidgetRef ref,
     AssessmentResult result,
   ) {
+    final heightIsDirect = {
+      'manual',
+      'reference_object',
+    }.contains(result.measurement.heightMethod);
+    final weightIsDirect = result.measurement.weightMethod == 'manual';
+
     return Column(
       children: [
         Card(
           child: ListTile(
             title: const Text('Poshan Setu v1 classification'),
             subtitle: Text(
-              'BMI: ${result.poshan.bmi?.toStringAsFixed(2) ?? '—'} '
+              'Measured BMI: ${result.poshan.bmi?.toStringAsFixed(2) ?? '—'} '
               '(${result.poshan.bmiStatus}) · Measured MUAC: '
-              '${result.poshan.muacStatus}\nWHO/MUAC screening: '
+              '${result.poshan.muacStatus}\nEstimated WHO/MUAC screening: '
               '${result.combinedNutrition.status} · Stunting (HAZ): '
               '${result.nutrition.hazStatus ?? 'Insufficient data'}',
             ),
@@ -215,13 +227,9 @@ class ResultScreen extends ConsumerWidget {
           title: t('metric_height', ref),
           value: result.measurement.effectiveHeightCm,
           unit: 'cm',
-          source: result.measurement.heightMethod == 'manual'
-              ? t('badge_manual', ref)
-              : result.measurement.heightMethod == 'image_estimated'
-                  ? t('badge_image', ref)
-                  : t('badge_undetected', ref),
-          zscore: result.nutrition.hazZscore,
-          status: result.nutrition.hazStatus,
+          source: _heightSource(ref, result.measurement),
+          zscore: heightIsDirect ? result.nutrition.hazZscore : null,
+          status: heightIsDirect ? result.nutrition.hazStatus : null,
         ),
         const SizedBox(height: 8),
         _metricCard(
@@ -231,19 +239,81 @@ class ResultScreen extends ConsumerWidget {
           value: result.measurement.predictedWeightKg ??
               result.measurement.manualWeightKg,
           unit: 'kg',
-          source: result.measurement.manualWeightKg != null
-              ? t('badge_manual', ref)
-              : result.measurement.predictedWeightKg != null
-                  ? t('badge_image', ref)
-                  : t('badge_undetected', ref),
-          zscore: result.nutrition.whzZscore,
-          status: result.nutrition.whzStatus,
+          source: _weightSource(ref, result.measurement),
+          zscore: heightIsDirect && weightIsDirect
+              ? result.nutrition.whzZscore
+              : null,
+          status: heightIsDirect && weightIsDirect
+              ? result.nutrition.whzStatus
+              : null,
           extras: _weightExtras(context, ref, result.measurement),
         ),
         const SizedBox(height: 8),
         _muacCard(context, ref, result.muac),
       ],
     );
+  }
+
+  bool _usesEstimatedEvidence(AssessmentResult result) {
+    final measurement = result.measurement;
+    return measurement.heightMethod != 'manual' ||
+        measurement.weightMethod != 'manual' ||
+        result.muac?.isDirectMeasurement != true;
+  }
+
+  Widget _estimateDisclosure(BuildContext context, WidgetRef ref) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        border: Border.all(color: Colors.amber.shade700),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            t('screening_estimates_title', ref),
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: Colors.amber.shade900,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(t('screening_estimates_body', ref)),
+        ],
+      ),
+    );
+  }
+
+  String _heightSource(WidgetRef ref, Measurement measurement) {
+    switch (measurement.heightMethod) {
+      case 'manual':
+        return t('badge_manual', ref);
+      case 'who_statistical':
+      case 'who_median_estimated':
+      case 'image_estimated':
+        return t('badge_who_age_estimate', ref);
+      case 'reference_object':
+        return t('badge_image', ref);
+      default:
+        return t('badge_undetected', ref);
+    }
+  }
+
+  String _weightSource(WidgetRef ref, Measurement measurement) {
+    switch (measurement.weightMethod) {
+      case 'manual':
+        return t('badge_manual', ref);
+      case 'ml_estimated':
+        return t('badge_ml_estimate', ref);
+      case 'who_statistical':
+      case 'who_median_estimated':
+        return t('badge_who_weight_estimate', ref);
+      default:
+        return t('badge_undetected', ref);
+    }
   }
 
   Widget? _weightExtras(BuildContext context, WidgetRef ref, Measurement m) {

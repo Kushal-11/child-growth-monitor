@@ -104,6 +104,7 @@ class AssessmentService {
       manualHeightCm: manualHeightCm,
       poseConfidence: poseConfidence,
     );
+    final heightMethod = manualHeightCm != null ? 'manual' : m.estimationMethod;
 
     WastingPrediction? prediction;
     try {
@@ -228,9 +229,7 @@ class AssessmentService {
         manualWeightKg: Value(manualWeightKg),
         effectiveHeightCm: Value(m.effectiveHeightCm),
         effectiveWeightKg: Value(effectiveWeight),
-        heightMethod: Value(
-          manualHeightCm != null ? 'manual' : 'image_estimated',
-        ),
+        heightMethod: Value(heightMethod),
         weightMethod: Value(weightMethod),
         bmi: Value(bmi),
         bmiStatus: Value(poshan.bmiStatus),
@@ -239,8 +238,8 @@ class AssessmentService {
         hazStatus: Value(hazStatus),
         whzStatus: Value(whzStatus),
         confidenceScore: Value(poseConfidence),
-        heightConfidence: Value(poseConfidence),
-        weightConfidence: Value(manualWeightKg != null ? 1.0 : poseConfidence),
+        heightConfidence: Value(manualHeightCm != null ? 1.0 : null),
+        weightConfidence: Value(manualWeightKg != null ? 1.0 : null),
         classificationConfidence: Value(
           triggeredBy.contains('muac') ? 1.0 : poseConfidence,
         ),
@@ -313,15 +312,15 @@ class AssessmentService {
       ),
       measurement: ar.Measurement(
         effectiveHeightCm: m.effectiveHeightCm,
-        heightMethod: manualHeightCm != null ? 'manual' : 'image_estimated',
+        heightMethod: heightMethod,
         predictedHeightCm: m.effectiveHeightCm,
         predictedWeightKg: effectiveWeight,
         manualHeightCm: manualHeightCm,
         manualWeightKg: manualWeightKg,
         effectiveWeightKg: effectiveWeight,
         weightMethod: weightMethod,
-        heightConfidence: manualHeightCm != null ? 1.0 : poseConfidence,
-        weightConfidence: manualWeightKg != null ? 1.0 : poseConfidence,
+        heightConfidence: manualHeightCm != null ? 1.0 : null,
+        weightConfidence: manualWeightKg != null ? 1.0 : null,
         confidenceScore: poseConfidence,
         estimationMethod: m.estimationMethod,
         bodyBuild: m.bodyBuild,

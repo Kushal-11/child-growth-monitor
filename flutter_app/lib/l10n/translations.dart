@@ -13,12 +13,10 @@ const Map<String, Map<String, String>> translations = {
     'mr': 'बाल वाढ मूल्यांकन',
   },
   'assess_subtitle': {
-    'en':
-        'Upload a photo to automatically estimate height, weight, and MUAC, '
-        'then classify stunting and wasting using WHO standards.',
-    'mr':
-        'उंची, वजन आणि MUAC स्वयंचलितपणे अंदाज करण्यासाठी फोटो अपलोड करा, '
-        'नंतर WHO मानकांनुसार कुपोषण आणि वाढ वर्गीकरण करा.',
+    'en': 'Photos analyse body proportions for screening estimates. '
+        'Measured height, scale weight, and tape MUAC are required for a complete clinical result.',
+    'mr': 'फोटो शरीराचे प्रमाण तपासून प्राथमिक अंदाज देतात. '
+        'पूर्ण वैद्यकीय निकालासाठी मोजलेली उंची, काट्यावरील वजन आणि टेपने मोजलेले MUAC आवश्यक आहे.',
   },
   'front_view_photo': {'en': 'Front View Photo', 'mr': 'समोरून फोटो'},
   'tip_front_1': {
@@ -39,8 +37,8 @@ const Map<String, Map<String, String>> translations = {
   },
   'side_view': {'en': 'Side View', 'mr': 'बाजूचे दृश्य'},
   'side_accuracy_badge': {
-    'en': '+30–40% weight accuracy',
-    'mr': '+३०–४०% वजन अचूकता',
+    'en': 'Improves body-shape screening estimate',
+    'mr': 'शरीराच्या आकाराचा प्राथमिक अंदाज सुधारतो',
   },
   'side_view_help': {
     'en': 'Child standing sideways — left or right side toward camera',
@@ -48,8 +46,8 @@ const Map<String, Map<String, String>> translations = {
   },
   'back_view': {'en': 'Back View', 'mr': 'मागचे दृश्य'},
   'back_view_help': {
-    'en': 'Child facing away, full body visible',
-    'mr': 'मूल पाठ दाखवून, संपूर्ण शरीर दिसावे',
+    'en': 'Stored for follow-up; not used in the current calculation',
+    'mr': 'पाठपुराव्यासाठी जतन; सध्याच्या गणनेत वापरले जात नाही',
   },
   'optional_label': {'en': 'Optional', 'mr': 'ऐच्छिक'},
   'child_information': {'en': 'Child Information', 'mr': 'मुलाची माहिती'},
@@ -69,12 +67,12 @@ const Map<String, Map<String, String>> translations = {
     'mr': 'किंवा वय महिन्यांत प्रविष्ट करा',
   },
   'optional_measurements': {
-    'en': 'Optional Measurements',
-    'mr': 'ऐच्छिक मोजमाप',
+    'en': 'Direct Measurements',
+    'mr': 'प्रत्यक्ष मोजमाप',
   },
   'optional_measurements_note': {
-    'en': '— improve accuracy if available',
-    'mr': '— उपलब्ध असल्यास अचूकता वाढते',
+    'en': '— needed for a complete result',
+    'mr': '— पूर्ण निकालासाठी आवश्यक',
   },
   'weight_kg': {'en': 'Weight (kg)', 'mr': 'वजन (किग्रॅ)'},
   'weight_placeholder': {'en': 'e.g. 11.5', 'mr': 'उदा. ११.५'},
@@ -83,12 +81,12 @@ const Map<String, Map<String, String>> translations = {
   'muac_placeholder': {'en': 'e.g. 13.5', 'mr': 'उदा. १३.५'},
   'muac_help': {'en': 'MUAC tape measurement', 'mr': 'MUAC टेप मोजमाप'},
   'height': {'en': 'Height', 'mr': 'उंची'},
-  'height_placeholder': {'en': 'Optional', 'mr': 'ऐच्छिक'},
+  'height_placeholder': {'en': 'e.g. 102.1', 'mr': 'उदा. १०२.१'},
   'unit_cm': {'en': 'cm', 'mr': 'सेमी'},
   'unit_inch': {'en': 'inch', 'mr': 'इंच'},
   'height_fallback': {
-    'en': 'Fallback if image fails',
-    'mr': 'प्रतिमा अयशस्वी असल्यास पर्याय',
+    'en': 'From a length board or stadiometer',
+    'mr': 'लेंथ बोर्ड किंवा स्टॅडिओमीटरवरून',
   },
   'guardian_name': {'en': 'Guardian Name', 'mr': 'पालक / पालकाचे नाव'},
   'location_clinic': {'en': 'Location / Clinic', 'mr': 'ठिकाण / दवाखाना'},
@@ -205,22 +203,52 @@ const Map<String, Map<String, String>> translations = {
     'mr': 'स्थिती ठरवता आली नाही',
   },
   'banner_unknown_msg': {
-    'en': 'Provide weight and height if possible for a complete assessment.',
-    'mr': 'पूर्ण मूल्यांकनासाठी शक्य असल्यास वजन आणि उंची द्या.',
+    'en':
+        'Enter measured height, scale weight, and tape MUAC for a complete assessment.',
+    'mr':
+        'पूर्ण मूल्यांकनासाठी मोजलेली उंची, काट्यावरील वजन आणि टेपने मोजलेले MUAC भरा.',
   },
   'months_unit': {'en': 'months', 'mr': 'महिने'},
-  'pose_confidence': {'en': 'Pose confidence', 'mr': 'पोझ विश्वास'},
+  'pose_confidence': {
+    'en': 'Pose detection confidence',
+    'mr': 'पोझ शोध विश्वास',
+  },
   'metric_height': {'en': 'Height', 'mr': 'उंची'},
   'metric_weight': {'en': 'Weight', 'mr': 'वजन'},
   'metric_muac': {'en': 'MUAC', 'mr': 'MUAC'},
   'badge_image': {'en': 'Image', 'mr': 'प्रतिमा'},
   'badge_manual': {'en': 'Manual', 'mr': 'हस्तलिखित'},
+  'badge_who_age_estimate': {
+    'en': 'WHO age estimate',
+    'mr': 'WHO वयावर आधारित अंदाज',
+  },
+  'badge_ml_estimate': {'en': 'ML estimate', 'mr': 'ML अंदाज'},
+  'badge_who_weight_estimate': {
+    'en': 'WHO weight estimate',
+    'mr': 'WHO वजन अंदाज',
+  },
   'badge_undetected': {'en': 'Undetected', 'mr': 'आढळले नाही'},
   'badge_side_view_ok': {'en': 'Side view ✓', 'mr': 'बाजू दृश्य ✓'},
   'badge_estimated': {'en': 'Estimated', 'mr': 'अंदाजित'},
   'badge_na': {'en': 'N/A', 'mr': 'लागू नाही'},
   'badge_tape': {'en': 'Tape', 'mr': 'टेप'},
   'badge_est': {'en': 'Est.', 'mr': 'अंदा.'},
+  'screening_estimates_title': {
+    'en': 'Screening estimates — not direct measurements',
+    'mr': 'प्राथमिक अंदाज — प्रत्यक्ष मोजमाप नाहीत',
+  },
+  'screening_estimates_body': {
+    'en': 'A photo has no absolute centimetre scale. Height may use the WHO age median; '
+        'weight may use ML; MUAC may be derived from WHZ. Do not use these estimates '
+        'as a Normal clinical result.',
+    'mr': 'फोटोमध्ये सेंटीमीटरचे प्रत्यक्ष प्रमाण नसते. उंचीसाठी WHO वय-मध्यक, '
+        'वजनासाठी ML आणि MUAC साठी WHZ-आधारित अंदाज वापरला जाऊ शकतो. '
+        'या अंदाजांवरून वैद्यकीयदृष्ट्या सामान्य निकाल मानू नका.',
+  },
+  'analysis_pose_who': {
+    'en': 'Analysis: pose landmarks + WHO age reference',
+    'mr': 'विश्लेषण: पोझ लँडमार्क + WHO वय संदर्भ',
+  },
   'chest_depth': {'en': 'Chest depth:', 'mr': 'छातीची खोली:'},
   'abd_depth': {'en': 'Abd:', 'mr': 'पोट:'},
   'ml_wasting_title': {'en': 'ML Wasting Detection', 'mr': 'ML कुपोषण शोध'},
@@ -237,11 +265,9 @@ const Map<String, Map<String, String>> translations = {
   },
   'muac_note_strong': {'en': 'MUAC note:', 'mr': 'MUAC टीप:'},
   'muac_note_text': {
-    'en':
-        'Value estimated from WHZ — not a direct tape measurement. '
+    'en': 'Value estimated from WHZ — not a direct tape measurement. '
         'Confirm with a physical MUAC tape for clinical decisions.',
-    'mr':
-        'WHZ वरून अंदाजित मूल्य — थेट टेप मोजमाप नाही. '
+    'mr': 'WHZ वरून अंदाजित मूल्य — थेट टेप मोजमाप नाही. '
         'Clinical निर्णयांसाठी भौतिक MUAC टेपने पुष्टी करा.',
   },
   'assess_another': {
