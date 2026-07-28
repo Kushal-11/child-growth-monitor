@@ -150,12 +150,9 @@ class WHODataService:
             L, M, S = lms
             return round(M, 2)
         
-        # Fallback to CSV reference if LMS not available
-        ref = self._whz_reference
-        row = ref[(ref["sex"] == sex) & (ref["height_cm"] == round(height_cm))]
-        if row.empty:
-            return None
-        return float(row.iloc[0]["median_kg"])
+        # Never substitute the deprecated quick-reference CSV for clinical LMS
+        # calculations. Unsupported measurements must remain unavailable.
+        return None
 
     def get_median_height_for_age(
         self, sex: str, age_months: int

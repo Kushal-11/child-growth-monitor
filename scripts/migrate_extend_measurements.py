@@ -28,6 +28,12 @@ NEW_COLUMNS = [
     ("muac_cm", "REAL"),
     ("muac_status", "TEXT"),
     ("muac_method", "TEXT"),
+    ("bmi", "REAL"),
+    ("bmi_status", "TEXT"),
+    ("combined_status", "TEXT"),
+    ("combined_triggered_by", "TEXT"),
+    ("height_method", "TEXT"),
+    ("weight_method", "TEXT"),
 ]
 
 

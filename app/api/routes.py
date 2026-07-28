@@ -10,6 +10,7 @@ Endpoints:
 import shutil
 import uuid
 from datetime import date
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -64,6 +65,20 @@ async def assess_child(
         dob = date.fromisoformat(date_of_birth)
     except ValueError:
         raise HTTPException(400, "date_of_birth must be ISO format (YYYY-MM-DD)")
+    if dob > date.today():
+        raise HTTPException(422, "date_of_birth cannot be in the future")
+    if not child_name.strip() or len(child_name) > 100:
+        raise HTTPException(422, "child_name must contain 1 to 100 characters")
+    for field_name, value, maximum in (
+        ("weight_kg", weight_kg, 50),
+        ("height_cm", height_cm, 200),
+        ("height_value", height_value, 200),
+        ("muac_cm", muac_cm, 30),
+    ):
+        if value is not None and (value <= 0 or value > maximum):
+            raise HTTPException(422, f"{field_name} is outside the supported range")
+    if height_unit not in ("cm", "inch"):
+        raise HTTPException(422, "height_unit must be 'cm' or 'inch'")
 
     # Convert height if provided with unit
     final_height_cm = height_cm
@@ -75,7 +90,8 @@ async def assess_child(
 
     # Save front image
     UPLOAD_DIR.mkdir(exist_ok=True)
-    filename = f"{uuid.uuid4().hex}_{image.filename}"
+    safe_original_name = Path(image.filename or "capture.jpg").name
+    filename = f"{uuid.uuid4().hex}_{safe_original_name}"
     file_path = UPLOAD_DIR / filename
     with open(file_path, "wb") as f:
         shutil.copyfileobj(image.file, f)
@@ -156,11 +172,24 @@ def get_child(
                 "predicted_height_cm": m.predicted_height_cm,
                 "predicted_weight_kg": m.predicted_weight_kg,
                 "manual_weight_kg": m.manual_weight_kg,
+                "manual_height_cm": m.manual_height_cm,
                 "haz_zscore": m.haz_zscore,
                 "whz_zscore": m.whz_zscore,
                 "haz_status": m.haz_status,
                 "whz_status": m.whz_status,
                 "confidence_score": m.confidence_score,
+                "bmi": m.bmi,
+                "bmi_status": m.bmi_status,
+                "combined_status": m.combined_status,
+                "combined_triggered_by": (
+                    m.combined_triggered_by.split(",")
+                    if m.combined_triggered_by else []
+                ),
+                "height_method": m.height_method,
+                "weight_method": m.weight_method,
+                "muac_cm": m.muac_cm,
+                "muac_status": m.muac_status,
+                "muac_method": m.muac_method,
             }
         visits.append(visit_data)
 

@@ -30,6 +30,8 @@ Reference for MUAC medians:
 from dataclasses import dataclass
 from typing import Optional
 
+from config import MUAC_MAM_BELOW_CM, MUAC_SAM_BELOW_CM
+
 
 # ── WHO MUAC-for-age medians (cm) ──────────────────────────────────────────
 # Source: WHO Child Growth Standards 2006 — Arm circumference-for-age tables
@@ -260,7 +262,8 @@ class MUACService:
         # SAM
         if muac_status_n == "SAM":
             triggered.append("muac")
-        if whz_status == "SAM":
+        whz_status_n = MUACService._canonical_wasting_status(whz_status)
+        if whz_status_n == "SAM":
             triggered.append("whz")
         if triggered:
             why = " or ".join(triggered)
@@ -273,7 +276,7 @@ class MUACService:
         # MAM
         if muac_status_n == "MAM":
             triggered.append("muac")
-        if whz_status == "MAM":
+        if whz_status_n == "MAM":
             triggered.append("whz")
         if triggered:
             why = " or ".join(triggered)
@@ -284,13 +287,13 @@ class MUACService:
             )
 
         # Overweight / Risk only governed by WHZ (MUAC has no upper threshold)
-        if whz_status == "Overweight":
+        if whz_status_n == "Overweight":
             return CombinedNutritionStatus(
                 status="Overweight",
                 triggered_by=["whz"],
                 rationale="Overweight from WHZ",
             )
-        if whz_status == "Risk_Overweight":
+        if whz_status_n == "Risk_Overweight":
             return CombinedNutritionStatus(
                 status="Risk_Overweight",
                 triggered_by=["whz"],
@@ -298,7 +301,7 @@ class MUACService:
             )
 
         # Both None → Unknown
-        if muac_status_n is None and whz_status is None:
+        if muac_status_n is None and whz_status_n is None:
             return CombinedNutritionStatus(
                 status="Unknown",
                 triggered_by=[],
@@ -338,8 +341,26 @@ class MUACService:
         """Classify MUAC using WHO absolute thresholds (6–59 months only)."""
         if not age_in_range:
             return None
-        if muac_cm < 11.5:
+        if muac_cm < MUAC_SAM_BELOW_CM:
             return "SAM"
-        if muac_cm < 12.5:
+        if muac_cm < MUAC_MAM_BELOW_CM:
             return "At Risk (MAM)"
         return "Normal"
+
+    @staticmethod
+    def _canonical_wasting_status(status: Optional[str]) -> Optional[str]:
+        """Normalize legacy descriptive labels without losing SAM/MAM flags."""
+        if not status:
+            return None
+        value = status.strip().lower()
+        if "severe acute malnutrition" in value or value == "sam":
+            return "SAM"
+        if "moderate acute malnutrition" in value or value == "mam":
+            return "MAM"
+        if value in {"possible risk of overweight", "risk_overweight"}:
+            return "Risk_Overweight"
+        if value == "overweight":
+            return "Overweight"
+        if value == "normal":
+            return "Normal"
+        return None

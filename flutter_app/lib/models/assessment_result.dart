@@ -8,6 +8,7 @@ class AssessmentResult {
     required this.nutrition,
     this.mlPrediction,
     this.muac,
+    this.combinedNutrition,
   });
 
   final String childName;
@@ -18,6 +19,7 @@ class AssessmentResult {
   final Nutrition nutrition;
   final MlPrediction? mlPrediction;
   final MuacDetail? muac;
+  final CombinedNutritionDetail? combinedNutrition;
 
   factory AssessmentResult.fromJson(Map<String, dynamic> json) {
     return AssessmentResult(
@@ -37,6 +39,10 @@ class AssessmentResult {
       muac: json['muac'] == null
           ? null
           : MuacDetail.fromJson(json['muac'] as Map<String, dynamic>),
+      combinedNutrition: json['combined_nutrition'] == null
+          ? null
+          : CombinedNutritionDetail.fromJson(
+              json['combined_nutrition'] as Map<String, dynamic>),
     );
   }
 }
@@ -89,6 +95,8 @@ class Nutrition {
     this.hazStatus,
     this.whzStatus,
     this.ageMonths,
+    this.bmi,
+    this.bmiStatus,
   });
 
   final double? hazZscore;
@@ -96,6 +104,8 @@ class Nutrition {
   final String? hazStatus;
   final String? whzStatus;
   final double? ageMonths;
+  final double? bmi;
+  final String? bmiStatus;
 
   factory Nutrition.fromJson(Map<String, dynamic> json) {
     return Nutrition(
@@ -104,6 +114,33 @@ class Nutrition {
       hazStatus: json['haz_status'] as String?,
       whzStatus: json['whz_status'] as String?,
       ageMonths: (json['age_months'] as num?)?.toDouble(),
+      bmi: (json['bmi'] as num?)?.toDouble(),
+      bmiStatus: json['bmi_status'] as String?,
+    );
+  }
+}
+
+class CombinedNutritionDetail {
+  CombinedNutritionDetail({
+    required this.status,
+    required this.triggeredBy,
+    required this.rationale,
+    required this.protocol,
+  });
+
+  final String status;
+  final List<String> triggeredBy;
+  final String rationale;
+  final String protocol;
+
+  factory CombinedNutritionDetail.fromJson(Map<String, dynamic> json) {
+    return CombinedNutritionDetail(
+      status: json['status'] as String? ?? 'Unknown',
+      triggeredBy: (json['triggered_by'] as List<dynamic>? ?? const [])
+          .map((value) => value.toString())
+          .toList(growable: false),
+      rationale: json['rationale'] as String? ?? '',
+      protocol: json['protocol'] as String? ?? 'programme_bmi_muac_v1',
     );
   }
 }

@@ -133,16 +133,16 @@
                         <div class="card metric-card h-100 text-center">
                             <div class="card-body px-2 py-3">
                                 <div class="metric-label">{{ t.metric_height }}</div>
-                                {% if result.measurement.predicted_height_cm %}
-                                    <div class="metric-value">
-                                        {{ "%.1f"|format(result.measurement.predicted_height_cm) }}<span class="metric-unit">{{ t.unit_cm }}</span>
-                                    </div>
-                                    <span class="badge bg-success mt-1">{{ t.badge_image }}</span>
-                                {% elif result.measurement.manual_height_cm %}
+                                {% if result.measurement.manual_height_cm %}
                                     <div class="metric-value">
                                         {{ "%.1f"|format(result.measurement.manual_height_cm) }}<span class="metric-unit">{{ t.unit_cm }}</span>
                                     </div>
                                     <span class="badge bg-info mt-1">{{ t.badge_manual }}</span>
+                                {% elif result.measurement.predicted_height_cm %}
+                                    <div class="metric-value">
+                                        {{ "%.1f"|format(result.measurement.predicted_height_cm) }}<span class="metric-unit">{{ t.unit_cm }}</span>
+                                    </div>
+                                    <span class="badge bg-success mt-1">{{ t.badge_image }}</span>
                                 {% else %}
                                     <div class="metric-value text-muted fs-3">—</div>
                                     <span class="badge bg-warning text-dark mt-1 small">{{ t.badge_undetected }}</span>
@@ -253,6 +253,14 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div class="alert {% if result.combined_nutrition.status == 'SAM' %}alert-danger{% elif result.combined_nutrition.status == 'MAM' %}alert-warning{% else %}alert-success{% endif %} mb-3">
+                    <strong>BMI + MUAC classification: {{ result.combined_nutrition.status }}</strong>
+                    {% if result.nutrition.bmi is not none %}
+                        <span class="ms-2">BMI {{ "%.2f"|format(result.nutrition.bmi) }} ({{ result.nutrition.bmi_status }})</span>
+                    {% endif %}
+                    <div class="small">{{ result.combined_nutrition.rationale }}</div>
                 </div>
 
                 {% if result.ml_prediction and result.ml_prediction.wasting_method != "unavailable" %}

@@ -67,6 +67,18 @@ ZSCORE_CLASSIFICATIONS = {
     },
 }
 
+# AppSheet-compatible BMI screening thresholds supplied by the programme.
+# BMI is an additional screening protocol; WHO HAZ/WHZ remain separately reported.
+BMI_THRESHOLDS = {
+    "M": {"sam_below": 13.0, "mam_below": 13.7},
+    "F": {"sam_below": 12.8, "mam_below": 13.5},
+}
+
+MUAC_SAM_BELOW_CM = 11.5
+MUAC_MAM_BELOW_CM = 12.5
+ML_WEIGHT_MIN_MEDIAN_RATIO = 0.45
+ML_WEIGHT_MAX_MEDIAN_RATIO = 1.80
+
 # ============================================================
 # ANTHROPOMETRIC RATIOS FOR HEIGHT ESTIMATION
 # ============================================================

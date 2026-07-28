@@ -75,6 +75,21 @@ String? classifyMuac(double muacCm, bool ageInRange) {
   return 'Normal';
 }
 
+String classifyProgrammeBmi(double bmi, String sex) {
+  final samBelow = sex.toUpperCase() == 'M' ? 13.0 : 12.8;
+  final mamBelow = sex.toUpperCase() == 'M' ? 13.7 : 13.5;
+  if (bmi < samBelow) return 'SAM';
+  if (bmi < mamBelow) return 'MAM';
+  return 'Normal';
+}
+
+String combineProgrammeBmiMuac(String? bmiStatus, String? muacStatus) {
+  return combineNutritionStatus(
+    whzStatus: bmiStatus,
+    muacStatus: muacStatus,
+  );
+}
+
 /// Combine WHZ, MUAC, and the ML wasting classifier into a single nutrition
 /// verdict via the WHO 2009/2013 CMAM **OR-rule**: a child is SAM/MAM if ANY
 /// available signal says so — the most-severe signal wins.

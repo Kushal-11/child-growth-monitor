@@ -73,6 +73,25 @@ void main() {
     });
   });
 
+  group('programme BMI + MUAC protocol', () {
+    test('boys use the supplied exact BMI boundaries', () {
+      expect(classifyProgrammeBmi(12.99, 'M'), 'SAM');
+      expect(classifyProgrammeBmi(13.0, 'M'), 'MAM');
+      expect(classifyProgrammeBmi(13.7, 'M'), 'Normal');
+    });
+
+    test('girls use the supplied exact BMI boundaries', () {
+      expect(classifyProgrammeBmi(12.79, 'F'), 'SAM');
+      expect(classifyProgrammeBmi(12.8, 'F'), 'MAM');
+      expect(classifyProgrammeBmi(13.5, 'F'), 'Normal');
+    });
+
+    test('worst BMI or MUAC result wins', () {
+      expect(combineProgrammeBmiMuac('Normal', 'SAM'), 'SAM');
+      expect(combineProgrammeBmiMuac('MAM', 'Normal'), 'MAM');
+    });
+  });
+
   // --- Exact WHO boundary regression net --------------------------------
   // Lock the precise threshold operators so an off-by-one flip (< vs <=)
   // that would misclassify a malnourished child as healthy is caught in CI.

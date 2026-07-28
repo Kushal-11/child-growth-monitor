@@ -18,6 +18,7 @@ from app.models.measurement import MeasurementResult
 from app.models.visit import Visit
 from app.schemas.assessment import (
     AssessmentResponse,
+    CombinedNutritionDetail,
     MeasurementDetail,
     MLPrediction,
     MUACDetail,
@@ -28,6 +29,11 @@ from app.services.ml_service import MLService
 from app.services.muac_service import MUACService
 from app.services.nutrition_service import NutritionService
 from app.services.who_data_service import WHODataService
+from config import (
+    BMI_THRESHOLDS,
+    ML_WEIGHT_MAX_MEDIAN_RATIO,
+    ML_WEIGHT_MIN_MEDIAN_RATIO,
+)
 
 
 class AssessmentService:
@@ -67,10 +73,9 @@ class AssessmentService:
         )
 
         # 3. Determine effective height
-        # Priority: image-based prediction > manual input
-        effective_height = meas.predicted_height_cm
-        if effective_height is None and height_cm is not None:
-            effective_height = height_cm
+        # A physical measurement always overrides an estimate.
+        effective_height = height_cm if height_cm is not None else meas.predicted_height_cm
+        height_method = "manual" if height_cm is not None else meas.estimation_method
 
         # 3b. Process side-view image for AP depth features (optional)
         side_segments = None
@@ -105,7 +110,11 @@ class AssessmentService:
                 )
                 weight_in_bounds = (
                     who_median_ref is None
-                    or (0.45 * who_median_ref <= ml_weight <= 1.80 * who_median_ref)
+                    or (
+                        ML_WEIGHT_MIN_MEDIAN_RATIO * who_median_ref
+                        <= ml_weight
+                        <= ML_WEIGHT_MAX_MEDIAN_RATIO * who_median_ref
+                    )
                 )
                 if weight_in_bounds:
                     effective_weight = ml_weight
@@ -145,6 +154,12 @@ class AssessmentService:
                 whz_status = self.nutrition_svc.classify_whz(whz_z)
                 whz_z = round(whz_z, 2)
 
+        bmi = None
+        bmi_status = None
+        if effective_height is not None and effective_weight is not None:
+            bmi = round(effective_weight / ((effective_height / 100.0) ** 2), 2)
+            bmi_status = self._classify_bmi(bmi, sex)
+
         # 5b. Estimate MUAC — pathway priority: manual > landmark > WHZ-derived
         # Pull arm length & shoulder width from measurement service (in cm).
         # ml_service.extract_features applies the same pixel→cm scaling using
@@ -173,11 +188,12 @@ class AssessmentService:
             height_cm=effective_height,
         )
 
-        # 5c. Combine MUAC + WHZ via WHO OR-rule for the final clinical call
-        combined_status = MUACService.combine_with_whz_status(
-            muac_status=muac_result.muac_status,
-            whz_status=whz_status,
-        )
+        # Requested programme protocol: BMI OR MUAC, worst result wins.
+        programme_status = self._combine_bmi_muac(bmi_status, muac_result.muac_status)
+
+        body_build_str = None
+        if meas.body_build and isinstance(meas.body_build, dict):
+            body_build_str = meas.body_build.get("body_build")
 
         # 6. Persist to database
         child = self._get_or_create_child(
@@ -203,7 +219,24 @@ class AssessmentService:
             whz_zscore=whz_z,
             haz_status=haz_status,
             whz_status=whz_status,
+            bmi=bmi,
+            bmi_status=bmi_status,
+            combined_status=programme_status.status,
+            combined_triggered_by=",".join(programme_status.triggered_by),
+            height_method=height_method,
+            weight_method=weight_source,
             confidence_score=meas.confidence_score,
+            body_build=body_build_str,
+            ml_estimated_weight_kg=ml_pred.estimated_weight_kg if ml_pred else None,
+            ml_wasting_status=ml_pred.wasting_status if ml_pred else None,
+            sam_probability=ml_pred.sam_probability if ml_pred else None,
+            mam_probability=ml_pred.mam_probability if ml_pred else None,
+            normal_probability=ml_pred.normal_probability if ml_pred else None,
+            risk_probability=ml_pred.risk_probability if ml_pred else None,
+            overweight_probability=ml_pred.overweight_probability if ml_pred else None,
+            muac_cm=muac_result.muac_cm,
+            muac_status=muac_result.muac_status,
+            muac_method=muac_result.muac_method,
         )
         db.add(measurement_record)
         db.commit()
@@ -221,13 +254,9 @@ class AssessmentService:
             meas.reference_object_detected,
             muac_result.muac_cm,
             muac_result.muac_status,
+            programme_status.status,
         )
 
-        # Extract body build from measurement result
-        body_build_str = None
-        if meas.body_build and isinstance(meas.body_build, dict):
-            body_build_str = meas.body_build.get("body_build")
-        
         # Compute depth in cm for response (if side view was used and measurements are valid)
         chest_depth_cm_out = None
         abd_depth_cm_out   = None
@@ -259,7 +288,7 @@ class AssessmentService:
                 scale_factor=meas.scale_factor,
                 confidence_score=meas.confidence_score,
                 annotated_image=meas.annotated_image_filename,
-                estimation_method=meas.estimation_method,
+                estimation_method=height_method,
                 body_build=body_build_str,
                 side_view_used=chest_depth_cm_out is not None or abd_depth_cm_out is not None,
                 chest_depth_cm=chest_depth_cm_out,
@@ -271,6 +300,8 @@ class AssessmentService:
                 haz_status=haz_status,
                 whz_status=whz_status,
                 age_months=round(age_months, 1),
+                bmi=bmi,
+                bmi_status=bmi_status,
             ),
             ml_prediction=MLPrediction(
                 estimated_weight_kg=ml_pred.estimated_weight_kg if ml_pred else None,
@@ -288,8 +319,30 @@ class AssessmentService:
                 muac_method=muac_result.muac_method,
                 age_in_range=muac_result.age_in_range,
             ),
+            combined_nutrition=CombinedNutritionDetail(
+                status=programme_status.status,
+                triggered_by=programme_status.triggered_by,
+                rationale=programme_status.rationale,
+            ),
             summary=summary,
         )
+
+    @staticmethod
+    def _classify_bmi(bmi: float, sex: str) -> str:
+        thresholds = BMI_THRESHOLDS[sex.upper()]
+        if bmi < thresholds["sam_below"]:
+            return "SAM"
+        if bmi < thresholds["mam_below"]:
+            return "MAM"
+        return "Normal"
+
+    @staticmethod
+    def _combine_bmi_muac(bmi_status, muac_status):
+        muac = "MAM" if muac_status == "At Risk (MAM)" else muac_status
+        result = MUACService.combine_with_whz_status(muac, bmi_status)
+        result.triggered_by = ["bmi" if item == "whz" else item for item in result.triggered_by]
+        result.rationale = f"{result.status} from programme BMI/MUAC worst-indicator rule"
+        return result
 
     @staticmethod
     def _compute_age_months(dob: date, today: date) -> float:
@@ -332,16 +385,16 @@ class AssessmentService:
     def _build_summary(
         name, age_months, effective_height, predicted_height, manual_height,
         weight, haz_status, whz_status, ref_detected,
-        muac_cm=None, muac_status=None,
+        muac_cm=None, muac_status=None, combined_status=None,
     ) -> str:
         """Build a human-readable summary string."""
         lines = [f"Assessment for {name} ({age_months:.1f} months old):"]
 
         if effective_height is not None:
-            if predicted_height is not None:
-                lines.append(f"  Height: {effective_height:.1f} cm (from image)")
-            elif manual_height is not None:
+            if manual_height is not None:
                 lines.append(f"  Height: {effective_height:.1f} cm (manual input)")
+            elif predicted_height is not None:
+                lines.append(f"  Height: {effective_height:.1f} cm (from image)")
         else:
             lines.append("  Height: Could not be determined.")
             if not ref_detected:
@@ -360,6 +413,8 @@ class AssessmentService:
             lines.append(f"  Stunting (HAZ): {haz_status}")
         if whz_status:
             lines.append(f"  Wasting (WHZ): {whz_status}")
+        if combined_status:
+            lines.append(f"  Final BMI/MUAC classification: {combined_status}")
 
         if not haz_status and not whz_status:
             lines.append("  Nutritional status could not be determined.")

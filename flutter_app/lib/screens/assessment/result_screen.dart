@@ -70,7 +70,7 @@ class ResultScreen extends ConsumerWidget {
     // WHO CMAM OR-rule: banner severity reflects WHZ, MUAC, AND the ML wasting
     // classifier together — not WHZ alone — so a tape-measured or ML-detected
     // SAM/MAM child is never shown the green "Normal" banner.
-    final combined = combineNutritionStatus(
+    final combined = result.combinedNutrition?.status ?? combineNutritionStatus(
       whzStatus: result.nutrition.whzStatus,
       muacStatus: result.muac?.muacStatus,
       mlStatus: result.mlPrediction?.wastingStatus,
@@ -203,6 +203,18 @@ class ResultScreen extends ConsumerWidget {
           zscore: result.nutrition.hazZscore,
           status: result.nutrition.hazStatus,
         ),
+        if (result.nutrition.bmi != null) ...[
+          const SizedBox(height: 8),
+          _metricCard(
+            context,
+            ref,
+            title: 'BMI',
+            value: result.nutrition.bmi,
+            unit: 'kg/m²',
+            source: 'BMI + MUAC protocol',
+            status: result.nutrition.bmiStatus,
+          ),
+        ],
         const SizedBox(height: 8),
         _metricCard(
           context,

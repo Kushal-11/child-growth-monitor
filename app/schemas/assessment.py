@@ -50,6 +50,16 @@ class NutritionDetail(BaseModel):
     haz_status: Optional[str] = None
     whz_status: Optional[str] = None
     age_months: float
+    bmi: Optional[float] = None
+    bmi_status: Optional[str] = None
+
+
+class CombinedNutritionDetail(BaseModel):
+    """Final BMI+MUAC screening result from the supplied programme protocol."""
+    status: str
+    triggered_by: list[str] = Field(default_factory=list)
+    rationale: str
+    protocol: str = "programme_bmi_muac_v1"
 
 
 class MLPrediction(BaseModel):
@@ -80,4 +90,5 @@ class AssessmentResponse(BaseModel):
     nutrition: NutritionDetail
     ml_prediction: Optional[MLPrediction] = None
     muac: Optional[MUACDetail] = None
+    combined_nutrition: CombinedNutritionDetail
     summary: str

@@ -156,6 +156,14 @@ class AssessmentService {
 
     final hazStatus = haz != null ? classifyHaz(haz) : null;
     final whzStatus = whz != null ? classifyWhz(whz) : null;
+    final bmi = effectiveWeight != null
+        ? effectiveWeight / ((m.effectiveHeightCm / 100) * (m.effectiveHeightCm / 100))
+        : null;
+    final bmiStatus = bmi != null ? classifyProgrammeBmi(bmi, sex) : null;
+    final programmeStatus = combineProgrammeBmiMuac(
+      bmiStatus,
+      muacResult.muacStatus,
+    );
 
     final child = await _childDao.findOrCreate(
       name: childName,
@@ -234,6 +242,8 @@ class AssessmentService {
         hazStatus: hazStatus,
         whzStatus: whzStatus,
         ageMonths: ageMonths,
+        bmi: bmi,
+        bmiStatus: bmiStatus,
       ),
       mlPrediction: prediction == null
           ? null
@@ -251,6 +261,17 @@ class AssessmentService {
         muacStatus: muacResult.muacStatus,
         muacMethod: muacResult.muacMethod,
         ageInRange: muacResult.ageInRange,
+      ),
+      combinedNutrition: ar.CombinedNutritionDetail(
+        status: programmeStatus,
+        triggeredBy: [
+          if (bmiStatus == programmeStatus) 'bmi',
+          if ((muacResult.muacStatus == programmeStatus) ||
+              (programmeStatus == 'MAM' &&
+                  muacResult.muacStatus == 'At Risk (MAM)')) 'muac',
+        ],
+        rationale: 'Worst result from BMI or MUAC',
+        protocol: 'programme_bmi_muac_v1',
       ),
     );
   }
