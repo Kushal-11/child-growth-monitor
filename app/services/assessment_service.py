@@ -5,10 +5,13 @@ Ties together measurement (image processing) and nutrition (Z-score) services.
 Handles the full flow: image -> measurements -> WHO lookup -> classification.
 
 Height resolution priority:
-  1. Image-based (WHO statistical + anthropometric ratios)
-  2. Manual height_cm input (fallback when image detection fails)
+  1. Manual height_cm input
+  2. Validated image-based estimate (WHO statistical + anthropometric ratios)
+  3. Unavailable
 """
-from datetime import date, datetime
+import json
+from datetime import date
+from math import isfinite
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -18,24 +21,32 @@ from app.models.measurement import MeasurementResult
 from app.models.visit import Visit
 from app.schemas.assessment import (
     AssessmentResponse,
+    CombinedNutritionDetail,
     MeasurementDetail,
     MLPrediction,
     MUACDetail,
     NutritionDetail,
 )
+from app.services.age_service import AgeService
 from app.services.measurement_service import MeasurementOutput, MeasurementService
 from app.services.ml_service import MLService
 from app.services.muac_service import MUACService
 from app.services.nutrition_service import NutritionService
 from app.services.who_data_service import WHODataService
+from config import WASTING_STATUS_LABELS, WastingStatus
 
 
 class AssessmentService:
-    def __init__(self, who_data: WHODataService):
+    age_svc = AgeService()
+
+    def __init__(
+        self, who_data: WHODataService, age_service: AgeService | None = None
+    ):
         self.measurement_svc = MeasurementService()
         self.nutrition_svc = NutritionService(who_data)
         self.who_data = who_data
         self.ml_svc = MLService()
+        self.age_svc = age_service or AgeService()
 
     def assess(
         self,
@@ -50,12 +61,14 @@ class AssessmentService:
         location: Optional[str] = None,
         muac_cm: Optional[float] = None,
         side_image: Optional[bytes] = None,
+        as_of: date | None = None,
     ) -> AssessmentResponse:
         """Run full assessment pipeline and persist results."""
 
         # 1. Compute age in months
-        today = datetime.utcnow().date()
-        age_months = self._compute_age_months(dob, today)
+        as_of = as_of or date.today()
+        age = self.age_svc.validate_clinical_age(dob, as_of)
+        age_months = age.months
 
         # 2. Process image for height estimation using hybrid approach
         # Pass age, sex, and WHO data for statistical estimation
@@ -67,10 +80,11 @@ class AssessmentService:
         )
 
         # 3. Determine effective height
-        # Priority: image-based prediction > manual input
-        effective_height = meas.predicted_height_cm
-        if effective_height is None and height_cm is not None:
-            effective_height = height_cm
+        # Manual measurements are authoritative.  Keep this resolution in one
+        # place so every downstream consumer receives exactly the same height.
+        effective_height, height_method = self._resolve_effective_height(
+            height_cm, meas.predicted_height_cm
+        )
 
         # 3b. Process side-view image for AP depth features (optional)
         side_segments = None
@@ -90,7 +104,6 @@ class AssessmentService:
         # Priority: manual_weight > ML-estimated > WHO-median (slender/stocky adjusted)
         effective_weight = weight_kg
         estimated_weight = None
-        weight_source = "manual" if weight_kg is not None else None
 
         if effective_weight is None:
             # Try ML weight estimate first (captures wasting signal)
@@ -103,14 +116,12 @@ class AssessmentService:
                 who_median_ref = self.who_data.get_median_weight_for_height(
                     sex, effective_height, age_months=age_months
                 )
-                weight_in_bounds = (
-                    who_median_ref is None
-                    or (0.45 * who_median_ref <= ml_weight <= 1.80 * who_median_ref)
+                weight_in_bounds = who_median_ref is not None and (
+                    0.45 * who_median_ref <= ml_weight <= 1.80 * who_median_ref
                 )
                 if weight_in_bounds:
                     effective_weight = ml_weight
                     estimated_weight = effective_weight
-                    weight_source = "ml_estimated"
 
             if effective_weight is None and effective_height is not None:
                 # Fall back to WHO median with body build adjustment
@@ -121,7 +132,6 @@ class AssessmentService:
                     weight_adjustment = getattr(meas, 'weight_adjustment', 1.0)
                     estimated_weight = round(estimated_weight * weight_adjustment, 2)
                 effective_weight = estimated_weight
-                weight_source = "who_median_estimated"
 
         # 5. Compute Z-scores
         haz_z = None
@@ -131,7 +141,7 @@ class AssessmentService:
 
         if effective_height is not None:
             haz_z = self.nutrition_svc.compute_haz(
-                sex, int(round(age_months)), effective_height
+                sex, age.completed_months, effective_height
             )
             if haz_z is not None:
                 haz_status = self.nutrition_svc.classify_haz(haz_z)
@@ -144,6 +154,23 @@ class AssessmentService:
             if whz_z is not None:
                 whz_status = self.nutrition_svc.classify_whz(whz_z)
                 whz_z = round(whz_z, 2)
+
+        assessment_warnings = []
+        if effective_height is not None and haz_z is None:
+            assessment_warnings.append(
+                f"HAZ unavailable: authoritative WHO length/height-for-age LMS data "
+                f"does not cover sex {sex!r} at age {int(round(age_months))} months."
+            )
+        if effective_height is not None and effective_weight is None:
+            assessment_warnings.append(
+                f"Weight unavailable: authoritative WHO weight-for-length/height LMS "
+                f"data does not cover {effective_height:.1f} cm; no median fallback was used."
+            )
+        elif effective_height is not None and effective_weight is not None and whz_z is None:
+            assessment_warnings.append(
+                f"WHZ unavailable: authoritative WHO weight-for-length/height LMS data "
+                f"does not cover {effective_height:.1f} cm."
+            )
 
         # 5b. Estimate MUAC — pathway priority: manual > landmark > WHZ-derived
         # Pull arm length & shoulder width from measurement service (in cm).
@@ -182,6 +209,10 @@ class AssessmentService:
             is_direct_measurement=muac_result.is_direct_measurement,
             landmark_autonomous_call_allowed=MUACService.LANDMARK_SAM_RECALL_VALIDATED,
         )
+        combined_confidence = self._combined_confidence(
+            combined_status.triggered_by, muac_result.muac_method,
+            meas.confidence_score,
+        )
 
         # 6. Persist to database
         child = self._get_or_create_child(
@@ -206,8 +237,13 @@ class AssessmentService:
             haz_zscore=haz_z,
             whz_zscore=whz_z,
             haz_status=haz_status,
-            whz_status=whz_status,
+            whz_status=whz_status.value if whz_status else None,
             confidence_score=meas.confidence_score,
+            combined_status=combined_status.status.value,
+            combined_triggered_by=json.dumps(combined_status.triggered_by),
+            combined_rationale=combined_status.rationale,
+            combined_method="who_muac_whz_or_rule",
+            combined_confidence_score=combined_confidence,
         )
         db.add(measurement_record)
         db.commit()
@@ -217,11 +253,10 @@ class AssessmentService:
             child_name,
             age_months,
             effective_height,
-            meas.predicted_height_cm,
-            height_cm,
+            height_method,
             effective_weight,
             haz_status,
-            whz_status,
+            combined_status.status,
             meas.reference_object_detected,
             muac_result.muac_cm,
             muac_result.muac_status,
@@ -255,6 +290,8 @@ class AssessmentService:
             sex=sex,
             age_months=round(age_months, 1),
             measurement=MeasurementDetail(
+                effective_height_cm=effective_height,
+                height_method=height_method,
                 predicted_height_cm=meas.predicted_height_cm,
                 predicted_weight_kg=estimated_weight,
                 manual_height_cm=height_cm,
@@ -300,14 +337,31 @@ class AssessmentService:
                 requires_confirmation=muac_result.requires_confirmation,
                 referral_guidance=muac_result.referral_guidance,
             ),
+            combined_nutrition=CombinedNutritionDetail(
+                status=combined_status.status,
+                triggered_by=combined_status.triggered_by,
+                rationale=combined_status.rationale,
+                method="who_muac_whz_or_rule",
+                confidence_score=combined_confidence,
+            ),
             summary=summary,
+            warnings=assessment_warnings,
         )
 
     @staticmethod
-    def _compute_age_months(dob: date, today: date) -> float:
-        """Compute age in fractional months."""
-        delta = today - dob
-        return delta.days / 30.4375
+    def _resolve_effective_height(
+        manual_height: Optional[float], predicted_height: Optional[float]
+    ) -> tuple[Optional[float], str]:
+        """Resolve the authoritative height and expose its provenance."""
+        if manual_height is not None and isfinite(manual_height) and manual_height > 0:
+            return manual_height, "manual"
+        if (
+            predicted_height is not None
+            and isfinite(predicted_height)
+            and predicted_height > 0
+        ):
+            return predicted_height, "image_estimated"
+        return None, "unavailable"
 
     @staticmethod
     def _get_or_create_child(
@@ -342,18 +396,18 @@ class AssessmentService:
 
     @staticmethod
     def _build_summary(
-        name, age_months, effective_height, predicted_height, manual_height,
-        weight, haz_status, whz_status, ref_detected,
+        name, age_months, effective_height, height_method,
+        weight, haz_status, combined_status, ref_detected,
         muac_cm=None, muac_status=None,
     ) -> str:
         """Build a human-readable summary string."""
         lines = [f"Assessment for {name} ({age_months:.1f} months old):"]
 
         if effective_height is not None:
-            if predicted_height is not None:
-                lines.append(f"  Height: {effective_height:.1f} cm (from image)")
-            elif manual_height is not None:
+            if height_method == "manual":
                 lines.append(f"  Height: {effective_height:.1f} cm (manual input)")
+            elif height_method == "image_estimated":
+                lines.append(f"  Height: {effective_height:.1f} cm (from image)")
         else:
             lines.append("  Height: Could not be determined.")
             if not ref_detected:
@@ -370,10 +424,18 @@ class AssessmentService:
 
         if haz_status:
             lines.append(f"  Stunting (HAZ): {haz_status}")
-        if whz_status:
-            lines.append(f"  Wasting (WHZ): {whz_status}")
+        if combined_status:
+            status = WastingStatus(combined_status)
+            lines.append(f"  Final wasting status: {WASTING_STATUS_LABELS[status]}")
 
-        if not haz_status and not whz_status:
+        if not haz_status and not combined_status:
             lines.append("  Nutritional status could not be determined.")
 
         return "\n".join(lines)
+
+    @staticmethod
+    def _combined_confidence(triggered_by, muac_method, pose_confidence):
+        """Expose how strongly the measurements supporting the final call were observed."""
+        if "muac" in triggered_by and muac_method == "manual":
+            return 1.0
+        return pose_confidence

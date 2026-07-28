@@ -28,6 +28,8 @@ Reference for MUAC medians:
 from dataclasses import dataclass
 from typing import Optional
 
+from config import WastingStatus
+
 
 # ── WHO MUAC-for-age medians (cm) ──────────────────────────────────────────
 # Source: WHO Child Growth Standards 2006 — Arm circumference-for-age tables
@@ -68,16 +70,16 @@ _MUAC_GIRLS: list[tuple[float, float]] = [
 @dataclass
 class MUACResult:
     muac_cm: Optional[float]        # rounded to 1 decimal place
-    muac_status: Optional[str]      # "SAM" | "At Risk (MAM)" | "Normal"
+    muac_status: Optional[WastingStatus]
     # "manual" | "landmark_estimated" | "estimated_from_whz"
     muac_method: str
     age_in_range: bool              # True only for 6–59 months
-    confidence: Optional[float]
-    uncertainty_lower_cm: Optional[float]
-    uncertainty_upper_cm: Optional[float]
-    model_version: Optional[str]
-    calibration_version: Optional[str]
-    is_direct_measurement: bool
+    confidence: Optional[float] = None
+    uncertainty_lower_cm: Optional[float] = None
+    uncertainty_upper_cm: Optional[float] = None
+    model_version: Optional[str] = None
+    calibration_version: Optional[str] = None
+    is_direct_measurement: bool = False
     requires_confirmation: bool = False
     referral_guidance: Optional[str] = None
 
@@ -87,7 +89,7 @@ class CombinedNutritionStatus:
     """
     Final SAM/MAM call after combining MUAC and WHZ via WHO OR-rule.
     """
-    status: str              # SAM / MAM / Normal / Risk_Overweight / Overweight
+    status: WastingStatus
     triggered_by: list[str]  # ["muac", "whz", ...]  why this status was chosen
     rationale: str           # human-readable explanation
 
@@ -175,9 +177,9 @@ class MUACService:
                 return MUACResult(
                     muac_cm=round(est, 1),
                     muac_status=(
-                        "Requires Confirmation"
-                        if age_in_range and requires_confirmation
-                        else MUACService._classify(est, age_in_range)
+                        MUACService._classify(est, age_in_range)
+                        if not requires_confirmation
+                        else None
                     ),
                     muac_method="landmark_estimated",
                     age_in_range=age_in_range,
@@ -216,7 +218,10 @@ class MUACService:
 
         return MUACResult(
             muac_cm=muac_cm,
-            muac_status=MUACService._classify(muac_cm, age_in_range),
+            # This estimate is transformed from WHZ and is explanatory only.
+            # Returning no MUAC classification prevents downstream consumers
+            # from treating the same evidence as an independent diagnostic arm.
+            muac_status=None,
             muac_method="estimated_from_whz",
             age_in_range=age_in_range,
             confidence=0.4,
@@ -287,10 +292,11 @@ class MUACService:
 
     @staticmethod
     def combine_with_whz_status(
-        muac_status: Optional[str],
-        whz_status: Optional[str],
-        muac_method: Optional[str] = None,
-        is_direct_measurement: bool = False,
+        muac_status: Optional[WastingStatus],
+        whz_status: Optional[WastingStatus],
+        *,
+        muac_method: Optional[str],
+        is_direct_measurement: bool,
         landmark_autonomous_call_allowed: bool = False,
     ) -> CombinedNutritionStatus:
         """
@@ -299,15 +305,18 @@ class MUACService:
         Rules (in order, severity descending):
           - If either says SAM           → SAM
           - Else if either says MAM      → MAM
-          - Else if WHZ says Overweight  → Overweight
-          - Else if WHZ says Risk_OW     → Risk_Overweight
-          - Else                          → Normal
-          - If both inputs are None      → status="Unknown"
+          - Else applicable overweight categories follow WHZ severity
+          - Else                          → NORMAL
+          - If both inputs are None      → UNKNOWN
 
-        Note: MUAC service uses "At Risk (MAM)" as the moderate label; we
-        normalise it to "MAM" in the combined status so downstream code
-        sees a single vocabulary.
+        Inputs must already use the canonical vocabulary. This strict boundary
+        prevents descriptive presentation labels from entering clinical logic.
         """
+        allowed = {status.value for status in WastingStatus}
+        for source, value in (("muac_status", muac_status), ("whz_status", whz_status)):
+            if value is not None and value not in allowed:
+                raise ValueError(f"{source} must be a canonical wasting status, got {value!r}")
+
         # A WHZ-derived value is the same evidence transformed, not an
         # independent diagnostic arm. Experimental landmarks are similarly
         # non-autonomous until the documented safety floor has been met.
@@ -317,66 +326,60 @@ class MUACService:
         if not muac_can_trigger:
             muac_status = None
 
-        # Normalise the MUAC vocabulary
-        if muac_status == "At Risk (MAM)":
-            muac_status_n = "MAM"
-        elif muac_status in ("SAM", "Normal"):
-            muac_status_n = muac_status
-        else:
-            muac_status_n = None
-
         triggered: list[str] = []
 
         # SAM
-        if muac_status_n == "SAM":
+        if muac_status == WastingStatus.SAM:
             triggered.append("muac")
-        if whz_status == "SAM":
+        if whz_status == WastingStatus.SAM:
             triggered.append("whz")
         if triggered:
             why = " or ".join(triggered)
             return CombinedNutritionStatus(
-                status="SAM",
+                status=WastingStatus.SAM,
                 triggered_by=triggered,
                 rationale=f"SAM flagged by {why} (WHO OR-rule)",
             )
 
         # MAM
-        if muac_status_n == "MAM":
+        if muac_status == WastingStatus.MAM:
             triggered.append("muac")
-        if whz_status == "MAM":
+        if whz_status == WastingStatus.MAM:
             triggered.append("whz")
         if triggered:
             why = " or ".join(triggered)
             return CombinedNutritionStatus(
-                status="MAM",
+                status=WastingStatus.MAM,
                 triggered_by=triggered,
                 rationale=f"MAM flagged by {why} (WHO OR-rule)",
             )
 
         # Overweight / Risk only governed by WHZ (MUAC has no upper threshold)
-        if whz_status == "Overweight":
+        if whz_status == WastingStatus.OBESE:
+            return CombinedNutritionStatus(WastingStatus.OBESE, ["whz"], "Obesity from WHZ")
+        if whz_status == WastingStatus.OVERWEIGHT:
             return CombinedNutritionStatus(
-                status="Overweight",
+                status=WastingStatus.OVERWEIGHT,
                 triggered_by=["whz"],
                 rationale="Overweight from WHZ",
             )
-        if whz_status == "Risk_Overweight":
+        if whz_status == WastingStatus.RISK_OVERWEIGHT:
             return CombinedNutritionStatus(
-                status="Risk_Overweight",
+                status=WastingStatus.RISK_OVERWEIGHT,
                 triggered_by=["whz"],
                 rationale="Risk of overweight from WHZ",
             )
 
         # Both None → Unknown
-        if muac_status_n is None and whz_status is None:
+        if muac_status is None and whz_status is None:
             return CombinedNutritionStatus(
-                status="Unknown",
+                status=WastingStatus.UNKNOWN,
                 triggered_by=[],
                 rationale="No MUAC or WHZ information available",
             )
 
         return CombinedNutritionStatus(
-            status="Normal",
+            status=WastingStatus.NORMAL,
             triggered_by=[],
             rationale="No MUAC or WHZ flag triggered",
         )
@@ -404,12 +407,14 @@ class MUACService:
         return table[-1][1]  # fallback
 
     @staticmethod
-    def _classify(muac_cm: float, age_in_range: bool) -> Optional[str]:
+    def _classify(
+        muac_cm: float, age_in_range: bool
+    ) -> Optional[WastingStatus]:
         """Classify MUAC using WHO absolute thresholds (6–59 months only)."""
         if not age_in_range:
             return None
         if muac_cm < 11.5:
-            return "SAM"
+            return WastingStatus.SAM
         if muac_cm < 12.5:
-            return "At Risk (MAM)"
-        return "Normal"
+            return WastingStatus.MAM
+        return WastingStatus.NORMAL

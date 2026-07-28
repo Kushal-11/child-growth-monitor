@@ -8,6 +8,7 @@ class AssessmentResult {
     required this.nutrition,
     this.mlPrediction,
     this.muac,
+    required this.combinedNutrition,
   });
 
   final String childName;
@@ -18,6 +19,7 @@ class AssessmentResult {
   final Nutrition nutrition;
   final MlPrediction? mlPrediction;
   final MuacDetail? muac;
+  final CombinedNutritionDetail combinedNutrition;
 
   factory AssessmentResult.fromJson(Map<String, dynamic> json) {
     return AssessmentResult(
@@ -33,16 +35,51 @@ class AssessmentResult {
       ),
       mlPrediction: json['ml_prediction'] == null
           ? null
-          : MlPrediction.fromJson(json['ml_prediction'] as Map<String, dynamic>),
+          : MlPrediction.fromJson(
+              json['ml_prediction'] as Map<String, dynamic>,
+            ),
       muac: json['muac'] == null
           ? null
           : MuacDetail.fromJson(json['muac'] as Map<String, dynamic>),
+      combinedNutrition: CombinedNutritionDetail.fromJson(
+        json['combined_nutrition'] as Map<String, dynamic>? ?? const {},
+      ),
+    );
+  }
+}
+
+class CombinedNutritionDetail {
+  const CombinedNutritionDetail({
+    required this.status,
+    this.triggeredBy = const [],
+    this.rationale = '',
+    this.method = 'who_muac_whz_or_rule',
+    this.confidenceScore,
+  });
+
+  final String status;
+  final List<String> triggeredBy;
+  final String rationale;
+  final String method;
+  final double? confidenceScore;
+
+  factory CombinedNutritionDetail.fromJson(Map<String, dynamic> json) {
+    return CombinedNutritionDetail(
+      status: json['status'] as String? ?? 'UNKNOWN',
+      triggeredBy: (json['triggered_by'] as List<dynamic>? ?? const [])
+          .map((value) => value.toString())
+          .toList(),
+      rationale: json['rationale'] as String? ?? '',
+      method: json['method'] as String? ?? 'who_muac_whz_or_rule',
+      confidenceScore: (json['confidence_score'] as num?)?.toDouble(),
     );
   }
 }
 
 class Measurement {
   Measurement({
+    this.effectiveHeightCm,
+    this.heightMethod = 'unavailable',
     this.predictedHeightCm,
     this.predictedWeightKg,
     this.manualHeightCm,
@@ -55,6 +92,8 @@ class Measurement {
     this.abdDepthCm,
   });
 
+  final double? effectiveHeightCm;
+  final String heightMethod;
   final double? predictedHeightCm;
   final double? predictedWeightKg;
   final double? manualHeightCm;
@@ -68,6 +107,8 @@ class Measurement {
 
   factory Measurement.fromJson(Map<String, dynamic> json) {
     return Measurement(
+      effectiveHeightCm: (json['effective_height_cm'] as num?)?.toDouble(),
+      heightMethod: json['height_method'] as String? ?? 'unavailable',
       predictedHeightCm: (json['predicted_height_cm'] as num?)?.toDouble(),
       predictedWeightKg: (json['predicted_weight_kg'] as num?)?.toDouble(),
       manualHeightCm: (json['manual_height_cm'] as num?)?.toDouble(),
@@ -134,7 +175,8 @@ class MlPrediction {
       mamProbability: (json['mam_probability'] as num?)?.toDouble(),
       normalProbability: (json['normal_probability'] as num?)?.toDouble(),
       riskProbability: (json['risk_probability'] as num?)?.toDouble(),
-      overweightProbability: (json['overweight_probability'] as num?)?.toDouble(),
+      overweightProbability: (json['overweight_probability'] as num?)
+          ?.toDouble(),
       wastingStatus: json['wasting_status'] as String?,
     );
   }
@@ -146,12 +188,28 @@ class MuacDetail {
     this.muacStatus,
     this.muacMethod,
     this.ageInRange,
+    this.confidence,
+    this.uncertaintyLowerCm,
+    this.uncertaintyUpperCm,
+    this.modelVersion,
+    this.calibrationVersion,
+    this.isDirectMeasurement = false,
+    this.requiresConfirmation = false,
+    this.referralGuidance,
   });
 
   final double? muacCm;
   final String? muacStatus;
   final String? muacMethod;
   final bool? ageInRange;
+  final double? confidence;
+  final double? uncertaintyLowerCm;
+  final double? uncertaintyUpperCm;
+  final String? modelVersion;
+  final String? calibrationVersion;
+  final bool isDirectMeasurement;
+  final bool requiresConfirmation;
+  final String? referralGuidance;
 
   factory MuacDetail.fromJson(Map<String, dynamic> json) {
     return MuacDetail(
@@ -159,6 +217,14 @@ class MuacDetail {
       muacStatus: json['muac_status'] as String?,
       muacMethod: json['muac_method'] as String?,
       ageInRange: json['age_in_range'] as bool?,
+      confidence: (json['confidence'] as num?)?.toDouble(),
+      uncertaintyLowerCm: (json['uncertainty_lower_cm'] as num?)?.toDouble(),
+      uncertaintyUpperCm: (json['uncertainty_upper_cm'] as num?)?.toDouble(),
+      modelVersion: json['model_version'] as String?,
+      calibrationVersion: json['calibration_version'] as String?,
+      isDirectMeasurement: json['is_direct_measurement'] as bool? ?? false,
+      requiresConfirmation: json['requires_confirmation'] as bool? ?? false,
+      referralGuidance: json['referral_guidance'] as String?,
     );
   }
 }

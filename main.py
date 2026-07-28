@@ -19,6 +19,7 @@ from app.api.routes import router as api_router
 from app.api.sync import router as sync_router
 from app.api.auth import router as auth_router
 from app.models.database import init_db, run_migrations
+from app.services.age_service import AgeService
 from app.services.assessment_service import AssessmentService
 from app.services.who_data_service import WHODataService
 from app.web.admin import router as admin_router
@@ -45,7 +46,8 @@ def create_app() -> FastAPI:
     who_data.load_all()
 
     # Create shared assessment service instance
-    assessment_svc = AssessmentService(who_data)
+    age_svc = AgeService()
+    assessment_svc = AssessmentService(who_data, age_svc)
 
     # Register routers
     app.include_router(api_router)
@@ -55,10 +57,12 @@ def create_app() -> FastAPI:
     app.include_router(admin_router)
 
     # Wire up dependency injection via FastAPI's override mechanism
+    from app.api.routes import get_age_service as age_dep
     from app.api.routes import get_assessment_service as api_dep
     from app.web.views import get_assessment_service as web_dep
 
     app.dependency_overrides[api_dep] = lambda: assessment_svc
+    app.dependency_overrides[age_dep] = lambda: age_svc
     app.dependency_overrides[web_dep] = lambda: assessment_svc
 
     # Serve uploaded images

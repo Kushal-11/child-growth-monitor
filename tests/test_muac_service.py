@@ -3,6 +3,7 @@
 import pytest
 
 from app.services.muac_service import MUACService
+from config import WastingStatus
 
 
 def landmark(muac_target: float, visibility: float = 0.95):
@@ -30,12 +31,14 @@ def test_low_landmark_visibility_is_low_confidence_and_not_autonomous():
     result = landmark(13.5, visibility=0.25)
     assert result.confidence == 0.25
     assert result.requires_confirmation
-    assert result.muac_status == "Requires Confirmation"
+    assert result.muac_status is None
     combined = MUACService.combine_with_whz_status(
-        result.muac_status, "Normal", result.muac_method,
-        result.is_direct_measurement,
+        result.muac_status,
+        WastingStatus.NORMAL,
+        muac_method=result.muac_method,
+        is_direct_measurement=result.is_direct_measurement,
     )
-    assert combined.status == "Normal"
+    assert combined.status == WastingStatus.NORMAL
     assert "muac" not in combined.triggered_by
 
 
@@ -60,9 +63,22 @@ def test_direct_and_whz_derived_muac_have_distinct_provenance():
     assert direct.is_direct_measurement and direct.confidence == 1.0
     assert not derived.is_direct_measurement
     assert derived.muac_method == "estimated_from_whz"
+    assert derived.muac_status is None
     # Derived MUAC must not double count the WHZ arm.
     combined = MUACService.combine_with_whz_status(
-        derived.muac_status, "SAM", derived.muac_method,
-        derived.is_direct_measurement,
+        derived.muac_status,
+        WastingStatus.SAM,
+        muac_method=derived.muac_method,
+        is_direct_measurement=derived.is_direct_measurement,
     )
     assert combined.triggered_by == ["whz"]
+
+
+def test_noncanonical_status_is_rejected_even_when_muac_cannot_trigger():
+    with pytest.raises(ValueError, match="canonical wasting status"):
+        MUACService.combine_with_whz_status(
+            "Requires Confirmation",
+            WastingStatus.NORMAL,
+            muac_method="landmark_estimated",
+            is_direct_measurement=False,
+        )

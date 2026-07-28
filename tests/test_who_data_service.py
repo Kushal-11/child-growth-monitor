@@ -6,7 +6,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
+import pandas as pd
+from config import WHO_DATA_FILES
 from app.services.who_data_service import WHODataService
+from app.services.nutrition_service import NutritionService
 
 
 @pytest.fixture(scope="module")
@@ -37,6 +40,30 @@ class TestHAZBoundaries:
         assert b is not None
         assert b["z_minus_3"] < b["z_minus_2"] < b["z_minus_1"] < b["z_0"]
         assert b["z_0"] < b["z_plus_1"] < b["z_plus_2"] < b["z_plus_3"]
+
+    @pytest.mark.parametrize("sex", ["F", "M"])
+    @pytest.mark.parametrize("age_months", [0, 24, 60])
+    def test_authoritative_lms_age_and_sex_boundaries(self, who_data, sex, age_months):
+        lms = who_data.get_haz_lms(sex, age_months)
+        assert lms is not None
+        L, M, S = lms
+        assert M > 0
+        assert S > 0
+        assert NutritionService(who_data).compute_haz(sex, age_months, M) == pytest.approx(0)
+
+    @pytest.mark.parametrize("sex", ["F", "M"])
+    def test_24_month_transition_selects_standing_height_row(
+        self, who_data, sex
+    ):
+        rows = who_data._haz_lms[
+            (who_data._haz_lms["sex"] == sex)
+            & (who_data._haz_lms["age_months"] == 24)
+        ]
+        assert len(rows) == 1
+        assert rows.iloc[0]["measure"] == "height"
+
+    def test_age_above_authoritative_boundary_is_unavailable(self, who_data):
+        assert who_data.get_haz_lms("F", 61) is None
 
 
 class TestWFHLMS:
@@ -81,6 +108,26 @@ class TestMedianWeight:
     def test_out_of_range(self, who_data):
         w = who_data.get_median_weight_for_height("F", 200.0)
         assert w is None
+
+    def test_below_table_range_has_no_csv_fallback(self, who_data):
+        assert who_data.get_median_weight_for_height("M", 20, age_months=6) is None
+
+
+def test_clinical_loading_never_reads_csv(monkeypatch):
+    def fail_read_csv(*args, **kwargs):
+        raise AssertionError("CSV must not participate in clinical WHO calculations")
+
+    monkeypatch.setattr(pd, "read_csv", fail_read_csv)
+    service = WHODataService()
+    service.load_all()
+    assert service.get_haz_lms("M", 24) is not None
+    assert service.get_median_weight_for_height("F", 85, 30) is not None
+
+
+def test_lhfa_workbook_is_text_packaged_for_pull_requests():
+    path = WHO_DATA_FILES["lhfa_0_5"]
+    assert path.suffix == ".b64"
+    assert path.read_bytes().isascii()
 
 
 class TestMedianHeight:

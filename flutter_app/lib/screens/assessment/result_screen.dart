@@ -51,7 +51,7 @@ class ResultScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               _mlSection(context, ref, result.mlPrediction!),
             ],
-            if (result.muac?.muacMethod == 'estimated_from_whz') ...[
+            if (result.muac?.requiresConfirmation == true) ...[
               const SizedBox(height: 12),
               _muacNote(context, ref),
             ],
@@ -64,17 +64,16 @@ class ResultScreen extends ConsumerWidget {
   }
 
   Widget _statusBanner(
-      BuildContext context, WidgetRef ref, AssessmentResult result) {
+    BuildContext context,
+    WidgetRef ref,
+    AssessmentResult result,
+  ) {
     final haz = result.nutrition.hazStatus;
 
     // WHO CMAM OR-rule: banner severity reflects WHZ, MUAC, AND the ML wasting
     // classifier together — not WHZ alone — so a tape-measured or ML-detected
     // SAM/MAM child is never shown the green "Normal" banner.
-    final combined = combineNutritionStatus(
-      whzStatus: result.nutrition.whzStatus,
-      muacStatus: result.muac?.muacStatus,
-      mlStatus: result.mlPrediction?.wastingStatus,
-    );
+    final combined = result.combinedNutrition.status;
 
     String title;
     String message;
@@ -88,11 +87,17 @@ class ResultScreen extends ConsumerWidget {
       title = t('banner_mam_title', ref);
       message = t('banner_mam_msg', ref);
       color = Colors.orange;
+    } else if (combined == 'RISK_OVERWEIGHT' ||
+        combined == 'OVERWEIGHT' ||
+        combined == 'OBESE') {
+      title = wastingStatusLabel(combined);
+      message = result.combinedNutrition.rationale;
+      color = Colors.amber.shade800;
     } else if (haz != null && haz.toLowerCase().contains('stunted')) {
       title = haz;
       message = t('banner_stunted_msg', ref);
       color = Colors.amber.shade700;
-    } else if (combined == 'Normal') {
+    } else if (combined == 'NORMAL') {
       title = t('banner_normal_title', ref);
       message = t('banner_normal_msg', ref);
       color = Colors.green;
@@ -120,13 +125,20 @@ class ResultScreen extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             title,
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(color: color, fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 4),
           Text(message),
+          const SizedBox(height: 6),
+          Text(
+            'Final wasting status: ${wastingStatusLabel(combined)}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          if (result.combinedNutrition.rationale.isNotEmpty)
+            Text(result.combinedNutrition.rationale),
           if (result.mlPrediction == null) ...[
             const SizedBox(height: 6),
             Container(
@@ -147,7 +159,10 @@ class ResultScreen extends ConsumerWidget {
   }
 
   Widget _photoSection(
-      BuildContext context, WidgetRef ref, AssessmentResult result) {
+    BuildContext context,
+    WidgetRef ref,
+    AssessmentResult result,
+  ) {
     final annotatedImage = result.measurement.estimationMethod;
     final confidence = result.measurement.confidenceScore;
 
@@ -185,21 +200,23 @@ class ResultScreen extends ConsumerWidget {
   }
 
   Widget _metricCards(
-      BuildContext context, WidgetRef ref, AssessmentResult result) {
+    BuildContext context,
+    WidgetRef ref,
+    AssessmentResult result,
+  ) {
     return Column(
       children: [
         _metricCard(
           context,
           ref,
           title: t('metric_height', ref),
-          value: result.measurement.predictedHeightCm ??
-              result.measurement.manualHeightCm,
+          value: result.measurement.effectiveHeightCm,
           unit: 'cm',
-          source: result.measurement.manualHeightCm != null
+          source: result.measurement.heightMethod == 'manual'
               ? t('badge_manual', ref)
-              : result.measurement.predictedHeightCm != null
-                  ? t('badge_image', ref)
-                  : t('badge_undetected', ref),
+              : result.measurement.heightMethod == 'image_estimated'
+              ? t('badge_image', ref)
+              : t('badge_undetected', ref),
           zscore: result.nutrition.hazZscore,
           status: result.nutrition.hazStatus,
         ),
@@ -208,14 +225,15 @@ class ResultScreen extends ConsumerWidget {
           context,
           ref,
           title: t('metric_weight', ref),
-          value: result.measurement.predictedWeightKg ??
+          value:
+              result.measurement.predictedWeightKg ??
               result.measurement.manualWeightKg,
           unit: 'kg',
           source: result.measurement.manualWeightKg != null
               ? t('badge_manual', ref)
               : result.measurement.predictedWeightKg != null
-                  ? t('badge_image', ref)
-                  : t('badge_undetected', ref),
+              ? t('badge_image', ref)
+              : t('badge_undetected', ref),
           zscore: result.nutrition.whzZscore,
           status: result.nutrition.whzStatus,
           extras: _weightExtras(context, ref, result.measurement),
@@ -226,14 +244,15 @@ class ResultScreen extends ConsumerWidget {
     );
   }
 
-  Widget? _weightExtras(
-      BuildContext context, WidgetRef ref, Measurement m) {
+  Widget? _weightExtras(BuildContext context, WidgetRef ref, Measurement m) {
     if (!m.sideViewUsed) return null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(t('badge_side_view_ok', ref),
-            style: const TextStyle(fontSize: 12, color: Colors.teal)),
+        Text(
+          t('badge_side_view_ok', ref),
+          style: const TextStyle(fontSize: 12, color: Colors.teal),
+        ),
         if (m.chestDepthCm != null)
           Text(
             '${t('chest_depth', ref)} ${m.chestDepthCm!.toStringAsFixed(1)} cm',
@@ -270,26 +289,30 @@ class ResultScreen extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      Text(title,
-                          style: Theme.of(context).textTheme.titleSmall),
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 1),
+                          horizontal: 6,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.grey.shade200,
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(source,
-                            style: const TextStyle(fontSize: 11)),
+                        child: Text(
+                          source,
+                          style: const TextStyle(fontSize: 11),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    value != null
-                        ? '${value.toStringAsFixed(1)} $unit'
-                        : '—',
+                    value != null ? '${value.toStringAsFixed(1)} $unit' : '—',
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   if (zscore != null)
@@ -297,10 +320,7 @@ class ResultScreen extends ConsumerWidget {
                       'Z-score: ${zscore.toStringAsFixed(2)}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
-                  if (extras != null) ...[
-                    const SizedBox(height: 4),
-                    extras,
-                  ],
+                  if (extras != null) ...[const SizedBox(height: 4), extras],
                 ],
               ),
             ),
@@ -339,8 +359,7 @@ class ResultScreen extends ConsumerWidget {
     );
   }
 
-  Widget _mlSection(
-      BuildContext context, WidgetRef ref, MlPrediction ml) {
+  Widget _mlSection(BuildContext context, WidgetRef ref, MlPrediction ml) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -357,13 +376,22 @@ class ResultScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             _probabilityBar(
-                t('sam_probability', ref), ml.samProbability, Colors.red),
+              t('sam_probability', ref),
+              ml.samProbability,
+              Colors.red,
+            ),
             const SizedBox(height: 4),
             _probabilityBar(
-                t('mam_probability', ref), ml.mamProbability, Colors.orange),
+              t('mam_probability', ref),
+              ml.mamProbability,
+              Colors.orange,
+            ),
             const SizedBox(height: 4),
-            _probabilityBar(t('normal_probability', ref),
-                ml.normalProbability, Colors.green),
+            _probabilityBar(
+              t('normal_probability', ref),
+              ml.normalProbability,
+              Colors.green,
+            ),
             if (ml.estimatedWeightKg != null) ...[
               const SizedBox(height: 8),
               Text(
@@ -381,7 +409,10 @@ class ResultScreen extends ConsumerWidget {
     final pct = value ?? 0;
     return Row(
       children: [
-        SizedBox(width: 120, child: Text(label, style: const TextStyle(fontSize: 12))),
+        SizedBox(
+          width: 120,
+          child: Text(label, style: const TextStyle(fontSize: 12)),
+        ),
         Expanded(
           child: LinearProgressIndicator(
             value: pct,
@@ -390,8 +421,10 @@ class ResultScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Text('${(pct * 100).toStringAsFixed(0)}%',
-            style: const TextStyle(fontSize: 12)),
+        Text(
+          '${(pct * 100).toStringAsFixed(0)}%',
+          style: const TextStyle(fontSize: 12),
+        ),
       ],
     );
   }
@@ -412,7 +445,9 @@ class ResultScreen extends ConsumerWidget {
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: DefaultTextStyle.of(context).style.copyWith(fontSize: 13),
+                style: DefaultTextStyle.of(
+                  context,
+                ).style.copyWith(fontSize: 13),
                 children: [
                   TextSpan(
                     text: '${t('muac_note_strong', ref)} ',
