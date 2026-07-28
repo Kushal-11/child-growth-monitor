@@ -49,7 +49,9 @@ class AppDatabase extends _$AppDatabase {
               await migrator.addColumn(visits, visits.entryMethod);
             }
           }
-          if (from < 4) {
+          // From v1 the measurements table was recreated above using the
+          // current schema, so only additive-upgrade existing v2/v3 tables.
+          if (from >= 2 && from < 4) {
             await migrator.addColumn(measurements, measurements.effectiveHeightCm);
             await migrator.addColumn(measurements, measurements.effectiveWeightKg);
             await migrator.addColumn(measurements, measurements.heightMethod);
@@ -61,10 +63,20 @@ class AppDatabase extends _$AppDatabase {
             await migrator.addColumn(measurements, measurements.classificationConfidence);
             await migrator.addColumn(measurements, measurements.wastingMethod);
             await migrator.addColumn(measurements, measurements.muacAgeInRange);
+            await migrator.addColumn(measurements, measurements.muacConfidence);
+            await migrator.addColumn(measurements, measurements.muacUncertaintyLowerCm);
+            await migrator.addColumn(measurements, measurements.muacUncertaintyUpperCm);
+            await migrator.addColumn(measurements, measurements.muacModelVersion);
+            await migrator.addColumn(measurements, measurements.muacCalibrationVersion);
+            await migrator.addColumn(measurements, measurements.muacIsDirectMeasurement);
+            await migrator.addColumn(measurements, measurements.muacRequiresConfirmation);
+            await migrator.addColumn(measurements, measurements.muacReferralGuidance);
             await migrator.addColumn(measurements, measurements.combinedStatus);
-            await migrator.addColumn(measurements, measurements.triggeringIndicators);
-            await migrator.addColumn(measurements, measurements.rationale);
-            await migrator.addColumn(measurements, measurements.protocolVersion);
+            await migrator.addColumn(measurements, measurements.combinedTriggeredBy);
+            await migrator.addColumn(measurements, measurements.combinedRationale);
+            await migrator.addColumn(measurements, measurements.combinedMethod);
+            await migrator.addColumn(measurements, measurements.combinedConfidenceScore);
+            await migrator.addColumn(measurements, measurements.combinedProtocolVersion);
           }
         },
       );

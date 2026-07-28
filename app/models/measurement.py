@@ -69,13 +69,22 @@ class MeasurementResult(Base):
     muac_status = Column(String(50), nullable=True)
     muac_method = Column(String(50), nullable=True)  # manual / estimated_from_whz
     muac_age_in_range = Column(Boolean, nullable=True)
+    muac_confidence = Column(Float, nullable=True)
+    muac_uncertainty_lower_cm = Column(Float, nullable=True)
+    muac_uncertainty_upper_cm = Column(Float, nullable=True)
+    muac_model_version = Column(String(100), nullable=True)
+    muac_calibration_version = Column(String(100), nullable=True)
+    muac_is_direct_measurement = Column(Boolean, nullable=True)
+    muac_requires_confirmation = Column(Boolean, nullable=True)
+    muac_referral_guidance = Column(Text, nullable=True)
 
-    # Final decision evidence.  triggering_indicators is JSON text so the
-    # ordered list survives SQLite, API history, and mobile synchronization.
-    combined_status = Column(String(50), nullable=True)
-    triggering_indicators = Column(Text, nullable=True)
-    rationale = Column(Text, nullable=True)
-    protocol_version = Column(String(50), nullable=True)
+    # Final combined clinical classification (MUAC + WHZ WHO OR-rule)
+    combined_status = Column(String(30), nullable=True)
+    combined_triggered_by = Column(String(100), nullable=True)  # JSON list
+    combined_rationale = Column(String(255), nullable=True)
+    combined_method = Column(String(50), nullable=True)
+    combined_confidence_score = Column(Float, nullable=True)
+    combined_protocol_version = Column(String(50), nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
 

@@ -39,8 +39,18 @@ class Measurements extends Table {
   TextColumn get muacStatus => text().nullable()();
   TextColumn get muacMethod => text().nullable()();
   BoolColumn get muacAgeInRange => boolean().nullable()();
+  RealColumn get muacConfidence => real().nullable()();
+  RealColumn get muacUncertaintyLowerCm => real().nullable()();
+  RealColumn get muacUncertaintyUpperCm => real().nullable()();
+  TextColumn get muacModelVersion => text().nullable()();
+  TextColumn get muacCalibrationVersion => text().nullable()();
+  BoolColumn get muacIsDirectMeasurement => boolean().nullable()();
+  BoolColumn get muacRequiresConfirmation => boolean().nullable()();
+  TextColumn get muacReferralGuidance => text().nullable()();
   TextColumn get combinedStatus => text().nullable()();
-  TextColumn get triggeringIndicators => text().nullable()();
-  TextColumn get rationale => text().nullable()();
-  TextColumn get protocolVersion => text().nullable()();
+  TextColumn get combinedTriggeredBy => text().nullable()();
+  TextColumn get combinedRationale => text().nullable()();
+  TextColumn get combinedMethod => text().nullable()();
+  RealColumn get combinedConfidenceScore => real().nullable()();
+  TextColumn get combinedProtocolVersion => text().nullable()();
 }

@@ -142,10 +142,38 @@ class SyncService {
         if (m?.muacStatus != null) 'muac_status': m!.muacStatus!,
         if (m?.muacMethod != null) 'muac_method': m!.muacMethod!,
         if (m?.muacAgeInRange != null) 'muac_age_in_range': m!.muacAgeInRange.toString(),
+        if (m?.muacConfidence != null)
+          'muac_confidence': m!.muacConfidence.toString(),
+        if (m?.muacUncertaintyLowerCm != null)
+          'muac_uncertainty_lower_cm':
+              m!.muacUncertaintyLowerCm.toString(),
+        if (m?.muacUncertaintyUpperCm != null)
+          'muac_uncertainty_upper_cm':
+              m!.muacUncertaintyUpperCm.toString(),
+        if (m?.muacModelVersion != null)
+          'muac_model_version': m!.muacModelVersion!,
+        if (m?.muacCalibrationVersion != null)
+          'muac_calibration_version': m!.muacCalibrationVersion!,
+        if (m?.muacIsDirectMeasurement != null)
+          'muac_is_direct_measurement':
+              m!.muacIsDirectMeasurement.toString(),
+        if (m?.muacRequiresConfirmation != null)
+          'muac_requires_confirmation':
+              m!.muacRequiresConfirmation.toString(),
+        if (m?.muacReferralGuidance != null)
+          'muac_referral_guidance': m!.muacReferralGuidance!,
         if (m?.combinedStatus != null) 'combined_status': m!.combinedStatus!,
-        if (m?.triggeringIndicators != null) 'triggering_indicators': m!.triggeringIndicators!,
-        if (m?.rationale != null) 'rationale': m!.rationale!,
-        if (m?.protocolVersion != null) 'protocol_version': m!.protocolVersion!,
+        if (m?.combinedTriggeredBy != null)
+          'combined_triggered_by': m!.combinedTriggeredBy!,
+        if (m?.combinedRationale != null)
+          'combined_rationale': m!.combinedRationale!,
+        if (m?.combinedMethod != null)
+          'combined_method': m!.combinedMethod!,
+        if (m?.combinedConfidenceScore != null)
+          'combined_confidence_score':
+              m!.combinedConfidenceScore.toString(),
+        if (m?.combinedProtocolVersion != null)
+          'combined_protocol_version': m!.combinedProtocolVersion!,
         if (child.guardianName != null) 'guardian_name': child.guardianName!,
         if (child.location != null) 'location': child.location!,
       });

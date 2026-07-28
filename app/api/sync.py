@@ -80,10 +80,20 @@ async def sync_assessment(
     muac_status: Optional[str] = Form(None),
     muac_method: Optional[str] = Form(None),
     muac_age_in_range: str = Form("false"),
+    muac_confidence: Optional[float] = Form(None),
+    muac_uncertainty_lower_cm: Optional[float] = Form(None),
+    muac_uncertainty_upper_cm: Optional[float] = Form(None),
+    muac_model_version: Optional[str] = Form(None),
+    muac_calibration_version: Optional[str] = Form(None),
+    muac_is_direct_measurement: str = Form("false"),
+    muac_requires_confirmation: str = Form("false"),
+    muac_referral_guidance: Optional[str] = Form(None),
     combined_status: Optional[str] = Form(None),
-    triggering_indicators: str = Form("[]"),
-    rationale: Optional[str] = Form(None),
-    protocol_version: Optional[str] = Form(None),
+    combined_triggered_by: str = Form("[]"),
+    combined_rationale: Optional[str] = Form(None),
+    combined_method: Optional[str] = Form(None),
+    combined_confidence_score: Optional[float] = Form(None),
+    combined_protocol_version: Optional[str] = Form(None),
     entry_method: str = Form("assessment"),
     is_archived: str = Form("false"),
     guardian_name: Optional[str] = Form(None),
@@ -164,11 +174,13 @@ async def sync_assessment(
     db.flush()
 
     try:
-        triggers = json.loads(triggering_indicators)
+        triggers = json.loads(combined_triggered_by)
         if not isinstance(triggers, list) or not all(isinstance(v, str) for v in triggers):
             raise ValueError
     except (json.JSONDecodeError, ValueError):
-        raise HTTPException(400, "triggering_indicators must be a JSON array of strings")
+        raise HTTPException(
+            400, "combined_triggered_by must be a JSON array of strings"
+        )
 
     measurement = MeasurementResult(
         visit_id=visit.id,
@@ -207,10 +219,24 @@ async def sync_assessment(
         muac_status=muac_status,
         muac_method=muac_method,
         muac_age_in_range=(muac_age_in_range.lower() in ("true", "1", "yes")),
+        muac_confidence=muac_confidence,
+        muac_uncertainty_lower_cm=muac_uncertainty_lower_cm,
+        muac_uncertainty_upper_cm=muac_uncertainty_upper_cm,
+        muac_model_version=muac_model_version,
+        muac_calibration_version=muac_calibration_version,
+        muac_is_direct_measurement=(
+            muac_is_direct_measurement.lower() in ("true", "1", "yes")
+        ),
+        muac_requires_confirmation=(
+            muac_requires_confirmation.lower() in ("true", "1", "yes")
+        ),
+        muac_referral_guidance=muac_referral_guidance,
         combined_status=combined_status,
-        triggering_indicators=json.dumps(triggers),
-        rationale=rationale,
-        protocol_version=protocol_version,
+        combined_triggered_by=json.dumps(triggers),
+        combined_rationale=combined_rationale,
+        combined_method=combined_method,
+        combined_confidence_score=combined_confidence_score,
+        combined_protocol_version=combined_protocol_version,
     )
     db.add(measurement)
     try:

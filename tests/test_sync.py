@@ -56,8 +56,8 @@ def _payload():
         "haz_status": "Normal",
         "whz_status": "Normal",
         "muac_cm": "14.0",
-        "muac_status": "Normal",
-        "muac_method": "estimated_from_whz",
+        "muac_status": "NORMAL",
+        "muac_method": "manual",
         "ml_wasting_status": "Normal",
         "ml_estimated_weight_kg": "9.4",
         "confidence_score": "0.85",
@@ -80,10 +80,18 @@ def _payload():
         "overweight_probability": "0.01",
         "ml_wasting_method": "ml_classifier",
         "muac_age_in_range": "true",
-        "combined_status": "Normal",
-        "triggering_indicators": "[]",
-        "rationale": "No MUAC or WHZ flag triggered",
-        "protocol_version": "WHO-CMAM-OR-2009/2013-v1",
+        "muac_confidence": "1.0",
+        "muac_uncertainty_lower_cm": "14.0",
+        "muac_uncertainty_upper_cm": "14.0",
+        "muac_calibration_version": "direct-tape",
+        "muac_is_direct_measurement": "true",
+        "muac_requires_confirmation": "false",
+        "combined_status": "NORMAL",
+        "combined_triggered_by": "[]",
+        "combined_rationale": "No direct MUAC or WHZ flag triggered",
+        "combined_method": "who_muac_whz_or_rule",
+        "combined_confidence_score": "0.85",
+        "combined_protocol_version": "WHO-CMAM-OR-2009/2013-v1",
     }
 
 
@@ -163,8 +171,8 @@ def test_sync_persists_all_mobile_fields():
         assert m.abd_depth_cm == 8.5
         assert m.ml_wasting_status == "Normal"
         assert m.muac_cm == 14.0
-        assert m.muac_status == "Normal"
-        assert m.muac_method == "estimated_from_whz"
+        assert m.muac_status == "NORMAL"
+        assert m.muac_method == "manual"
         assert m.sam_probability == 0.02
         assert m.mam_probability == 0.10
         assert m.normal_probability == 0.85
@@ -183,10 +191,18 @@ def test_sync_persists_all_mobile_fields():
         assert m.classification_confidence == 0.92
         assert m.ml_wasting_method == "ml_classifier"
         assert m.muac_age_in_range is True
-        assert m.combined_status == "Normal"
-        assert m.triggering_indicators == "[]"
-        assert m.rationale == "No MUAC or WHZ flag triggered"
-        assert m.protocol_version == "WHO-CMAM-OR-2009/2013-v1"
+        assert m.muac_confidence == 1.0
+        assert m.muac_uncertainty_lower_cm == 14.0
+        assert m.muac_uncertainty_upper_cm == 14.0
+        assert m.muac_calibration_version == "direct-tape"
+        assert m.muac_is_direct_measurement is True
+        assert m.muac_requires_confirmation is False
+        assert m.combined_status == "NORMAL"
+        assert m.combined_triggered_by == "[]"
+        assert m.combined_rationale == "No direct MUAC or WHZ flag triggered"
+        assert m.combined_method == "who_muac_whz_or_rule"
+        assert m.combined_confidence_score == 0.85
+        assert m.combined_protocol_version == "WHO-CMAM-OR-2009/2013-v1"
         assert m.predicted_height_cm == 78.0
         assert m.predicted_weight_kg == 9.5
         assert m.haz_zscore == -1.0
@@ -204,6 +220,7 @@ def test_sync_persists_all_mobile_fields():
         v["measurement"] for v in detail.json()["visits"]
         if v["visit_id"] == visit_id
     )
+    assert restored["combined_triggered_by"] == []
     for key in (
         "haz_status", "whz_status", "muac_status", "muac_method",
         "ml_wasting_status", "ml_wasting_method", "height_method",
@@ -211,11 +228,22 @@ def test_sync_persists_all_mobile_fields():
         "confidence_score", "height_confidence", "weight_confidence",
         "classification_confidence", "sam_probability", "mam_probability",
         "normal_probability", "risk_probability", "overweight_probability",
-        "rationale", "protocol_version",
+        "muac_confidence", "muac_uncertainty_lower_cm",
+        "muac_uncertainty_upper_cm", "muac_calibration_version",
+        "muac_is_direct_measurement", "muac_requires_confirmation",
+        "combined_rationale", "combined_method", "combined_confidence_score",
+        "combined_protocol_version",
     ):
         expected = body[key]
-        if key.endswith("confidence") or key.endswith("probability") or key == "confidence_score":
+        if (
+            key.endswith("confidence")
+            or key.endswith("confidence_score")
+            or key.endswith("probability")
+            or key.endswith("_cm")
+        ):
             expected = float(expected)
+        elif key in ("muac_is_direct_measurement", "muac_requires_confirmation"):
+            expected = expected == "true"
         assert restored[key] == expected, key
 
 

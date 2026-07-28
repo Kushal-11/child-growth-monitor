@@ -1,8 +1,11 @@
 """Pydantic schemas for API request/response validation."""
 from datetime import date
-from typing import Optional
+from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
+
+from app.services.age_service import AgeService
+from config import WastingStatus
 
 
 class AssessmentRequest(BaseModel):
@@ -21,13 +24,24 @@ class AssessmentRequest(BaseModel):
         None,
         gt=0,
         le=200,
-        description="Manually entered height in cm. Used as fallback when image-based estimation fails.",
+        description="Manually entered height in cm. Overrides an image-based estimate.",
     )
     guardian_name: Optional[str] = None
     location: Optional[str] = None
 
+    @field_validator("date_of_birth")
+    @classmethod
+    def validate_date_of_birth(cls, value: date, info: ValidationInfo) -> date:
+        """Reject dates that cannot be assessed against the WHO tables."""
+        context = info.context or {}
+        age_service = context.get("age_service") or AgeService()
+        age_service.validate_clinical_age(value, context.get("as_of"))
+        return value
+
 
 class MeasurementDetail(BaseModel):
+    effective_height_cm: Optional[float] = None
+    height_method: str = "unavailable"  # "manual" | "image_estimated" | "unavailable"
     predicted_height_cm: Optional[float] = None
     predicted_weight_kg: Optional[float] = None
     manual_height_cm: Optional[float] = None
@@ -37,9 +51,7 @@ class MeasurementDetail(BaseModel):
     confidence_score: Optional[float] = None
     annotated_image: Optional[str] = None  # filename of pose-annotated image
     estimation_method: str = "none"  # "who_statistical", "reference_object", "manual", "none"
-    effective_height_cm: Optional[float] = None
     effective_weight_kg: Optional[float] = None
-    height_method: Optional[str] = None
     weight_method: Optional[str] = None
     height_confidence: Optional[float] = None
     weight_confidence: Optional[float] = None
@@ -54,15 +66,10 @@ class NutritionDetail(BaseModel):
     haz_zscore: Optional[float] = None
     whz_zscore: Optional[float] = None
     haz_status: Optional[str] = None
-    whz_status: Optional[str] = None
+    whz_status: Optional[WastingStatus] = None
     age_months: float
     bmi: Optional[float] = None
     bmi_status: Optional[str] = None
-    combined_status: Optional[str] = None
-    triggering_indicators: list[str] = Field(default_factory=list)
-    rationale: Optional[str] = None
-    protocol_version: Optional[str] = None
-    classification_confidence: Optional[float] = None
 
 
 class MLPrediction(BaseModel):
@@ -80,9 +87,28 @@ class MLPrediction(BaseModel):
 class MUACDetail(BaseModel):
     """MUAC measurement or estimate."""
     muac_cm: Optional[float] = None
-    muac_status: Optional[str] = None  # "SAM" | "At Risk (MAM)" | "Normal"
-    muac_method: str = "estimated_from_whz"  # "manual" | "estimated_from_whz"
+    muac_status: Optional[WastingStatus] = None
+    # "manual" | "landmark_estimated" | "estimated_from_whz"
+    muac_method: str = "estimated_from_whz"
     age_in_range: bool = True  # False if age outside 6-59 months
+    confidence: Optional[float] = Field(None, ge=0, le=1)
+    uncertainty_lower_cm: Optional[float] = None
+    uncertainty_upper_cm: Optional[float] = None
+    model_version: Optional[str] = None
+    calibration_version: Optional[str] = None
+    is_direct_measurement: bool = False
+    requires_confirmation: bool = False
+    referral_guidance: Optional[str] = None
+
+
+class CombinedNutritionDetail(BaseModel):
+    """Final clinical wasting verdict after combining all applicable arms."""
+
+    status: WastingStatus
+    triggered_by: list[str]
+    rationale: str
+    method: str = "who_or_rule"
+    confidence_score: Optional[float] = None
 
 
 class AssessmentResponse(BaseModel):
@@ -93,4 +119,6 @@ class AssessmentResponse(BaseModel):
     nutrition: NutritionDetail
     ml_prediction: Optional[MLPrediction] = None
     muac: Optional[MUACDetail] = None
+    combined_nutrition: CombinedNutritionDetail
     summary: str
+    warnings: List[str] = Field(default_factory=list)

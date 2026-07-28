@@ -40,10 +40,20 @@ NEW_COLUMNS = [
     ("classification_confidence", "REAL"),
     ("ml_wasting_method", "TEXT"),
     ("muac_age_in_range", "INTEGER"),
+    ("muac_confidence", "REAL"),
+    ("muac_uncertainty_lower_cm", "REAL"),
+    ("muac_uncertainty_upper_cm", "REAL"),
+    ("muac_model_version", "TEXT"),
+    ("muac_calibration_version", "TEXT"),
+    ("muac_is_direct_measurement", "INTEGER"),
+    ("muac_requires_confirmation", "INTEGER"),
+    ("muac_referral_guidance", "TEXT"),
     ("combined_status", "TEXT"),
-    ("triggering_indicators", "TEXT"),
-    ("rationale", "TEXT"),
-    ("protocol_version", "TEXT"),
+    ("combined_triggered_by", "TEXT"),
+    ("combined_rationale", "TEXT"),
+    ("combined_method", "TEXT"),
+    ("combined_confidence_score", "REAL"),
+    ("combined_protocol_version", "TEXT"),
 ]
 
 

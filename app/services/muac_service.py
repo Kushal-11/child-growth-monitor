@@ -10,17 +10,15 @@ Thresholds (WHO, 6–59 months, absolute — NOT age-adjusted):
 Three estimation pathways, in priority order:
 
   1. **Manual** — tape measurement provided, used directly.
-  2. **Landmark-based** — derived from the upper-arm length and the body's
-     overall stoutness (shoulder/hip widths) extracted from the pose. This
-     is *partially* independent of the WHZ pathway: it depends mostly on
-     lateral body proportions, not on the predicted weight. Makes the
-     OR-rule combiner non-trivially additive.
+  2. **Landmark-based** — an experimental screening estimate. It cannot make
+     an autonomous clinical call until paired tape-measure validation shows
+     SAM recall >= 0.80.
   3. **WHZ-based** — fallback when landmarks aren't available. Uses the
      formula MUAC = median(age,sex) × (1 + 0.087 × clamp(WHZ, ±3)).
 
-The OR-rule combiner (`combine_with_whz_status`) implements the WHO 2009/2013
-community-management protocol: classify SAM/MAM if EITHER MUAC OR WHZ flags
-the child. This *raises* sensitivity vs either single criterion alone.
+WHZ-derived MUAC is explanatory only. It is not a second diagnostic arm and
+is therefore ignored by the final combiner (otherwise the same WHZ evidence
+would be counted twice).
 
 Reference for MUAC medians:
     WHO Child Growth Standards (2006): Arm circumference-for-age.
@@ -29,6 +27,8 @@ Reference for MUAC medians:
 
 from dataclasses import dataclass
 from typing import Optional
+
+from config import WastingStatus
 
 
 # ── WHO MUAC-for-age medians (cm) ──────────────────────────────────────────
@@ -70,10 +70,18 @@ _MUAC_GIRLS: list[tuple[float, float]] = [
 @dataclass
 class MUACResult:
     muac_cm: Optional[float]        # rounded to 1 decimal place
-    muac_status: Optional[str]      # "SAM" | "At Risk (MAM)" | "Normal"
+    muac_status: Optional[WastingStatus]
     # "manual" | "landmark_estimated" | "estimated_from_whz"
     muac_method: str
     age_in_range: bool              # True only for 6–59 months
+    confidence: Optional[float] = None
+    uncertainty_lower_cm: Optional[float] = None
+    uncertainty_upper_cm: Optional[float] = None
+    model_version: Optional[str] = None
+    calibration_version: Optional[str] = None
+    is_direct_measurement: bool = False
+    requires_confirmation: bool = False
+    referral_guidance: Optional[str] = None
 
 
 @dataclass
@@ -81,13 +89,19 @@ class CombinedNutritionStatus:
     """
     Final SAM/MAM call after combining MUAC and WHZ via WHO OR-rule.
     """
-    status: str              # SAM / MAM / Normal / Risk_Overweight / Overweight
+    status: WastingStatus
     triggered_by: list[str]  # ["muac", "whz", ...]  why this status was chosen
     rationale: str           # human-readable explanation
 
 
 class MUACService:
     """Estimate or classify MUAC for a child."""
+
+    LANDMARK_MODEL_VERSION = "landmark-ratio-v1"
+    LANDMARK_CALIBRATION_VERSION = "unvalidated-paired-tape-v0"
+    LANDMARK_SAM_RECALL_VALIDATED = False
+    MIN_AUTONOMOUS_SAM_RECALL = 0.80
+    MIN_LANDMARK_CONFIDENCE = 0.80
 
     @staticmethod
     def estimate(
@@ -98,6 +112,7 @@ class MUACService:
         upper_arm_length_cm: Optional[float] = None,
         shoulder_width_cm: Optional[float] = None,
         height_cm: Optional[float] = None,
+        landmark_visibility: Optional[float] = None,
     ) -> MUACResult:
         """
         Return a MUACResult for the given child.
@@ -126,6 +141,12 @@ class MUACService:
                 muac_status=MUACService._classify(manual_muac_cm, age_in_range),
                 muac_method="manual",
                 age_in_range=age_in_range,
+                confidence=1.0,
+                uncertainty_lower_cm=round(manual_muac_cm, 1),
+                uncertainty_upper_cm=round(manual_muac_cm, 1),
+                model_version=None,
+                calibration_version="direct-tape",
+                is_direct_measurement=True,
             )
 
         # ── 2. Landmark-based estimate (independent of WHZ) ──────────────
@@ -143,11 +164,34 @@ class MUACService:
                 height_cm=height_cm,
             )
             if est is not None:
+                visibility = landmark_visibility if landmark_visibility is not None else 0.5
+                confidence = max(0.0, min(1.0, visibility))
+                half_width = max(0.6, 2.0 * (1.0 - confidence))
+                lower, upper = est - half_width, est + half_width
+                crosses_threshold = any(lower < threshold <= upper for threshold in (11.5, 12.5))
+                requires_confirmation = (
+                    not MUACService.LANDMARK_SAM_RECALL_VALIDATED
+                    or confidence < MUACService.MIN_LANDMARK_CONFIDENCE
+                    or crosses_threshold
+                )
                 return MUACResult(
                     muac_cm=round(est, 1),
-                    muac_status=MUACService._classify(est, age_in_range),
+                    muac_status=(
+                        MUACService._classify(est, age_in_range)
+                        if not requires_confirmation
+                        else None
+                    ),
                     muac_method="landmark_estimated",
                     age_in_range=age_in_range,
+                    confidence=round(confidence, 2),
+                    uncertainty_lower_cm=round(lower, 1),
+                    uncertainty_upper_cm=round(upper, 1),
+                    model_version=MUACService.LANDMARK_MODEL_VERSION,
+                    calibration_version=MUACService.LANDMARK_CALIBRATION_VERSION,
+                    is_direct_measurement=False,
+                    requires_confirmation=requires_confirmation,
+                    referral_guidance=("Prompt tape MUAC confirmation and refer for clinical assessment; "
+                                       "do not dismiss as Normal." if requires_confirmation else None),
                 )
 
         # ── 3. WHZ-based estimate ────────────────────────────────────────
@@ -157,6 +201,14 @@ class MUACService:
                 muac_status=None,
                 muac_method="estimated_from_whz",
                 age_in_range=age_in_range,
+                confidence=None,
+                uncertainty_lower_cm=None,
+                uncertainty_upper_cm=None,
+                model_version="whz-explanatory-v1",
+                calibration_version="who-median-formula-v1",
+                is_direct_measurement=False,
+                requires_confirmation=True,
+                referral_guidance="Obtain a direct tape MUAC measurement.",
             )
 
         median = MUACService._median_for_age(age_months, sex)
@@ -166,9 +218,20 @@ class MUACService:
 
         return MUACResult(
             muac_cm=muac_cm,
-            muac_status=MUACService._classify(muac_cm, age_in_range),
+            # This estimate is transformed from WHZ and is explanatory only.
+            # Returning no MUAC classification prevents downstream consumers
+            # from treating the same evidence as an independent diagnostic arm.
+            muac_status=None,
             muac_method="estimated_from_whz",
             age_in_range=age_in_range,
+            confidence=0.4,
+            uncertainty_lower_cm=round(muac_cm - 1.0, 1),
+            uncertainty_upper_cm=round(muac_cm + 1.0, 1),
+            model_version="whz-explanatory-v1",
+            calibration_version="who-median-formula-v1",
+            is_direct_measurement=False,
+            requires_confirmation=True,
+            referral_guidance="WHZ-derived MUAC is explanatory only; obtain a direct tape measurement.",
         )
 
     @staticmethod
@@ -229,8 +292,12 @@ class MUACService:
 
     @staticmethod
     def combine_with_whz_status(
-        muac_status: Optional[str],
-        whz_status: Optional[str],
+        muac_status: Optional[WastingStatus],
+        whz_status: Optional[WastingStatus],
+        *,
+        muac_method: Optional[str],
+        is_direct_measurement: bool,
+        landmark_autonomous_call_allowed: bool = False,
     ) -> CombinedNutritionStatus:
         """
         Combine MUAC and WHZ classifications via WHO OR-rule (2009/2013 CMAM).
@@ -238,75 +305,81 @@ class MUACService:
         Rules (in order, severity descending):
           - If either says SAM           → SAM
           - Else if either says MAM      → MAM
-          - Else if WHZ says Overweight  → Overweight
-          - Else if WHZ says Risk_OW     → Risk_Overweight
-          - Else                          → Normal
-          - If both inputs are None      → status="Unknown"
+          - Else applicable overweight categories follow WHZ severity
+          - Else                          → NORMAL
+          - If both inputs are None      → UNKNOWN
 
-        Note: MUAC service uses "At Risk (MAM)" as the moderate label; we
-        normalise it to "MAM" in the combined status so downstream code
-        sees a single vocabulary.
+        Inputs must already use the canonical vocabulary. This strict boundary
+        prevents descriptive presentation labels from entering clinical logic.
         """
-        # Normalise the MUAC vocabulary
-        if muac_status == "At Risk (MAM)":
-            muac_status_n = "MAM"
-        elif muac_status in ("SAM", "Normal"):
-            muac_status_n = muac_status
-        else:
-            muac_status_n = None
+        allowed = {status.value for status in WastingStatus}
+        for source, value in (("muac_status", muac_status), ("whz_status", whz_status)):
+            if value is not None and value not in allowed:
+                raise ValueError(f"{source} must be a canonical wasting status, got {value!r}")
+
+        # A WHZ-derived value is the same evidence transformed, not an
+        # independent diagnostic arm. Experimental landmarks are similarly
+        # non-autonomous until the documented safety floor has been met.
+        muac_can_trigger = is_direct_measurement or (
+            muac_method == "landmark_estimated" and landmark_autonomous_call_allowed
+        )
+        if not muac_can_trigger:
+            muac_status = None
 
         triggered: list[str] = []
 
         # SAM
-        if muac_status_n == "SAM":
+        if muac_status == WastingStatus.SAM:
             triggered.append("muac")
-        if whz_status == "SAM":
+        if whz_status == WastingStatus.SAM:
             triggered.append("whz")
         if triggered:
             why = " or ".join(triggered)
             return CombinedNutritionStatus(
-                status="SAM",
+                status=WastingStatus.SAM,
                 triggered_by=triggered,
                 rationale=f"SAM flagged by {why} (WHO OR-rule)",
             )
 
         # MAM
-        if muac_status_n == "MAM":
+        if muac_status == WastingStatus.MAM:
             triggered.append("muac")
-        if whz_status == "MAM":
+        if whz_status == WastingStatus.MAM:
             triggered.append("whz")
         if triggered:
             why = " or ".join(triggered)
             return CombinedNutritionStatus(
-                status="MAM",
+                status=WastingStatus.MAM,
                 triggered_by=triggered,
                 rationale=f"MAM flagged by {why} (WHO OR-rule)",
             )
 
         # Overweight / Risk only governed by WHZ (MUAC has no upper threshold)
-        if whz_status == "Overweight":
+        if whz_status == WastingStatus.OBESE:
+            return CombinedNutritionStatus(WastingStatus.OBESE, ["whz"], "Obesity from WHZ")
+        if whz_status == WastingStatus.OVERWEIGHT:
             return CombinedNutritionStatus(
-                status="Overweight",
+                status=WastingStatus.OVERWEIGHT,
                 triggered_by=["whz"],
                 rationale="Overweight from WHZ",
             )
-        if whz_status == "Risk_Overweight":
+        if whz_status == WastingStatus.RISK_OVERWEIGHT:
             return CombinedNutritionStatus(
-                status="Risk_Overweight",
+                status=WastingStatus.RISK_OVERWEIGHT,
                 triggered_by=["whz"],
                 rationale="Risk of overweight from WHZ",
             )
 
         # Both None → Unknown
-        if muac_status_n is None and whz_status is None:
+        if muac_status is None and whz_status is None:
             return CombinedNutritionStatus(
-                status="Unknown",
+                status=WastingStatus.UNKNOWN,
                 triggered_by=[],
                 rationale="No MUAC or WHZ information available",
             )
 
         return CombinedNutritionStatus(
-            status="Normal",
+            status=WastingStatus.NORMAL,
             triggered_by=[],
             rationale="No MUAC or WHZ flag triggered",
         )
@@ -334,12 +407,14 @@ class MUACService:
         return table[-1][1]  # fallback
 
     @staticmethod
-    def _classify(muac_cm: float, age_in_range: bool) -> Optional[str]:
+    def _classify(
+        muac_cm: float, age_in_range: bool
+    ) -> Optional[WastingStatus]:
         """Classify MUAC using WHO absolute thresholds (6–59 months only)."""
         if not age_in_range:
             return None
         if muac_cm < 11.5:
-            return "SAM"
+            return WastingStatus.SAM
         if muac_cm < 12.5:
-            return "At Risk (MAM)"
-        return "Normal"
+            return WastingStatus.MAM
+        return WastingStatus.NORMAL

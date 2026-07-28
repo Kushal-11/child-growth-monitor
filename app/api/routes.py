@@ -20,7 +20,8 @@ from app.models.child import Child
 from app.models.user import User
 from app.services.auth_service import get_current_user
 from app.models.database import get_db
-from app.schemas.assessment import AssessmentResponse
+from app.schemas.assessment import AssessmentRequest, AssessmentResponse
+from app.services.age_service import AgeService
 from app.services.assessment_service import AssessmentService
 from config import UPLOAD_DIR
 
@@ -29,9 +30,27 @@ from config import UPLOAD_DIR
 router = APIRouter(prefix="/api/v1", tags=["API"])
 
 
+def _decode_string_list(value: Optional[str]) -> list[str]:
+    """Decode legacy JSON evidence without breaking child history."""
+    if not value:
+        return []
+    try:
+        decoded = json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return []
+    if not isinstance(decoded, list):
+        return []
+    return [item for item in decoded if isinstance(item, str)]
+
+
 def get_assessment_service() -> AssessmentService:
     """Placeholder; overridden at app startup in main.py."""
     raise NotImplementedError
+
+
+def get_age_service() -> AgeService:
+    """Provide the shared stateless clinical-age service."""
+    return AgeService()
 
 
 @router.get("/health")
@@ -56,6 +75,7 @@ async def assess_child(
     location: str = Form(None),
     db: Session = Depends(get_db),
     svc: AssessmentService = Depends(get_assessment_service),
+    age_svc: AgeService = Depends(get_age_service),
 ):
     """Main assessment endpoint. Accepts multipart form with image + metadata."""
     if sex not in ("M", "F"):
@@ -64,7 +84,27 @@ async def assess_child(
     try:
         dob = date.fromisoformat(date_of_birth)
     except ValueError:
-        raise HTTPException(400, "date_of_birth must be ISO format (YYYY-MM-DD)")
+        raise HTTPException(
+            422, "date_of_birth must be ISO format (YYYY-MM-DD)"
+        ) from None
+
+    as_of = date.today()
+    try:
+        # Apply the same Pydantic contract used by JSON callers to multipart data.
+        AssessmentRequest.model_validate(
+            {
+                "child_name": child_name,
+                "date_of_birth": dob,
+                "sex": sex,
+                "weight_kg": weight_kg,
+                "height_cm": height_cm,
+                "guardian_name": guardian_name,
+                "location": location,
+            },
+            context={"age_service": age_svc, "as_of": as_of},
+        )
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
     # Convert height if provided with unit
     final_height_cm = height_cm
@@ -98,6 +138,7 @@ async def assess_child(
         guardian_name=guardian_name,
         location=location,
         side_image=side_image_bytes,
+        as_of=as_of,
     )
     return result
 
@@ -191,10 +232,22 @@ def get_child(
                 "muac_status": m.muac_status,
                 "muac_method": m.muac_method,
                 "muac_age_in_range": m.muac_age_in_range,
+                "muac_confidence": m.muac_confidence,
+                "muac_uncertainty_lower_cm": m.muac_uncertainty_lower_cm,
+                "muac_uncertainty_upper_cm": m.muac_uncertainty_upper_cm,
+                "muac_model_version": m.muac_model_version,
+                "muac_calibration_version": m.muac_calibration_version,
+                "muac_is_direct_measurement": m.muac_is_direct_measurement,
+                "muac_requires_confirmation": m.muac_requires_confirmation,
+                "muac_referral_guidance": m.muac_referral_guidance,
                 "combined_status": m.combined_status,
-                "triggering_indicators": json.loads(m.triggering_indicators or "[]"),
-                "rationale": m.rationale,
-                "protocol_version": m.protocol_version,
+                "combined_triggered_by": _decode_string_list(
+                    m.combined_triggered_by
+                ),
+                "combined_rationale": m.combined_rationale,
+                "combined_method": m.combined_method,
+                "combined_confidence_score": m.combined_confidence_score,
+                "combined_protocol_version": m.combined_protocol_version,
             }
         visits.append(visit_data)
 
