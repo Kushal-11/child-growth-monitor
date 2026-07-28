@@ -114,9 +114,8 @@ class AssessmentService:
                 who_median_ref = self.who_data.get_median_weight_for_height(
                     sex, effective_height, age_months=age_months
                 )
-                weight_in_bounds = (
-                    who_median_ref is None
-                    or (0.45 * who_median_ref <= ml_weight <= 1.80 * who_median_ref)
+                weight_in_bounds = who_median_ref is not None and (
+                    0.45 * who_median_ref <= ml_weight <= 1.80 * who_median_ref
                 )
                 if weight_in_bounds:
                     effective_weight = ml_weight
@@ -155,6 +154,23 @@ class AssessmentService:
             if whz_z is not None:
                 whz_status = self.nutrition_svc.classify_whz(whz_z)
                 whz_z = round(whz_z, 2)
+
+        assessment_warnings = []
+        if effective_height is not None and haz_z is None:
+            assessment_warnings.append(
+                f"HAZ unavailable: authoritative WHO length/height-for-age LMS data "
+                f"does not cover sex {sex!r} at age {int(round(age_months))} months."
+            )
+        if effective_height is not None and effective_weight is None:
+            assessment_warnings.append(
+                f"Weight unavailable: authoritative WHO weight-for-length/height LMS "
+                f"data does not cover {effective_height:.1f} cm; no median fallback was used."
+            )
+        elif effective_height is not None and effective_weight is not None and whz_z is None:
+            assessment_warnings.append(
+                f"WHZ unavailable: authoritative WHO weight-for-length/height LMS data "
+                f"does not cover {effective_height:.1f} cm."
+            )
 
         # 5b. Estimate MUAC — pathway priority: manual > landmark > WHZ-derived
         # Pull arm length & shoulder width from measurement service (in cm).
@@ -301,6 +317,7 @@ class AssessmentService:
                 age_in_range=muac_result.age_in_range,
             ),
             summary=summary,
+            warnings=assessment_warnings,
         )
 
     @staticmethod
