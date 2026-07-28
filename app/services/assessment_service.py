@@ -37,6 +37,7 @@ from config import WASTING_STATUS_LABELS, WastingStatus
 
 
 class AssessmentService:
+    PROTOCOL_VERSION = "WHO-CMAM-OR-2009/2013-v1"
     age_svc = AgeService()
 
     def __init__(
@@ -104,6 +105,7 @@ class AssessmentService:
         # Priority: manual_weight > ML-estimated > WHO-median (slender/stocky adjusted)
         effective_weight = weight_kg
         estimated_weight = None
+        weight_source = "manual" if weight_kg is not None else "unavailable"
 
         if effective_weight is None:
             # Try ML weight estimate first (captures wasting signal)
@@ -122,6 +124,7 @@ class AssessmentService:
                 if weight_in_bounds:
                     effective_weight = ml_weight
                     estimated_weight = effective_weight
+                    weight_source = "ml_estimated"
 
             if effective_weight is None and effective_height is not None:
                 # Fall back to WHO median with body build adjustment
@@ -131,6 +134,7 @@ class AssessmentService:
                 if estimated_weight is not None:
                     weight_adjustment = getattr(meas, 'weight_adjustment', 1.0)
                     estimated_weight = round(estimated_weight * weight_adjustment, 2)
+                    weight_source = "who_statistical"
                 effective_weight = estimated_weight
 
         # 5. Compute Z-scores
@@ -214,6 +218,41 @@ class AssessmentService:
             meas.confidence_score,
         )
 
+        bmi = None
+        if (
+            effective_height is not None
+            and effective_weight is not None
+            and effective_height > 0
+        ):
+            bmi = round(effective_weight / ((effective_height / 100.0) ** 2), 2)
+        # Raw BMI is retained as evidence. It is not interpreted here using
+        # adult/fixed cut-offs for a child under five.
+        bmi_status = None
+        classification_confidence = combined_confidence
+
+        body_build_str = None
+        if meas.body_build and isinstance(meas.body_build, dict):
+            body_build_str = meas.body_build.get("body_build")
+
+        chest_depth_cm_out = None
+        abd_depth_cm_out = None
+        if (
+            side_segments is not None
+            and effective_height is not None
+            and side_segments.total_height_px
+        ):
+            side_scale = effective_height / side_segments.total_height_px
+            approx_shoulder = effective_height * 0.211
+            approx_hip = approx_shoulder * 0.88
+            if side_segments.chest_depth_px and side_segments.chest_confidence >= 0.5:
+                raw = round(side_segments.chest_depth_px * side_scale, 1)
+                if 0.15 * approx_shoulder < raw < 0.65 * approx_shoulder:
+                    chest_depth_cm_out = raw
+            if side_segments.abd_depth_px and side_segments.abd_confidence >= 0.5:
+                raw = round(side_segments.abd_depth_px * side_scale, 1)
+                if 0.15 * approx_hip < raw < 0.65 * approx_hip:
+                    abd_depth_cm_out = raw
+
         # 6. Persist to database
         child = self._get_or_create_child(
             db, child_name, dob, sex, guardian_name, location
@@ -232,6 +271,13 @@ class AssessmentService:
             predicted_weight_kg=estimated_weight,
             manual_height_cm=height_cm,
             manual_weight_kg=weight_kg,
+            effective_height_cm=effective_height,
+            effective_weight_kg=effective_weight,
+            height_method=height_method,
+            weight_method=weight_source,
+            estimation_method=meas.estimation_method,
+            bmi=bmi,
+            bmi_status=bmi_status,
             reference_object_detected=str(meas.reference_object_detected).lower(),
             scale_factor=meas.scale_factor,
             haz_zscore=haz_z,
@@ -239,11 +285,45 @@ class AssessmentService:
             haz_status=haz_status,
             whz_status=whz_status.value if whz_status else None,
             confidence_score=meas.confidence_score,
+            height_confidence=(
+                1.0 if height_method == "manual" else meas.confidence_score
+            ),
+            weight_confidence=(
+                1.0 if weight_source == "manual" else meas.confidence_score
+            ),
+            classification_confidence=classification_confidence,
+            body_build=body_build_str,
+            side_view_used=(
+                chest_depth_cm_out is not None or abd_depth_cm_out is not None
+            ),
+            chest_depth_cm=chest_depth_cm_out,
+            abd_depth_cm=abd_depth_cm_out,
+            ml_estimated_weight_kg=ml_pred.estimated_weight_kg if ml_pred else None,
+            ml_wasting_status=ml_pred.wasting_status if ml_pred else None,
+            ml_wasting_method=ml_pred.wasting_method if ml_pred else "unavailable",
+            sam_probability=ml_pred.sam_probability if ml_pred else None,
+            mam_probability=ml_pred.mam_probability if ml_pred else None,
+            normal_probability=ml_pred.normal_probability if ml_pred else None,
+            risk_probability=ml_pred.risk_probability if ml_pred else None,
+            overweight_probability=ml_pred.overweight_probability if ml_pred else None,
+            muac_cm=muac_result.muac_cm,
+            muac_status=muac_result.muac_status,
+            muac_method=muac_result.muac_method,
+            muac_age_in_range=muac_result.age_in_range,
+            muac_confidence=muac_result.confidence,
+            muac_uncertainty_lower_cm=muac_result.uncertainty_lower_cm,
+            muac_uncertainty_upper_cm=muac_result.uncertainty_upper_cm,
+            muac_model_version=muac_result.model_version,
+            muac_calibration_version=muac_result.calibration_version,
+            muac_is_direct_measurement=muac_result.is_direct_measurement,
+            muac_requires_confirmation=muac_result.requires_confirmation,
+            muac_referral_guidance=muac_result.referral_guidance,
             combined_status=combined_status.status.value,
             combined_triggered_by=json.dumps(combined_status.triggered_by),
             combined_rationale=combined_status.rationale,
             combined_method="who_muac_whz_or_rule",
             combined_confidence_score=combined_confidence,
+            combined_protocol_version=self.PROTOCOL_VERSION,
         )
         db.add(measurement_record)
         db.commit()
@@ -262,29 +342,6 @@ class AssessmentService:
             muac_result.muac_status,
         )
 
-        # Extract body build from measurement result
-        body_build_str = None
-        if meas.body_build and isinstance(meas.body_build, dict):
-            body_build_str = meas.body_build.get("body_build")
-        
-        # Compute depth in cm for response (if side view was used and measurements are valid)
-        chest_depth_cm_out = None
-        abd_depth_cm_out   = None
-        if side_segments is not None and effective_height is not None and side_segments.total_height_px:
-            side_scale = effective_height / side_segments.total_height_px
-            # Reference widths for validation (Snyder 1975 mean ratios at ~36 months)
-            approx_shoulder = effective_height * 0.211
-            approx_hip      = approx_shoulder * 0.88
-            if side_segments.chest_depth_px and side_segments.chest_confidence >= 0.5:
-                raw = round(side_segments.chest_depth_px * side_scale, 1)
-                # Accept only if within true side-view range (15–65% of shoulder width)
-                if 0.15 * approx_shoulder < raw < 0.65 * approx_shoulder:
-                    chest_depth_cm_out = raw
-            if side_segments.abd_depth_px and side_segments.abd_confidence >= 0.5:
-                raw = round(side_segments.abd_depth_px * side_scale, 1)
-                if 0.15 * approx_hip < raw < 0.65 * approx_hip:
-                    abd_depth_cm_out = raw
-
         return AssessmentResponse(
             child_name=child_name,
             sex=sex,
@@ -301,6 +358,14 @@ class AssessmentService:
                 confidence_score=meas.confidence_score,
                 annotated_image=meas.annotated_image_filename,
                 estimation_method=meas.estimation_method,
+                effective_weight_kg=effective_weight,
+                weight_method=weight_source,
+                height_confidence=(
+                    1.0 if height_method == "manual" else meas.confidence_score
+                ),
+                weight_confidence=(
+                    1.0 if weight_source == "manual" else meas.confidence_score
+                ),
                 body_build=body_build_str,
                 side_view_used=chest_depth_cm_out is not None or abd_depth_cm_out is not None,
                 chest_depth_cm=chest_depth_cm_out,
@@ -312,6 +377,8 @@ class AssessmentService:
                 haz_status=haz_status,
                 whz_status=whz_status,
                 age_months=round(age_months, 1),
+                bmi=bmi,
+                bmi_status=bmi_status,
             ),
             ml_prediction=MLPrediction(
                 estimated_weight_kg=ml_pred.estimated_weight_kg if ml_pred else None,

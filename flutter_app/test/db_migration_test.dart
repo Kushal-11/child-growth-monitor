@@ -6,7 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:child_growth_monitor_app/database/database.dart';
 
 void main() {
-  test('schema v3 fresh DB has new columns and inserts work', () async {
+  test('schema v4 fresh DB has evidence columns and inserts work', () async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     final id = await db.into(db.children).insert(
           ChildrenCompanion.insert(
@@ -86,7 +86,7 @@ void main() {
     await legacy.close();
 
     // 2) Reopen with migrations enabled. Drift sees user_version < schemaVersion
-    //    (3) and runs the real onUpgrade migrator. A query forces it to open.
+    //    (4) and runs the real onUpgrade migrator. A query forces it to open.
     final upgraded = AppDatabase.forTesting(NativeDatabase(file));
     final rows = await upgraded.select(upgraded.children).get();
     expect(rows, isA<List>());
@@ -98,7 +98,21 @@ void main() {
     expect(visitNames.contains('owner_user_id'), true,
         reason: 'visits.owner_user_id missing after v$legacyVersion -> v3');
     expect(visitNames.contains('entry_method'), true,
-        reason: 'visits.entry_method missing after v$legacyVersion -> v3');
+        reason: 'visits.entry_method missing after v$legacyVersion -> v4');
+
+    final measurementCols =
+        await upgraded.customSelect('PRAGMA table_info(measurements)').get();
+    final measurementNames =
+        measurementCols.map((r) => r.data['name'] as String).toSet();
+    for (final name in [
+      'effective_height_cm',
+      'muac_requires_confirmation',
+      'combined_triggered_by',
+      'combined_protocol_version',
+    ]) {
+      expect(measurementNames.contains(name), true,
+          reason: 'measurements.$name missing after v$legacyVersion -> v4');
+    }
 
     // New children columns must exist and be usable.
     final id = await upgraded.into(upgraded.children).insert(
@@ -117,12 +131,12 @@ void main() {
     await upgraded.close();
   }
 
-  test('v2 -> v3 upgrade runs without crashing and adds visits columns',
+  test('v2 -> v4 upgrade adds visit and evidence columns',
       () async {
     await runUpgradeFrom(2);
   });
 
-  test('v1 -> v3 upgrade runs without crashing (no duplicate-column)',
+  test('v1 -> v4 upgrade runs without duplicate columns',
       () async {
     // Regression: a v1 DB hits the from < 2 destructive recreate (which builds
     // visits at the current schema, already including the new columns) AND the

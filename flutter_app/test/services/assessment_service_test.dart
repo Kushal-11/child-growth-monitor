@@ -143,6 +143,16 @@ void main() {
     final visits = await db.select(db.visits).get();
     expect(visits.length, 1);
     expect(visits.first.localUuid.length, 36);
+
+    final stored = await db.select(db.measurements).getSingle();
+    expect(stored.effectiveHeightCm, result.measurement.effectiveHeightCm);
+    expect(stored.effectiveWeightKg, result.measurement.predictedWeightKg);
+    expect(stored.combinedStatus, result.combinedNutrition.status);
+    expect(stored.combinedMethod, 'who_muac_whz_or_rule');
+    expect(stored.combinedProtocolVersion, AssessmentService.protocolVersion);
+    expect(stored.muacRequiresConfirmation, isTrue);
+    expect(stored.muacIsDirectMeasurement, isFalse);
+    expect(stored.muacCalibrationVersion, 'who-median-formula-v1');
   });
 
   test('ML failure produces a result labelled who_fallback', () async {

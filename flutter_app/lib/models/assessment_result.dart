@@ -87,6 +87,10 @@ class Measurement {
     this.confidenceScore,
     this.bodyBuild,
     this.estimationMethod,
+    this.effectiveWeightKg,
+    this.weightMethod,
+    this.heightConfidence,
+    this.weightConfidence,
     this.sideViewUsed = false,
     this.chestDepthCm,
     this.abdDepthCm,
@@ -101,6 +105,10 @@ class Measurement {
   final double? confidenceScore;
   final String? bodyBuild;
   final String? estimationMethod;
+  final double? effectiveWeightKg;
+  final String? weightMethod;
+  final double? heightConfidence;
+  final double? weightConfidence;
   final bool sideViewUsed;
   final double? chestDepthCm;
   final double? abdDepthCm;
@@ -116,6 +124,10 @@ class Measurement {
       confidenceScore: (json['confidence_score'] as num?)?.toDouble(),
       bodyBuild: json['body_build'] as String?,
       estimationMethod: json['estimation_method'] as String?,
+      effectiveWeightKg: (json['effective_weight_kg'] as num?)?.toDouble(),
+      weightMethod: json['weight_method'] as String?,
+      heightConfidence: (json['height_confidence'] as num?)?.toDouble(),
+      weightConfidence: (json['weight_confidence'] as num?)?.toDouble(),
       sideViewUsed: json['side_view_used'] as bool? ?? false,
       chestDepthCm: (json['chest_depth_cm'] as num?)?.toDouble(),
       abdDepthCm: (json['abd_depth_cm'] as num?)?.toDouble(),
@@ -130,6 +142,8 @@ class Nutrition {
     this.hazStatus,
     this.whzStatus,
     this.ageMonths,
+    this.bmi,
+    this.bmiStatus,
   });
 
   final double? hazZscore;
@@ -137,6 +151,8 @@ class Nutrition {
   final String? hazStatus;
   final String? whzStatus;
   final double? ageMonths;
+  final double? bmi;
+  final String? bmiStatus;
 
   factory Nutrition.fromJson(Map<String, dynamic> json) {
     return Nutrition(
@@ -145,6 +161,8 @@ class Nutrition {
       hazStatus: json['haz_status'] as String?,
       whzStatus: json['whz_status'] as String?,
       ageMonths: (json['age_months'] as num?)?.toDouble(),
+      bmi: (json['bmi'] as num?)?.toDouble(),
+      bmiStatus: json['bmi_status'] as String?,
     );
   }
 }
@@ -158,6 +176,7 @@ class MlPrediction {
     this.riskProbability,
     this.overweightProbability,
     this.wastingStatus,
+    this.wastingMethod,
   });
 
   final double? estimatedWeightKg;
@@ -167,6 +186,7 @@ class MlPrediction {
   final double? riskProbability;
   final double? overweightProbability;
   final String? wastingStatus;
+  final String? wastingMethod;
 
   factory MlPrediction.fromJson(Map<String, dynamic> json) {
     return MlPrediction(
@@ -178,6 +198,7 @@ class MlPrediction {
       overweightProbability: (json['overweight_probability'] as num?)
           ?.toDouble(),
       wastingStatus: json['wasting_status'] as String?,
+      wastingMethod: json['wasting_method'] as String?,
     );
   }
 }

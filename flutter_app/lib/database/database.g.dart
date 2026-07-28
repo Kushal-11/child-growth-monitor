@@ -1158,6 +1158,41 @@ class $MeasurementsTable extends Measurements
   late final GeneratedColumn<double> manualWeightKg = GeneratedColumn<double>(
       'manual_weight_kg', aliasedName, true,
       type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _effectiveHeightCmMeta =
+      const VerificationMeta('effectiveHeightCm');
+  @override
+  late final GeneratedColumn<double> effectiveHeightCm =
+      GeneratedColumn<double>('effective_height_cm', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _effectiveWeightKgMeta =
+      const VerificationMeta('effectiveWeightKg');
+  @override
+  late final GeneratedColumn<double> effectiveWeightKg =
+      GeneratedColumn<double>('effective_weight_kg', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _heightMethodMeta =
+      const VerificationMeta('heightMethod');
+  @override
+  late final GeneratedColumn<String> heightMethod = GeneratedColumn<String>(
+      'height_method', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _weightMethodMeta =
+      const VerificationMeta('weightMethod');
+  @override
+  late final GeneratedColumn<String> weightMethod = GeneratedColumn<String>(
+      'weight_method', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _bmiMeta = const VerificationMeta('bmi');
+  @override
+  late final GeneratedColumn<double> bmi = GeneratedColumn<double>(
+      'bmi', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _bmiStatusMeta =
+      const VerificationMeta('bmiStatus');
+  @override
+  late final GeneratedColumn<String> bmiStatus = GeneratedColumn<String>(
+      'bmi_status', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _hazZscoreMeta =
       const VerificationMeta('hazZscore');
   @override
@@ -1188,6 +1223,24 @@ class $MeasurementsTable extends Measurements
   late final GeneratedColumn<double> confidenceScore = GeneratedColumn<double>(
       'confidence_score', aliasedName, true,
       type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _heightConfidenceMeta =
+      const VerificationMeta('heightConfidence');
+  @override
+  late final GeneratedColumn<double> heightConfidence = GeneratedColumn<double>(
+      'height_confidence', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _weightConfidenceMeta =
+      const VerificationMeta('weightConfidence');
+  @override
+  late final GeneratedColumn<double> weightConfidence = GeneratedColumn<double>(
+      'weight_confidence', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _classificationConfidenceMeta =
+      const VerificationMeta('classificationConfidence');
+  @override
+  late final GeneratedColumn<double> classificationConfidence =
+      GeneratedColumn<double>('classification_confidence', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
   static const VerificationMeta _bodyBuildMeta =
       const VerificationMeta('bodyBuild');
   @override
@@ -1264,6 +1317,12 @@ class $MeasurementsTable extends Measurements
   late final GeneratedColumn<String> wastingStatus = GeneratedColumn<String>(
       'wasting_status', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _wastingMethodMeta =
+      const VerificationMeta('wastingMethod');
+  @override
+  late final GeneratedColumn<String> wastingMethod = GeneratedColumn<String>(
+      'wasting_method', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _muacCmMeta = const VerificationMeta('muacCm');
   @override
   late final GeneratedColumn<double> muacCm = GeneratedColumn<double>(
@@ -1281,6 +1340,106 @@ class $MeasurementsTable extends Measurements
   late final GeneratedColumn<String> muacMethod = GeneratedColumn<String>(
       'muac_method', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _muacAgeInRangeMeta =
+      const VerificationMeta('muacAgeInRange');
+  @override
+  late final GeneratedColumn<bool> muacAgeInRange = GeneratedColumn<bool>(
+      'muac_age_in_range', aliasedName, true,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("muac_age_in_range" IN (0, 1))'));
+  static const VerificationMeta _muacConfidenceMeta =
+      const VerificationMeta('muacConfidence');
+  @override
+  late final GeneratedColumn<double> muacConfidence = GeneratedColumn<double>(
+      'muac_confidence', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _muacUncertaintyLowerCmMeta =
+      const VerificationMeta('muacUncertaintyLowerCm');
+  @override
+  late final GeneratedColumn<double> muacUncertaintyLowerCm =
+      GeneratedColumn<double>('muac_uncertainty_lower_cm', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _muacUncertaintyUpperCmMeta =
+      const VerificationMeta('muacUncertaintyUpperCm');
+  @override
+  late final GeneratedColumn<double> muacUncertaintyUpperCm =
+      GeneratedColumn<double>('muac_uncertainty_upper_cm', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _muacModelVersionMeta =
+      const VerificationMeta('muacModelVersion');
+  @override
+  late final GeneratedColumn<String> muacModelVersion = GeneratedColumn<String>(
+      'muac_model_version', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _muacCalibrationVersionMeta =
+      const VerificationMeta('muacCalibrationVersion');
+  @override
+  late final GeneratedColumn<String> muacCalibrationVersion =
+      GeneratedColumn<String>('muac_calibration_version', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _muacIsDirectMeasurementMeta =
+      const VerificationMeta('muacIsDirectMeasurement');
+  @override
+  late final GeneratedColumn<bool> muacIsDirectMeasurement =
+      GeneratedColumn<bool>('muac_is_direct_measurement', aliasedName, true,
+          type: DriftSqlType.bool,
+          requiredDuringInsert: false,
+          defaultConstraints: GeneratedColumn.constraintIsAlways(
+              'CHECK ("muac_is_direct_measurement" IN (0, 1))'));
+  static const VerificationMeta _muacRequiresConfirmationMeta =
+      const VerificationMeta('muacRequiresConfirmation');
+  @override
+  late final GeneratedColumn<bool> muacRequiresConfirmation =
+      GeneratedColumn<bool>(
+          'muac_requires_confirmation', aliasedName, true,
+          type: DriftSqlType.bool,
+          requiredDuringInsert: false,
+          defaultConstraints: GeneratedColumn.constraintIsAlways(
+              'CHECK ("muac_requires_confirmation" IN (0, 1))'));
+  static const VerificationMeta _muacReferralGuidanceMeta =
+      const VerificationMeta('muacReferralGuidance');
+  @override
+  late final GeneratedColumn<String> muacReferralGuidance =
+      GeneratedColumn<String>('muac_referral_guidance', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _combinedStatusMeta =
+      const VerificationMeta('combinedStatus');
+  @override
+  late final GeneratedColumn<String> combinedStatus = GeneratedColumn<String>(
+      'combined_status', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _combinedTriggeredByMeta =
+      const VerificationMeta('combinedTriggeredBy');
+  @override
+  late final GeneratedColumn<String> combinedTriggeredBy =
+      GeneratedColumn<String>('combined_triggered_by', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _combinedRationaleMeta =
+      const VerificationMeta('combinedRationale');
+  @override
+  late final GeneratedColumn<String> combinedRationale =
+      GeneratedColumn<String>('combined_rationale', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _combinedMethodMeta =
+      const VerificationMeta('combinedMethod');
+  @override
+  late final GeneratedColumn<String> combinedMethod = GeneratedColumn<String>(
+      'combined_method', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _combinedConfidenceScoreMeta =
+      const VerificationMeta('combinedConfidenceScore');
+  @override
+  late final GeneratedColumn<double> combinedConfidenceScore =
+      GeneratedColumn<double>('combined_confidence_score', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _combinedProtocolVersionMeta =
+      const VerificationMeta('combinedProtocolVersion');
+  @override
+  late final GeneratedColumn<String> combinedProtocolVersion =
+      GeneratedColumn<String>('combined_protocol_version', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -1289,11 +1448,20 @@ class $MeasurementsTable extends Measurements
         predictedWeightKg,
         manualHeightCm,
         manualWeightKg,
+        effectiveHeightCm,
+        effectiveWeightKg,
+        heightMethod,
+        weightMethod,
+        bmi,
+        bmiStatus,
         hazZscore,
         whzZscore,
         hazStatus,
         whzStatus,
         confidenceScore,
+        heightConfidence,
+        weightConfidence,
+        classificationConfidence,
         bodyBuild,
         estimationMethod,
         sideViewUsed,
@@ -1306,9 +1474,25 @@ class $MeasurementsTable extends Measurements
         riskOverweightProbability,
         overweightProbability,
         wastingStatus,
+        wastingMethod,
         muacCm,
         muacStatus,
-        muacMethod
+        muacMethod,
+        muacAgeInRange,
+        muacConfidence,
+        muacUncertaintyLowerCm,
+        muacUncertaintyUpperCm,
+        muacModelVersion,
+        muacCalibrationVersion,
+        muacIsDirectMeasurement,
+        muacRequiresConfirmation,
+        muacReferralGuidance,
+        combinedStatus,
+        combinedTriggeredBy,
+        combinedRationale,
+        combinedMethod,
+        combinedConfidenceScore,
+        combinedProtocolVersion
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1353,6 +1537,38 @@ class $MeasurementsTable extends Measurements
           manualWeightKg.isAcceptableOrUnknown(
               data['manual_weight_kg']!, _manualWeightKgMeta));
     }
+    if (data.containsKey('effective_height_cm')) {
+      context.handle(
+          _effectiveHeightCmMeta,
+          effectiveHeightCm.isAcceptableOrUnknown(
+              data['effective_height_cm']!, _effectiveHeightCmMeta));
+    }
+    if (data.containsKey('effective_weight_kg')) {
+      context.handle(
+          _effectiveWeightKgMeta,
+          effectiveWeightKg.isAcceptableOrUnknown(
+              data['effective_weight_kg']!, _effectiveWeightKgMeta));
+    }
+    if (data.containsKey('height_method')) {
+      context.handle(
+          _heightMethodMeta,
+          heightMethod.isAcceptableOrUnknown(
+              data['height_method']!, _heightMethodMeta));
+    }
+    if (data.containsKey('weight_method')) {
+      context.handle(
+          _weightMethodMeta,
+          weightMethod.isAcceptableOrUnknown(
+              data['weight_method']!, _weightMethodMeta));
+    }
+    if (data.containsKey('bmi')) {
+      context.handle(
+          _bmiMeta, bmi.isAcceptableOrUnknown(data['bmi']!, _bmiMeta));
+    }
+    if (data.containsKey('bmi_status')) {
+      context.handle(_bmiStatusMeta,
+          bmiStatus.isAcceptableOrUnknown(data['bmi_status']!, _bmiStatusMeta));
+    }
     if (data.containsKey('haz_zscore')) {
       context.handle(_hazZscoreMeta,
           hazZscore.isAcceptableOrUnknown(data['haz_zscore']!, _hazZscoreMeta));
@@ -1374,6 +1590,25 @@ class $MeasurementsTable extends Measurements
           _confidenceScoreMeta,
           confidenceScore.isAcceptableOrUnknown(
               data['confidence_score']!, _confidenceScoreMeta));
+    }
+    if (data.containsKey('height_confidence')) {
+      context.handle(
+          _heightConfidenceMeta,
+          heightConfidence.isAcceptableOrUnknown(
+              data['height_confidence']!, _heightConfidenceMeta));
+    }
+    if (data.containsKey('weight_confidence')) {
+      context.handle(
+          _weightConfidenceMeta,
+          weightConfidence.isAcceptableOrUnknown(
+              data['weight_confidence']!, _weightConfidenceMeta));
+    }
+    if (data.containsKey('classification_confidence')) {
+      context.handle(
+          _classificationConfidenceMeta,
+          classificationConfidence.isAcceptableOrUnknown(
+              data['classification_confidence']!,
+              _classificationConfidenceMeta));
     }
     if (data.containsKey('body_build')) {
       context.handle(_bodyBuildMeta,
@@ -1446,6 +1681,12 @@ class $MeasurementsTable extends Measurements
           wastingStatus.isAcceptableOrUnknown(
               data['wasting_status']!, _wastingStatusMeta));
     }
+    if (data.containsKey('wasting_method')) {
+      context.handle(
+          _wastingMethodMeta,
+          wastingMethod.isAcceptableOrUnknown(
+              data['wasting_method']!, _wastingMethodMeta));
+    }
     if (data.containsKey('muac_cm')) {
       context.handle(_muacCmMeta,
           muacCm.isAcceptableOrUnknown(data['muac_cm']!, _muacCmMeta));
@@ -1461,6 +1702,100 @@ class $MeasurementsTable extends Measurements
           _muacMethodMeta,
           muacMethod.isAcceptableOrUnknown(
               data['muac_method']!, _muacMethodMeta));
+    }
+    if (data.containsKey('muac_age_in_range')) {
+      context.handle(
+          _muacAgeInRangeMeta,
+          muacAgeInRange.isAcceptableOrUnknown(
+              data['muac_age_in_range']!, _muacAgeInRangeMeta));
+    }
+    if (data.containsKey('muac_confidence')) {
+      context.handle(
+          _muacConfidenceMeta,
+          muacConfidence.isAcceptableOrUnknown(
+              data['muac_confidence']!, _muacConfidenceMeta));
+    }
+    if (data.containsKey('muac_uncertainty_lower_cm')) {
+      context.handle(
+          _muacUncertaintyLowerCmMeta,
+          muacUncertaintyLowerCm.isAcceptableOrUnknown(
+              data['muac_uncertainty_lower_cm']!, _muacUncertaintyLowerCmMeta));
+    }
+    if (data.containsKey('muac_uncertainty_upper_cm')) {
+      context.handle(
+          _muacUncertaintyUpperCmMeta,
+          muacUncertaintyUpperCm.isAcceptableOrUnknown(
+              data['muac_uncertainty_upper_cm']!, _muacUncertaintyUpperCmMeta));
+    }
+    if (data.containsKey('muac_model_version')) {
+      context.handle(
+          _muacModelVersionMeta,
+          muacModelVersion.isAcceptableOrUnknown(
+              data['muac_model_version']!, _muacModelVersionMeta));
+    }
+    if (data.containsKey('muac_calibration_version')) {
+      context.handle(
+          _muacCalibrationVersionMeta,
+          muacCalibrationVersion.isAcceptableOrUnknown(
+              data['muac_calibration_version']!, _muacCalibrationVersionMeta));
+    }
+    if (data.containsKey('muac_is_direct_measurement')) {
+      context.handle(
+          _muacIsDirectMeasurementMeta,
+          muacIsDirectMeasurement.isAcceptableOrUnknown(
+              data['muac_is_direct_measurement']!,
+              _muacIsDirectMeasurementMeta));
+    }
+    if (data.containsKey('muac_requires_confirmation')) {
+      context.handle(
+          _muacRequiresConfirmationMeta,
+          muacRequiresConfirmation.isAcceptableOrUnknown(
+              data['muac_requires_confirmation']!,
+              _muacRequiresConfirmationMeta));
+    }
+    if (data.containsKey('muac_referral_guidance')) {
+      context.handle(
+          _muacReferralGuidanceMeta,
+          muacReferralGuidance.isAcceptableOrUnknown(
+              data['muac_referral_guidance']!, _muacReferralGuidanceMeta));
+    }
+    if (data.containsKey('combined_status')) {
+      context.handle(
+          _combinedStatusMeta,
+          combinedStatus.isAcceptableOrUnknown(
+              data['combined_status']!, _combinedStatusMeta));
+    }
+    if (data.containsKey('combined_triggered_by')) {
+      context.handle(
+          _combinedTriggeredByMeta,
+          combinedTriggeredBy.isAcceptableOrUnknown(
+              data['combined_triggered_by']!, _combinedTriggeredByMeta));
+    }
+    if (data.containsKey('combined_rationale')) {
+      context.handle(
+          _combinedRationaleMeta,
+          combinedRationale.isAcceptableOrUnknown(
+              data['combined_rationale']!, _combinedRationaleMeta));
+    }
+    if (data.containsKey('combined_method')) {
+      context.handle(
+          _combinedMethodMeta,
+          combinedMethod.isAcceptableOrUnknown(
+              data['combined_method']!, _combinedMethodMeta));
+    }
+    if (data.containsKey('combined_confidence_score')) {
+      context.handle(
+          _combinedConfidenceScoreMeta,
+          combinedConfidenceScore.isAcceptableOrUnknown(
+              data['combined_confidence_score']!,
+              _combinedConfidenceScoreMeta));
+    }
+    if (data.containsKey('combined_protocol_version')) {
+      context.handle(
+          _combinedProtocolVersionMeta,
+          combinedProtocolVersion.isAcceptableOrUnknown(
+              data['combined_protocol_version']!,
+              _combinedProtocolVersionMeta));
     }
     return context;
   }
@@ -1483,6 +1818,18 @@ class $MeasurementsTable extends Measurements
           DriftSqlType.double, data['${effectivePrefix}manual_height_cm']),
       manualWeightKg: attachedDatabase.typeMapping.read(
           DriftSqlType.double, data['${effectivePrefix}manual_weight_kg']),
+      effectiveHeightCm: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}effective_height_cm']),
+      effectiveWeightKg: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}effective_weight_kg']),
+      heightMethod: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}height_method']),
+      weightMethod: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}weight_method']),
+      bmi: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}bmi']),
+      bmiStatus: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}bmi_status']),
       hazZscore: attachedDatabase.typeMapping
           .read(DriftSqlType.double, data['${effectivePrefix}haz_zscore']),
       whzZscore: attachedDatabase.typeMapping
@@ -1493,6 +1840,13 @@ class $MeasurementsTable extends Measurements
           .read(DriftSqlType.string, data['${effectivePrefix}whz_status']),
       confidenceScore: attachedDatabase.typeMapping.read(
           DriftSqlType.double, data['${effectivePrefix}confidence_score']),
+      heightConfidence: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}height_confidence']),
+      weightConfidence: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}weight_confidence']),
+      classificationConfidence: attachedDatabase.typeMapping.read(
+          DriftSqlType.double,
+          data['${effectivePrefix}classification_confidence']),
       bodyBuild: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}body_build']),
       estimationMethod: attachedDatabase.typeMapping.read(
@@ -1520,12 +1874,52 @@ class $MeasurementsTable extends Measurements
           data['${effectivePrefix}overweight_probability']),
       wastingStatus: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}wasting_status']),
+      wastingMethod: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}wasting_method']),
       muacCm: attachedDatabase.typeMapping
           .read(DriftSqlType.double, data['${effectivePrefix}muac_cm']),
       muacStatus: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}muac_status']),
       muacMethod: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}muac_method']),
+      muacAgeInRange: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}muac_age_in_range']),
+      muacConfidence: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}muac_confidence']),
+      muacUncertaintyLowerCm: attachedDatabase.typeMapping.read(
+          DriftSqlType.double,
+          data['${effectivePrefix}muac_uncertainty_lower_cm']),
+      muacUncertaintyUpperCm: attachedDatabase.typeMapping.read(
+          DriftSqlType.double,
+          data['${effectivePrefix}muac_uncertainty_upper_cm']),
+      muacModelVersion: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}muac_model_version']),
+      muacCalibrationVersion: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}muac_calibration_version']),
+      muacIsDirectMeasurement: attachedDatabase.typeMapping.read(
+          DriftSqlType.bool,
+          data['${effectivePrefix}muac_is_direct_measurement']),
+      muacRequiresConfirmation: attachedDatabase.typeMapping.read(
+          DriftSqlType.bool,
+          data['${effectivePrefix}muac_requires_confirmation']),
+      muacReferralGuidance: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}muac_referral_guidance']),
+      combinedStatus: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}combined_status']),
+      combinedTriggeredBy: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}combined_triggered_by']),
+      combinedRationale: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}combined_rationale']),
+      combinedMethod: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}combined_method']),
+      combinedConfidenceScore: attachedDatabase.typeMapping.read(
+          DriftSqlType.double,
+          data['${effectivePrefix}combined_confidence_score']),
+      combinedProtocolVersion: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}combined_protocol_version']),
     );
   }
 
@@ -1542,11 +1936,20 @@ class Measurement extends DataClass implements Insertable<Measurement> {
   final double? predictedWeightKg;
   final double? manualHeightCm;
   final double? manualWeightKg;
+  final double? effectiveHeightCm;
+  final double? effectiveWeightKg;
+  final String? heightMethod;
+  final String? weightMethod;
+  final double? bmi;
+  final String? bmiStatus;
   final double? hazZscore;
   final double? whzZscore;
   final String? hazStatus;
   final String? whzStatus;
   final double? confidenceScore;
+  final double? heightConfidence;
+  final double? weightConfidence;
+  final double? classificationConfidence;
   final String? bodyBuild;
   final String? estimationMethod;
   final bool sideViewUsed;
@@ -1559,9 +1962,25 @@ class Measurement extends DataClass implements Insertable<Measurement> {
   final double? riskOverweightProbability;
   final double? overweightProbability;
   final String? wastingStatus;
+  final String? wastingMethod;
   final double? muacCm;
   final String? muacStatus;
   final String? muacMethod;
+  final bool? muacAgeInRange;
+  final double? muacConfidence;
+  final double? muacUncertaintyLowerCm;
+  final double? muacUncertaintyUpperCm;
+  final String? muacModelVersion;
+  final String? muacCalibrationVersion;
+  final bool? muacIsDirectMeasurement;
+  final bool? muacRequiresConfirmation;
+  final String? muacReferralGuidance;
+  final String? combinedStatus;
+  final String? combinedTriggeredBy;
+  final String? combinedRationale;
+  final String? combinedMethod;
+  final double? combinedConfidenceScore;
+  final String? combinedProtocolVersion;
   const Measurement(
       {required this.id,
       required this.visitId,
@@ -1569,11 +1988,20 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       this.predictedWeightKg,
       this.manualHeightCm,
       this.manualWeightKg,
+      this.effectiveHeightCm,
+      this.effectiveWeightKg,
+      this.heightMethod,
+      this.weightMethod,
+      this.bmi,
+      this.bmiStatus,
       this.hazZscore,
       this.whzZscore,
       this.hazStatus,
       this.whzStatus,
       this.confidenceScore,
+      this.heightConfidence,
+      this.weightConfidence,
+      this.classificationConfidence,
       this.bodyBuild,
       this.estimationMethod,
       required this.sideViewUsed,
@@ -1586,9 +2014,25 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       this.riskOverweightProbability,
       this.overweightProbability,
       this.wastingStatus,
+      this.wastingMethod,
       this.muacCm,
       this.muacStatus,
-      this.muacMethod});
+      this.muacMethod,
+      this.muacAgeInRange,
+      this.muacConfidence,
+      this.muacUncertaintyLowerCm,
+      this.muacUncertaintyUpperCm,
+      this.muacModelVersion,
+      this.muacCalibrationVersion,
+      this.muacIsDirectMeasurement,
+      this.muacRequiresConfirmation,
+      this.muacReferralGuidance,
+      this.combinedStatus,
+      this.combinedTriggeredBy,
+      this.combinedRationale,
+      this.combinedMethod,
+      this.combinedConfidenceScore,
+      this.combinedProtocolVersion});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1606,6 +2050,24 @@ class Measurement extends DataClass implements Insertable<Measurement> {
     if (!nullToAbsent || manualWeightKg != null) {
       map['manual_weight_kg'] = Variable<double>(manualWeightKg);
     }
+    if (!nullToAbsent || effectiveHeightCm != null) {
+      map['effective_height_cm'] = Variable<double>(effectiveHeightCm);
+    }
+    if (!nullToAbsent || effectiveWeightKg != null) {
+      map['effective_weight_kg'] = Variable<double>(effectiveWeightKg);
+    }
+    if (!nullToAbsent || heightMethod != null) {
+      map['height_method'] = Variable<String>(heightMethod);
+    }
+    if (!nullToAbsent || weightMethod != null) {
+      map['weight_method'] = Variable<String>(weightMethod);
+    }
+    if (!nullToAbsent || bmi != null) {
+      map['bmi'] = Variable<double>(bmi);
+    }
+    if (!nullToAbsent || bmiStatus != null) {
+      map['bmi_status'] = Variable<String>(bmiStatus);
+    }
     if (!nullToAbsent || hazZscore != null) {
       map['haz_zscore'] = Variable<double>(hazZscore);
     }
@@ -1620,6 +2082,16 @@ class Measurement extends DataClass implements Insertable<Measurement> {
     }
     if (!nullToAbsent || confidenceScore != null) {
       map['confidence_score'] = Variable<double>(confidenceScore);
+    }
+    if (!nullToAbsent || heightConfidence != null) {
+      map['height_confidence'] = Variable<double>(heightConfidence);
+    }
+    if (!nullToAbsent || weightConfidence != null) {
+      map['weight_confidence'] = Variable<double>(weightConfidence);
+    }
+    if (!nullToAbsent || classificationConfidence != null) {
+      map['classification_confidence'] =
+          Variable<double>(classificationConfidence);
     }
     if (!nullToAbsent || bodyBuild != null) {
       map['body_build'] = Variable<String>(bodyBuild);
@@ -1656,6 +2128,9 @@ class Measurement extends DataClass implements Insertable<Measurement> {
     if (!nullToAbsent || wastingStatus != null) {
       map['wasting_status'] = Variable<String>(wastingStatus);
     }
+    if (!nullToAbsent || wastingMethod != null) {
+      map['wasting_method'] = Variable<String>(wastingMethod);
+    }
     if (!nullToAbsent || muacCm != null) {
       map['muac_cm'] = Variable<double>(muacCm);
     }
@@ -1664,6 +2139,58 @@ class Measurement extends DataClass implements Insertable<Measurement> {
     }
     if (!nullToAbsent || muacMethod != null) {
       map['muac_method'] = Variable<String>(muacMethod);
+    }
+    if (!nullToAbsent || muacAgeInRange != null) {
+      map['muac_age_in_range'] = Variable<bool>(muacAgeInRange);
+    }
+    if (!nullToAbsent || muacConfidence != null) {
+      map['muac_confidence'] = Variable<double>(muacConfidence);
+    }
+    if (!nullToAbsent || muacUncertaintyLowerCm != null) {
+      map['muac_uncertainty_lower_cm'] =
+          Variable<double>(muacUncertaintyLowerCm);
+    }
+    if (!nullToAbsent || muacUncertaintyUpperCm != null) {
+      map['muac_uncertainty_upper_cm'] =
+          Variable<double>(muacUncertaintyUpperCm);
+    }
+    if (!nullToAbsent || muacModelVersion != null) {
+      map['muac_model_version'] = Variable<String>(muacModelVersion);
+    }
+    if (!nullToAbsent || muacCalibrationVersion != null) {
+      map['muac_calibration_version'] =
+          Variable<String>(muacCalibrationVersion);
+    }
+    if (!nullToAbsent || muacIsDirectMeasurement != null) {
+      map['muac_is_direct_measurement'] =
+          Variable<bool>(muacIsDirectMeasurement);
+    }
+    if (!nullToAbsent || muacRequiresConfirmation != null) {
+      map['muac_requires_confirmation'] =
+          Variable<bool>(muacRequiresConfirmation);
+    }
+    if (!nullToAbsent || muacReferralGuidance != null) {
+      map['muac_referral_guidance'] = Variable<String>(muacReferralGuidance);
+    }
+    if (!nullToAbsent || combinedStatus != null) {
+      map['combined_status'] = Variable<String>(combinedStatus);
+    }
+    if (!nullToAbsent || combinedTriggeredBy != null) {
+      map['combined_triggered_by'] = Variable<String>(combinedTriggeredBy);
+    }
+    if (!nullToAbsent || combinedRationale != null) {
+      map['combined_rationale'] = Variable<String>(combinedRationale);
+    }
+    if (!nullToAbsent || combinedMethod != null) {
+      map['combined_method'] = Variable<String>(combinedMethod);
+    }
+    if (!nullToAbsent || combinedConfidenceScore != null) {
+      map['combined_confidence_score'] =
+          Variable<double>(combinedConfidenceScore);
+    }
+    if (!nullToAbsent || combinedProtocolVersion != null) {
+      map['combined_protocol_version'] =
+          Variable<String>(combinedProtocolVersion);
     }
     return map;
   }
@@ -1684,6 +2211,22 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       manualWeightKg: manualWeightKg == null && nullToAbsent
           ? const Value.absent()
           : Value(manualWeightKg),
+      effectiveHeightCm: effectiveHeightCm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(effectiveHeightCm),
+      effectiveWeightKg: effectiveWeightKg == null && nullToAbsent
+          ? const Value.absent()
+          : Value(effectiveWeightKg),
+      heightMethod: heightMethod == null && nullToAbsent
+          ? const Value.absent()
+          : Value(heightMethod),
+      weightMethod: weightMethod == null && nullToAbsent
+          ? const Value.absent()
+          : Value(weightMethod),
+      bmi: bmi == null && nullToAbsent ? const Value.absent() : Value(bmi),
+      bmiStatus: bmiStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bmiStatus),
       hazZscore: hazZscore == null && nullToAbsent
           ? const Value.absent()
           : Value(hazZscore),
@@ -1699,6 +2242,15 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       confidenceScore: confidenceScore == null && nullToAbsent
           ? const Value.absent()
           : Value(confidenceScore),
+      heightConfidence: heightConfidence == null && nullToAbsent
+          ? const Value.absent()
+          : Value(heightConfidence),
+      weightConfidence: weightConfidence == null && nullToAbsent
+          ? const Value.absent()
+          : Value(weightConfidence),
+      classificationConfidence: classificationConfidence == null && nullToAbsent
+          ? const Value.absent()
+          : Value(classificationConfidence),
       bodyBuild: bodyBuild == null && nullToAbsent
           ? const Value.absent()
           : Value(bodyBuild),
@@ -1734,6 +2286,9 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       wastingStatus: wastingStatus == null && nullToAbsent
           ? const Value.absent()
           : Value(wastingStatus),
+      wastingMethod: wastingMethod == null && nullToAbsent
+          ? const Value.absent()
+          : Value(wastingMethod),
       muacCm:
           muacCm == null && nullToAbsent ? const Value.absent() : Value(muacCm),
       muacStatus: muacStatus == null && nullToAbsent
@@ -1742,6 +2297,51 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       muacMethod: muacMethod == null && nullToAbsent
           ? const Value.absent()
           : Value(muacMethod),
+      muacAgeInRange: muacAgeInRange == null && nullToAbsent
+          ? const Value.absent()
+          : Value(muacAgeInRange),
+      muacConfidence: muacConfidence == null && nullToAbsent
+          ? const Value.absent()
+          : Value(muacConfidence),
+      muacUncertaintyLowerCm: muacUncertaintyLowerCm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(muacUncertaintyLowerCm),
+      muacUncertaintyUpperCm: muacUncertaintyUpperCm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(muacUncertaintyUpperCm),
+      muacModelVersion: muacModelVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(muacModelVersion),
+      muacCalibrationVersion: muacCalibrationVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(muacCalibrationVersion),
+      muacIsDirectMeasurement: muacIsDirectMeasurement == null && nullToAbsent
+          ? const Value.absent()
+          : Value(muacIsDirectMeasurement),
+      muacRequiresConfirmation: muacRequiresConfirmation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(muacRequiresConfirmation),
+      muacReferralGuidance: muacReferralGuidance == null && nullToAbsent
+          ? const Value.absent()
+          : Value(muacReferralGuidance),
+      combinedStatus: combinedStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(combinedStatus),
+      combinedTriggeredBy: combinedTriggeredBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(combinedTriggeredBy),
+      combinedRationale: combinedRationale == null && nullToAbsent
+          ? const Value.absent()
+          : Value(combinedRationale),
+      combinedMethod: combinedMethod == null && nullToAbsent
+          ? const Value.absent()
+          : Value(combinedMethod),
+      combinedConfidenceScore: combinedConfidenceScore == null && nullToAbsent
+          ? const Value.absent()
+          : Value(combinedConfidenceScore),
+      combinedProtocolVersion: combinedProtocolVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(combinedProtocolVersion),
     );
   }
 
@@ -1757,11 +2357,23 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           serializer.fromJson<double?>(json['predictedWeightKg']),
       manualHeightCm: serializer.fromJson<double?>(json['manualHeightCm']),
       manualWeightKg: serializer.fromJson<double?>(json['manualWeightKg']),
+      effectiveHeightCm:
+          serializer.fromJson<double?>(json['effectiveHeightCm']),
+      effectiveWeightKg:
+          serializer.fromJson<double?>(json['effectiveWeightKg']),
+      heightMethod: serializer.fromJson<String?>(json['heightMethod']),
+      weightMethod: serializer.fromJson<String?>(json['weightMethod']),
+      bmi: serializer.fromJson<double?>(json['bmi']),
+      bmiStatus: serializer.fromJson<String?>(json['bmiStatus']),
       hazZscore: serializer.fromJson<double?>(json['hazZscore']),
       whzZscore: serializer.fromJson<double?>(json['whzZscore']),
       hazStatus: serializer.fromJson<String?>(json['hazStatus']),
       whzStatus: serializer.fromJson<String?>(json['whzStatus']),
       confidenceScore: serializer.fromJson<double?>(json['confidenceScore']),
+      heightConfidence: serializer.fromJson<double?>(json['heightConfidence']),
+      weightConfidence: serializer.fromJson<double?>(json['weightConfidence']),
+      classificationConfidence:
+          serializer.fromJson<double?>(json['classificationConfidence']),
       bodyBuild: serializer.fromJson<String?>(json['bodyBuild']),
       estimationMethod: serializer.fromJson<String?>(json['estimationMethod']),
       sideViewUsed: serializer.fromJson<bool>(json['sideViewUsed']),
@@ -1778,9 +2390,35 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       overweightProbability:
           serializer.fromJson<double?>(json['overweightProbability']),
       wastingStatus: serializer.fromJson<String?>(json['wastingStatus']),
+      wastingMethod: serializer.fromJson<String?>(json['wastingMethod']),
       muacCm: serializer.fromJson<double?>(json['muacCm']),
       muacStatus: serializer.fromJson<String?>(json['muacStatus']),
       muacMethod: serializer.fromJson<String?>(json['muacMethod']),
+      muacAgeInRange: serializer.fromJson<bool?>(json['muacAgeInRange']),
+      muacConfidence: serializer.fromJson<double?>(json['muacConfidence']),
+      muacUncertaintyLowerCm:
+          serializer.fromJson<double?>(json['muacUncertaintyLowerCm']),
+      muacUncertaintyUpperCm:
+          serializer.fromJson<double?>(json['muacUncertaintyUpperCm']),
+      muacModelVersion: serializer.fromJson<String?>(json['muacModelVersion']),
+      muacCalibrationVersion:
+          serializer.fromJson<String?>(json['muacCalibrationVersion']),
+      muacIsDirectMeasurement:
+          serializer.fromJson<bool?>(json['muacIsDirectMeasurement']),
+      muacRequiresConfirmation:
+          serializer.fromJson<bool?>(json['muacRequiresConfirmation']),
+      muacReferralGuidance:
+          serializer.fromJson<String?>(json['muacReferralGuidance']),
+      combinedStatus: serializer.fromJson<String?>(json['combinedStatus']),
+      combinedTriggeredBy:
+          serializer.fromJson<String?>(json['combinedTriggeredBy']),
+      combinedRationale:
+          serializer.fromJson<String?>(json['combinedRationale']),
+      combinedMethod: serializer.fromJson<String?>(json['combinedMethod']),
+      combinedConfidenceScore:
+          serializer.fromJson<double?>(json['combinedConfidenceScore']),
+      combinedProtocolVersion:
+          serializer.fromJson<String?>(json['combinedProtocolVersion']),
     );
   }
   @override
@@ -1793,11 +2431,21 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       'predictedWeightKg': serializer.toJson<double?>(predictedWeightKg),
       'manualHeightCm': serializer.toJson<double?>(manualHeightCm),
       'manualWeightKg': serializer.toJson<double?>(manualWeightKg),
+      'effectiveHeightCm': serializer.toJson<double?>(effectiveHeightCm),
+      'effectiveWeightKg': serializer.toJson<double?>(effectiveWeightKg),
+      'heightMethod': serializer.toJson<String?>(heightMethod),
+      'weightMethod': serializer.toJson<String?>(weightMethod),
+      'bmi': serializer.toJson<double?>(bmi),
+      'bmiStatus': serializer.toJson<String?>(bmiStatus),
       'hazZscore': serializer.toJson<double?>(hazZscore),
       'whzZscore': serializer.toJson<double?>(whzZscore),
       'hazStatus': serializer.toJson<String?>(hazStatus),
       'whzStatus': serializer.toJson<String?>(whzStatus),
       'confidenceScore': serializer.toJson<double?>(confidenceScore),
+      'heightConfidence': serializer.toJson<double?>(heightConfidence),
+      'weightConfidence': serializer.toJson<double?>(weightConfidence),
+      'classificationConfidence':
+          serializer.toJson<double?>(classificationConfidence),
       'bodyBuild': serializer.toJson<String?>(bodyBuild),
       'estimationMethod': serializer.toJson<String?>(estimationMethod),
       'sideViewUsed': serializer.toJson<bool>(sideViewUsed),
@@ -1812,9 +2460,32 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       'overweightProbability':
           serializer.toJson<double?>(overweightProbability),
       'wastingStatus': serializer.toJson<String?>(wastingStatus),
+      'wastingMethod': serializer.toJson<String?>(wastingMethod),
       'muacCm': serializer.toJson<double?>(muacCm),
       'muacStatus': serializer.toJson<String?>(muacStatus),
       'muacMethod': serializer.toJson<String?>(muacMethod),
+      'muacAgeInRange': serializer.toJson<bool?>(muacAgeInRange),
+      'muacConfidence': serializer.toJson<double?>(muacConfidence),
+      'muacUncertaintyLowerCm':
+          serializer.toJson<double?>(muacUncertaintyLowerCm),
+      'muacUncertaintyUpperCm':
+          serializer.toJson<double?>(muacUncertaintyUpperCm),
+      'muacModelVersion': serializer.toJson<String?>(muacModelVersion),
+      'muacCalibrationVersion':
+          serializer.toJson<String?>(muacCalibrationVersion),
+      'muacIsDirectMeasurement':
+          serializer.toJson<bool?>(muacIsDirectMeasurement),
+      'muacRequiresConfirmation':
+          serializer.toJson<bool?>(muacRequiresConfirmation),
+      'muacReferralGuidance': serializer.toJson<String?>(muacReferralGuidance),
+      'combinedStatus': serializer.toJson<String?>(combinedStatus),
+      'combinedTriggeredBy': serializer.toJson<String?>(combinedTriggeredBy),
+      'combinedRationale': serializer.toJson<String?>(combinedRationale),
+      'combinedMethod': serializer.toJson<String?>(combinedMethod),
+      'combinedConfidenceScore':
+          serializer.toJson<double?>(combinedConfidenceScore),
+      'combinedProtocolVersion':
+          serializer.toJson<String?>(combinedProtocolVersion),
     };
   }
 
@@ -1825,11 +2496,20 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           Value<double?> predictedWeightKg = const Value.absent(),
           Value<double?> manualHeightCm = const Value.absent(),
           Value<double?> manualWeightKg = const Value.absent(),
+          Value<double?> effectiveHeightCm = const Value.absent(),
+          Value<double?> effectiveWeightKg = const Value.absent(),
+          Value<String?> heightMethod = const Value.absent(),
+          Value<String?> weightMethod = const Value.absent(),
+          Value<double?> bmi = const Value.absent(),
+          Value<String?> bmiStatus = const Value.absent(),
           Value<double?> hazZscore = const Value.absent(),
           Value<double?> whzZscore = const Value.absent(),
           Value<String?> hazStatus = const Value.absent(),
           Value<String?> whzStatus = const Value.absent(),
           Value<double?> confidenceScore = const Value.absent(),
+          Value<double?> heightConfidence = const Value.absent(),
+          Value<double?> weightConfidence = const Value.absent(),
+          Value<double?> classificationConfidence = const Value.absent(),
           Value<String?> bodyBuild = const Value.absent(),
           Value<String?> estimationMethod = const Value.absent(),
           bool? sideViewUsed,
@@ -1842,9 +2522,25 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           Value<double?> riskOverweightProbability = const Value.absent(),
           Value<double?> overweightProbability = const Value.absent(),
           Value<String?> wastingStatus = const Value.absent(),
+          Value<String?> wastingMethod = const Value.absent(),
           Value<double?> muacCm = const Value.absent(),
           Value<String?> muacStatus = const Value.absent(),
-          Value<String?> muacMethod = const Value.absent()}) =>
+          Value<String?> muacMethod = const Value.absent(),
+          Value<bool?> muacAgeInRange = const Value.absent(),
+          Value<double?> muacConfidence = const Value.absent(),
+          Value<double?> muacUncertaintyLowerCm = const Value.absent(),
+          Value<double?> muacUncertaintyUpperCm = const Value.absent(),
+          Value<String?> muacModelVersion = const Value.absent(),
+          Value<String?> muacCalibrationVersion = const Value.absent(),
+          Value<bool?> muacIsDirectMeasurement = const Value.absent(),
+          Value<bool?> muacRequiresConfirmation = const Value.absent(),
+          Value<String?> muacReferralGuidance = const Value.absent(),
+          Value<String?> combinedStatus = const Value.absent(),
+          Value<String?> combinedTriggeredBy = const Value.absent(),
+          Value<String?> combinedRationale = const Value.absent(),
+          Value<String?> combinedMethod = const Value.absent(),
+          Value<double?> combinedConfidenceScore = const Value.absent(),
+          Value<String?> combinedProtocolVersion = const Value.absent()}) =>
       Measurement(
         id: id ?? this.id,
         visitId: visitId ?? this.visitId,
@@ -1858,6 +2554,18 @@ class Measurement extends DataClass implements Insertable<Measurement> {
             manualHeightCm.present ? manualHeightCm.value : this.manualHeightCm,
         manualWeightKg:
             manualWeightKg.present ? manualWeightKg.value : this.manualWeightKg,
+        effectiveHeightCm: effectiveHeightCm.present
+            ? effectiveHeightCm.value
+            : this.effectiveHeightCm,
+        effectiveWeightKg: effectiveWeightKg.present
+            ? effectiveWeightKg.value
+            : this.effectiveWeightKg,
+        heightMethod:
+            heightMethod.present ? heightMethod.value : this.heightMethod,
+        weightMethod:
+            weightMethod.present ? weightMethod.value : this.weightMethod,
+        bmi: bmi.present ? bmi.value : this.bmi,
+        bmiStatus: bmiStatus.present ? bmiStatus.value : this.bmiStatus,
         hazZscore: hazZscore.present ? hazZscore.value : this.hazZscore,
         whzZscore: whzZscore.present ? whzZscore.value : this.whzZscore,
         hazStatus: hazStatus.present ? hazStatus.value : this.hazStatus,
@@ -1865,6 +2573,15 @@ class Measurement extends DataClass implements Insertable<Measurement> {
         confidenceScore: confidenceScore.present
             ? confidenceScore.value
             : this.confidenceScore,
+        heightConfidence: heightConfidence.present
+            ? heightConfidence.value
+            : this.heightConfidence,
+        weightConfidence: weightConfidence.present
+            ? weightConfidence.value
+            : this.weightConfidence,
+        classificationConfidence: classificationConfidence.present
+            ? classificationConfidence.value
+            : this.classificationConfidence,
         bodyBuild: bodyBuild.present ? bodyBuild.value : this.bodyBuild,
         estimationMethod: estimationMethod.present
             ? estimationMethod.value
@@ -1891,9 +2608,52 @@ class Measurement extends DataClass implements Insertable<Measurement> {
             : this.overweightProbability,
         wastingStatus:
             wastingStatus.present ? wastingStatus.value : this.wastingStatus,
+        wastingMethod:
+            wastingMethod.present ? wastingMethod.value : this.wastingMethod,
         muacCm: muacCm.present ? muacCm.value : this.muacCm,
         muacStatus: muacStatus.present ? muacStatus.value : this.muacStatus,
         muacMethod: muacMethod.present ? muacMethod.value : this.muacMethod,
+        muacAgeInRange:
+            muacAgeInRange.present ? muacAgeInRange.value : this.muacAgeInRange,
+        muacConfidence:
+            muacConfidence.present ? muacConfidence.value : this.muacConfidence,
+        muacUncertaintyLowerCm: muacUncertaintyLowerCm.present
+            ? muacUncertaintyLowerCm.value
+            : this.muacUncertaintyLowerCm,
+        muacUncertaintyUpperCm: muacUncertaintyUpperCm.present
+            ? muacUncertaintyUpperCm.value
+            : this.muacUncertaintyUpperCm,
+        muacModelVersion: muacModelVersion.present
+            ? muacModelVersion.value
+            : this.muacModelVersion,
+        muacCalibrationVersion: muacCalibrationVersion.present
+            ? muacCalibrationVersion.value
+            : this.muacCalibrationVersion,
+        muacIsDirectMeasurement: muacIsDirectMeasurement.present
+            ? muacIsDirectMeasurement.value
+            : this.muacIsDirectMeasurement,
+        muacRequiresConfirmation: muacRequiresConfirmation.present
+            ? muacRequiresConfirmation.value
+            : this.muacRequiresConfirmation,
+        muacReferralGuidance: muacReferralGuidance.present
+            ? muacReferralGuidance.value
+            : this.muacReferralGuidance,
+        combinedStatus:
+            combinedStatus.present ? combinedStatus.value : this.combinedStatus,
+        combinedTriggeredBy: combinedTriggeredBy.present
+            ? combinedTriggeredBy.value
+            : this.combinedTriggeredBy,
+        combinedRationale: combinedRationale.present
+            ? combinedRationale.value
+            : this.combinedRationale,
+        combinedMethod:
+            combinedMethod.present ? combinedMethod.value : this.combinedMethod,
+        combinedConfidenceScore: combinedConfidenceScore.present
+            ? combinedConfidenceScore.value
+            : this.combinedConfidenceScore,
+        combinedProtocolVersion: combinedProtocolVersion.present
+            ? combinedProtocolVersion.value
+            : this.combinedProtocolVersion,
       );
   Measurement copyWithCompanion(MeasurementsCompanion data) {
     return Measurement(
@@ -1911,6 +2671,20 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       manualWeightKg: data.manualWeightKg.present
           ? data.manualWeightKg.value
           : this.manualWeightKg,
+      effectiveHeightCm: data.effectiveHeightCm.present
+          ? data.effectiveHeightCm.value
+          : this.effectiveHeightCm,
+      effectiveWeightKg: data.effectiveWeightKg.present
+          ? data.effectiveWeightKg.value
+          : this.effectiveWeightKg,
+      heightMethod: data.heightMethod.present
+          ? data.heightMethod.value
+          : this.heightMethod,
+      weightMethod: data.weightMethod.present
+          ? data.weightMethod.value
+          : this.weightMethod,
+      bmi: data.bmi.present ? data.bmi.value : this.bmi,
+      bmiStatus: data.bmiStatus.present ? data.bmiStatus.value : this.bmiStatus,
       hazZscore: data.hazZscore.present ? data.hazZscore.value : this.hazZscore,
       whzZscore: data.whzZscore.present ? data.whzZscore.value : this.whzZscore,
       hazStatus: data.hazStatus.present ? data.hazStatus.value : this.hazStatus,
@@ -1918,6 +2692,15 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       confidenceScore: data.confidenceScore.present
           ? data.confidenceScore.value
           : this.confidenceScore,
+      heightConfidence: data.heightConfidence.present
+          ? data.heightConfidence.value
+          : this.heightConfidence,
+      weightConfidence: data.weightConfidence.present
+          ? data.weightConfidence.value
+          : this.weightConfidence,
+      classificationConfidence: data.classificationConfidence.present
+          ? data.classificationConfidence.value
+          : this.classificationConfidence,
       bodyBuild: data.bodyBuild.present ? data.bodyBuild.value : this.bodyBuild,
       estimationMethod: data.estimationMethod.present
           ? data.estimationMethod.value
@@ -1951,11 +2734,59 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       wastingStatus: data.wastingStatus.present
           ? data.wastingStatus.value
           : this.wastingStatus,
+      wastingMethod: data.wastingMethod.present
+          ? data.wastingMethod.value
+          : this.wastingMethod,
       muacCm: data.muacCm.present ? data.muacCm.value : this.muacCm,
       muacStatus:
           data.muacStatus.present ? data.muacStatus.value : this.muacStatus,
       muacMethod:
           data.muacMethod.present ? data.muacMethod.value : this.muacMethod,
+      muacAgeInRange: data.muacAgeInRange.present
+          ? data.muacAgeInRange.value
+          : this.muacAgeInRange,
+      muacConfidence: data.muacConfidence.present
+          ? data.muacConfidence.value
+          : this.muacConfidence,
+      muacUncertaintyLowerCm: data.muacUncertaintyLowerCm.present
+          ? data.muacUncertaintyLowerCm.value
+          : this.muacUncertaintyLowerCm,
+      muacUncertaintyUpperCm: data.muacUncertaintyUpperCm.present
+          ? data.muacUncertaintyUpperCm.value
+          : this.muacUncertaintyUpperCm,
+      muacModelVersion: data.muacModelVersion.present
+          ? data.muacModelVersion.value
+          : this.muacModelVersion,
+      muacCalibrationVersion: data.muacCalibrationVersion.present
+          ? data.muacCalibrationVersion.value
+          : this.muacCalibrationVersion,
+      muacIsDirectMeasurement: data.muacIsDirectMeasurement.present
+          ? data.muacIsDirectMeasurement.value
+          : this.muacIsDirectMeasurement,
+      muacRequiresConfirmation: data.muacRequiresConfirmation.present
+          ? data.muacRequiresConfirmation.value
+          : this.muacRequiresConfirmation,
+      muacReferralGuidance: data.muacReferralGuidance.present
+          ? data.muacReferralGuidance.value
+          : this.muacReferralGuidance,
+      combinedStatus: data.combinedStatus.present
+          ? data.combinedStatus.value
+          : this.combinedStatus,
+      combinedTriggeredBy: data.combinedTriggeredBy.present
+          ? data.combinedTriggeredBy.value
+          : this.combinedTriggeredBy,
+      combinedRationale: data.combinedRationale.present
+          ? data.combinedRationale.value
+          : this.combinedRationale,
+      combinedMethod: data.combinedMethod.present
+          ? data.combinedMethod.value
+          : this.combinedMethod,
+      combinedConfidenceScore: data.combinedConfidenceScore.present
+          ? data.combinedConfidenceScore.value
+          : this.combinedConfidenceScore,
+      combinedProtocolVersion: data.combinedProtocolVersion.present
+          ? data.combinedProtocolVersion.value
+          : this.combinedProtocolVersion,
     );
   }
 
@@ -1968,11 +2799,20 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           ..write('predictedWeightKg: $predictedWeightKg, ')
           ..write('manualHeightCm: $manualHeightCm, ')
           ..write('manualWeightKg: $manualWeightKg, ')
+          ..write('effectiveHeightCm: $effectiveHeightCm, ')
+          ..write('effectiveWeightKg: $effectiveWeightKg, ')
+          ..write('heightMethod: $heightMethod, ')
+          ..write('weightMethod: $weightMethod, ')
+          ..write('bmi: $bmi, ')
+          ..write('bmiStatus: $bmiStatus, ')
           ..write('hazZscore: $hazZscore, ')
           ..write('whzZscore: $whzZscore, ')
           ..write('hazStatus: $hazStatus, ')
           ..write('whzStatus: $whzStatus, ')
           ..write('confidenceScore: $confidenceScore, ')
+          ..write('heightConfidence: $heightConfidence, ')
+          ..write('weightConfidence: $weightConfidence, ')
+          ..write('classificationConfidence: $classificationConfidence, ')
           ..write('bodyBuild: $bodyBuild, ')
           ..write('estimationMethod: $estimationMethod, ')
           ..write('sideViewUsed: $sideViewUsed, ')
@@ -1985,9 +2825,25 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           ..write('riskOverweightProbability: $riskOverweightProbability, ')
           ..write('overweightProbability: $overweightProbability, ')
           ..write('wastingStatus: $wastingStatus, ')
+          ..write('wastingMethod: $wastingMethod, ')
           ..write('muacCm: $muacCm, ')
           ..write('muacStatus: $muacStatus, ')
-          ..write('muacMethod: $muacMethod')
+          ..write('muacMethod: $muacMethod, ')
+          ..write('muacAgeInRange: $muacAgeInRange, ')
+          ..write('muacConfidence: $muacConfidence, ')
+          ..write('muacUncertaintyLowerCm: $muacUncertaintyLowerCm, ')
+          ..write('muacUncertaintyUpperCm: $muacUncertaintyUpperCm, ')
+          ..write('muacModelVersion: $muacModelVersion, ')
+          ..write('muacCalibrationVersion: $muacCalibrationVersion, ')
+          ..write('muacIsDirectMeasurement: $muacIsDirectMeasurement, ')
+          ..write('muacRequiresConfirmation: $muacRequiresConfirmation, ')
+          ..write('muacReferralGuidance: $muacReferralGuidance, ')
+          ..write('combinedStatus: $combinedStatus, ')
+          ..write('combinedTriggeredBy: $combinedTriggeredBy, ')
+          ..write('combinedRationale: $combinedRationale, ')
+          ..write('combinedMethod: $combinedMethod, ')
+          ..write('combinedConfidenceScore: $combinedConfidenceScore, ')
+          ..write('combinedProtocolVersion: $combinedProtocolVersion')
           ..write(')'))
         .toString();
   }
@@ -2000,11 +2856,20 @@ class Measurement extends DataClass implements Insertable<Measurement> {
         predictedWeightKg,
         manualHeightCm,
         manualWeightKg,
+        effectiveHeightCm,
+        effectiveWeightKg,
+        heightMethod,
+        weightMethod,
+        bmi,
+        bmiStatus,
         hazZscore,
         whzZscore,
         hazStatus,
         whzStatus,
         confidenceScore,
+        heightConfidence,
+        weightConfidence,
+        classificationConfidence,
         bodyBuild,
         estimationMethod,
         sideViewUsed,
@@ -2017,9 +2882,25 @@ class Measurement extends DataClass implements Insertable<Measurement> {
         riskOverweightProbability,
         overweightProbability,
         wastingStatus,
+        wastingMethod,
         muacCm,
         muacStatus,
-        muacMethod
+        muacMethod,
+        muacAgeInRange,
+        muacConfidence,
+        muacUncertaintyLowerCm,
+        muacUncertaintyUpperCm,
+        muacModelVersion,
+        muacCalibrationVersion,
+        muacIsDirectMeasurement,
+        muacRequiresConfirmation,
+        muacReferralGuidance,
+        combinedStatus,
+        combinedTriggeredBy,
+        combinedRationale,
+        combinedMethod,
+        combinedConfidenceScore,
+        combinedProtocolVersion
       ]);
   @override
   bool operator ==(Object other) =>
@@ -2031,11 +2912,20 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           other.predictedWeightKg == this.predictedWeightKg &&
           other.manualHeightCm == this.manualHeightCm &&
           other.manualWeightKg == this.manualWeightKg &&
+          other.effectiveHeightCm == this.effectiveHeightCm &&
+          other.effectiveWeightKg == this.effectiveWeightKg &&
+          other.heightMethod == this.heightMethod &&
+          other.weightMethod == this.weightMethod &&
+          other.bmi == this.bmi &&
+          other.bmiStatus == this.bmiStatus &&
           other.hazZscore == this.hazZscore &&
           other.whzZscore == this.whzZscore &&
           other.hazStatus == this.hazStatus &&
           other.whzStatus == this.whzStatus &&
           other.confidenceScore == this.confidenceScore &&
+          other.heightConfidence == this.heightConfidence &&
+          other.weightConfidence == this.weightConfidence &&
+          other.classificationConfidence == this.classificationConfidence &&
           other.bodyBuild == this.bodyBuild &&
           other.estimationMethod == this.estimationMethod &&
           other.sideViewUsed == this.sideViewUsed &&
@@ -2048,9 +2938,25 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           other.riskOverweightProbability == this.riskOverweightProbability &&
           other.overweightProbability == this.overweightProbability &&
           other.wastingStatus == this.wastingStatus &&
+          other.wastingMethod == this.wastingMethod &&
           other.muacCm == this.muacCm &&
           other.muacStatus == this.muacStatus &&
-          other.muacMethod == this.muacMethod);
+          other.muacMethod == this.muacMethod &&
+          other.muacAgeInRange == this.muacAgeInRange &&
+          other.muacConfidence == this.muacConfidence &&
+          other.muacUncertaintyLowerCm == this.muacUncertaintyLowerCm &&
+          other.muacUncertaintyUpperCm == this.muacUncertaintyUpperCm &&
+          other.muacModelVersion == this.muacModelVersion &&
+          other.muacCalibrationVersion == this.muacCalibrationVersion &&
+          other.muacIsDirectMeasurement == this.muacIsDirectMeasurement &&
+          other.muacRequiresConfirmation == this.muacRequiresConfirmation &&
+          other.muacReferralGuidance == this.muacReferralGuidance &&
+          other.combinedStatus == this.combinedStatus &&
+          other.combinedTriggeredBy == this.combinedTriggeredBy &&
+          other.combinedRationale == this.combinedRationale &&
+          other.combinedMethod == this.combinedMethod &&
+          other.combinedConfidenceScore == this.combinedConfidenceScore &&
+          other.combinedProtocolVersion == this.combinedProtocolVersion);
 }
 
 class MeasurementsCompanion extends UpdateCompanion<Measurement> {
@@ -2060,11 +2966,20 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
   final Value<double?> predictedWeightKg;
   final Value<double?> manualHeightCm;
   final Value<double?> manualWeightKg;
+  final Value<double?> effectiveHeightCm;
+  final Value<double?> effectiveWeightKg;
+  final Value<String?> heightMethod;
+  final Value<String?> weightMethod;
+  final Value<double?> bmi;
+  final Value<String?> bmiStatus;
   final Value<double?> hazZscore;
   final Value<double?> whzZscore;
   final Value<String?> hazStatus;
   final Value<String?> whzStatus;
   final Value<double?> confidenceScore;
+  final Value<double?> heightConfidence;
+  final Value<double?> weightConfidence;
+  final Value<double?> classificationConfidence;
   final Value<String?> bodyBuild;
   final Value<String?> estimationMethod;
   final Value<bool> sideViewUsed;
@@ -2077,9 +2992,25 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
   final Value<double?> riskOverweightProbability;
   final Value<double?> overweightProbability;
   final Value<String?> wastingStatus;
+  final Value<String?> wastingMethod;
   final Value<double?> muacCm;
   final Value<String?> muacStatus;
   final Value<String?> muacMethod;
+  final Value<bool?> muacAgeInRange;
+  final Value<double?> muacConfidence;
+  final Value<double?> muacUncertaintyLowerCm;
+  final Value<double?> muacUncertaintyUpperCm;
+  final Value<String?> muacModelVersion;
+  final Value<String?> muacCalibrationVersion;
+  final Value<bool?> muacIsDirectMeasurement;
+  final Value<bool?> muacRequiresConfirmation;
+  final Value<String?> muacReferralGuidance;
+  final Value<String?> combinedStatus;
+  final Value<String?> combinedTriggeredBy;
+  final Value<String?> combinedRationale;
+  final Value<String?> combinedMethod;
+  final Value<double?> combinedConfidenceScore;
+  final Value<String?> combinedProtocolVersion;
   const MeasurementsCompanion({
     this.id = const Value.absent(),
     this.visitId = const Value.absent(),
@@ -2087,11 +3018,20 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     this.predictedWeightKg = const Value.absent(),
     this.manualHeightCm = const Value.absent(),
     this.manualWeightKg = const Value.absent(),
+    this.effectiveHeightCm = const Value.absent(),
+    this.effectiveWeightKg = const Value.absent(),
+    this.heightMethod = const Value.absent(),
+    this.weightMethod = const Value.absent(),
+    this.bmi = const Value.absent(),
+    this.bmiStatus = const Value.absent(),
     this.hazZscore = const Value.absent(),
     this.whzZscore = const Value.absent(),
     this.hazStatus = const Value.absent(),
     this.whzStatus = const Value.absent(),
     this.confidenceScore = const Value.absent(),
+    this.heightConfidence = const Value.absent(),
+    this.weightConfidence = const Value.absent(),
+    this.classificationConfidence = const Value.absent(),
     this.bodyBuild = const Value.absent(),
     this.estimationMethod = const Value.absent(),
     this.sideViewUsed = const Value.absent(),
@@ -2104,9 +3044,25 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     this.riskOverweightProbability = const Value.absent(),
     this.overweightProbability = const Value.absent(),
     this.wastingStatus = const Value.absent(),
+    this.wastingMethod = const Value.absent(),
     this.muacCm = const Value.absent(),
     this.muacStatus = const Value.absent(),
     this.muacMethod = const Value.absent(),
+    this.muacAgeInRange = const Value.absent(),
+    this.muacConfidence = const Value.absent(),
+    this.muacUncertaintyLowerCm = const Value.absent(),
+    this.muacUncertaintyUpperCm = const Value.absent(),
+    this.muacModelVersion = const Value.absent(),
+    this.muacCalibrationVersion = const Value.absent(),
+    this.muacIsDirectMeasurement = const Value.absent(),
+    this.muacRequiresConfirmation = const Value.absent(),
+    this.muacReferralGuidance = const Value.absent(),
+    this.combinedStatus = const Value.absent(),
+    this.combinedTriggeredBy = const Value.absent(),
+    this.combinedRationale = const Value.absent(),
+    this.combinedMethod = const Value.absent(),
+    this.combinedConfidenceScore = const Value.absent(),
+    this.combinedProtocolVersion = const Value.absent(),
   });
   MeasurementsCompanion.insert({
     this.id = const Value.absent(),
@@ -2115,11 +3071,20 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     this.predictedWeightKg = const Value.absent(),
     this.manualHeightCm = const Value.absent(),
     this.manualWeightKg = const Value.absent(),
+    this.effectiveHeightCm = const Value.absent(),
+    this.effectiveWeightKg = const Value.absent(),
+    this.heightMethod = const Value.absent(),
+    this.weightMethod = const Value.absent(),
+    this.bmi = const Value.absent(),
+    this.bmiStatus = const Value.absent(),
     this.hazZscore = const Value.absent(),
     this.whzZscore = const Value.absent(),
     this.hazStatus = const Value.absent(),
     this.whzStatus = const Value.absent(),
     this.confidenceScore = const Value.absent(),
+    this.heightConfidence = const Value.absent(),
+    this.weightConfidence = const Value.absent(),
+    this.classificationConfidence = const Value.absent(),
     this.bodyBuild = const Value.absent(),
     this.estimationMethod = const Value.absent(),
     this.sideViewUsed = const Value.absent(),
@@ -2132,9 +3097,25 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     this.riskOverweightProbability = const Value.absent(),
     this.overweightProbability = const Value.absent(),
     this.wastingStatus = const Value.absent(),
+    this.wastingMethod = const Value.absent(),
     this.muacCm = const Value.absent(),
     this.muacStatus = const Value.absent(),
     this.muacMethod = const Value.absent(),
+    this.muacAgeInRange = const Value.absent(),
+    this.muacConfidence = const Value.absent(),
+    this.muacUncertaintyLowerCm = const Value.absent(),
+    this.muacUncertaintyUpperCm = const Value.absent(),
+    this.muacModelVersion = const Value.absent(),
+    this.muacCalibrationVersion = const Value.absent(),
+    this.muacIsDirectMeasurement = const Value.absent(),
+    this.muacRequiresConfirmation = const Value.absent(),
+    this.muacReferralGuidance = const Value.absent(),
+    this.combinedStatus = const Value.absent(),
+    this.combinedTriggeredBy = const Value.absent(),
+    this.combinedRationale = const Value.absent(),
+    this.combinedMethod = const Value.absent(),
+    this.combinedConfidenceScore = const Value.absent(),
+    this.combinedProtocolVersion = const Value.absent(),
   }) : visitId = Value(visitId);
   static Insertable<Measurement> custom({
     Expression<int>? id,
@@ -2143,11 +3124,20 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     Expression<double>? predictedWeightKg,
     Expression<double>? manualHeightCm,
     Expression<double>? manualWeightKg,
+    Expression<double>? effectiveHeightCm,
+    Expression<double>? effectiveWeightKg,
+    Expression<String>? heightMethod,
+    Expression<String>? weightMethod,
+    Expression<double>? bmi,
+    Expression<String>? bmiStatus,
     Expression<double>? hazZscore,
     Expression<double>? whzZscore,
     Expression<String>? hazStatus,
     Expression<String>? whzStatus,
     Expression<double>? confidenceScore,
+    Expression<double>? heightConfidence,
+    Expression<double>? weightConfidence,
+    Expression<double>? classificationConfidence,
     Expression<String>? bodyBuild,
     Expression<String>? estimationMethod,
     Expression<bool>? sideViewUsed,
@@ -2160,9 +3150,25 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     Expression<double>? riskOverweightProbability,
     Expression<double>? overweightProbability,
     Expression<String>? wastingStatus,
+    Expression<String>? wastingMethod,
     Expression<double>? muacCm,
     Expression<String>? muacStatus,
     Expression<String>? muacMethod,
+    Expression<bool>? muacAgeInRange,
+    Expression<double>? muacConfidence,
+    Expression<double>? muacUncertaintyLowerCm,
+    Expression<double>? muacUncertaintyUpperCm,
+    Expression<String>? muacModelVersion,
+    Expression<String>? muacCalibrationVersion,
+    Expression<bool>? muacIsDirectMeasurement,
+    Expression<bool>? muacRequiresConfirmation,
+    Expression<String>? muacReferralGuidance,
+    Expression<String>? combinedStatus,
+    Expression<String>? combinedTriggeredBy,
+    Expression<String>? combinedRationale,
+    Expression<String>? combinedMethod,
+    Expression<double>? combinedConfidenceScore,
+    Expression<String>? combinedProtocolVersion,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2171,11 +3177,21 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
       if (predictedWeightKg != null) 'predicted_weight_kg': predictedWeightKg,
       if (manualHeightCm != null) 'manual_height_cm': manualHeightCm,
       if (manualWeightKg != null) 'manual_weight_kg': manualWeightKg,
+      if (effectiveHeightCm != null) 'effective_height_cm': effectiveHeightCm,
+      if (effectiveWeightKg != null) 'effective_weight_kg': effectiveWeightKg,
+      if (heightMethod != null) 'height_method': heightMethod,
+      if (weightMethod != null) 'weight_method': weightMethod,
+      if (bmi != null) 'bmi': bmi,
+      if (bmiStatus != null) 'bmi_status': bmiStatus,
       if (hazZscore != null) 'haz_zscore': hazZscore,
       if (whzZscore != null) 'whz_zscore': whzZscore,
       if (hazStatus != null) 'haz_status': hazStatus,
       if (whzStatus != null) 'whz_status': whzStatus,
       if (confidenceScore != null) 'confidence_score': confidenceScore,
+      if (heightConfidence != null) 'height_confidence': heightConfidence,
+      if (weightConfidence != null) 'weight_confidence': weightConfidence,
+      if (classificationConfidence != null)
+        'classification_confidence': classificationConfidence,
       if (bodyBuild != null) 'body_build': bodyBuild,
       if (estimationMethod != null) 'estimation_method': estimationMethod,
       if (sideViewUsed != null) 'side_view_used': sideViewUsed,
@@ -2191,9 +3207,34 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
       if (overweightProbability != null)
         'overweight_probability': overweightProbability,
       if (wastingStatus != null) 'wasting_status': wastingStatus,
+      if (wastingMethod != null) 'wasting_method': wastingMethod,
       if (muacCm != null) 'muac_cm': muacCm,
       if (muacStatus != null) 'muac_status': muacStatus,
       if (muacMethod != null) 'muac_method': muacMethod,
+      if (muacAgeInRange != null) 'muac_age_in_range': muacAgeInRange,
+      if (muacConfidence != null) 'muac_confidence': muacConfidence,
+      if (muacUncertaintyLowerCm != null)
+        'muac_uncertainty_lower_cm': muacUncertaintyLowerCm,
+      if (muacUncertaintyUpperCm != null)
+        'muac_uncertainty_upper_cm': muacUncertaintyUpperCm,
+      if (muacModelVersion != null) 'muac_model_version': muacModelVersion,
+      if (muacCalibrationVersion != null)
+        'muac_calibration_version': muacCalibrationVersion,
+      if (muacIsDirectMeasurement != null)
+        'muac_is_direct_measurement': muacIsDirectMeasurement,
+      if (muacRequiresConfirmation != null)
+        'muac_requires_confirmation': muacRequiresConfirmation,
+      if (muacReferralGuidance != null)
+        'muac_referral_guidance': muacReferralGuidance,
+      if (combinedStatus != null) 'combined_status': combinedStatus,
+      if (combinedTriggeredBy != null)
+        'combined_triggered_by': combinedTriggeredBy,
+      if (combinedRationale != null) 'combined_rationale': combinedRationale,
+      if (combinedMethod != null) 'combined_method': combinedMethod,
+      if (combinedConfidenceScore != null)
+        'combined_confidence_score': combinedConfidenceScore,
+      if (combinedProtocolVersion != null)
+        'combined_protocol_version': combinedProtocolVersion,
     });
   }
 
@@ -2204,11 +3245,20 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
       Value<double?>? predictedWeightKg,
       Value<double?>? manualHeightCm,
       Value<double?>? manualWeightKg,
+      Value<double?>? effectiveHeightCm,
+      Value<double?>? effectiveWeightKg,
+      Value<String?>? heightMethod,
+      Value<String?>? weightMethod,
+      Value<double?>? bmi,
+      Value<String?>? bmiStatus,
       Value<double?>? hazZscore,
       Value<double?>? whzZscore,
       Value<String?>? hazStatus,
       Value<String?>? whzStatus,
       Value<double?>? confidenceScore,
+      Value<double?>? heightConfidence,
+      Value<double?>? weightConfidence,
+      Value<double?>? classificationConfidence,
       Value<String?>? bodyBuild,
       Value<String?>? estimationMethod,
       Value<bool>? sideViewUsed,
@@ -2221,9 +3271,25 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
       Value<double?>? riskOverweightProbability,
       Value<double?>? overweightProbability,
       Value<String?>? wastingStatus,
+      Value<String?>? wastingMethod,
       Value<double?>? muacCm,
       Value<String?>? muacStatus,
-      Value<String?>? muacMethod}) {
+      Value<String?>? muacMethod,
+      Value<bool?>? muacAgeInRange,
+      Value<double?>? muacConfidence,
+      Value<double?>? muacUncertaintyLowerCm,
+      Value<double?>? muacUncertaintyUpperCm,
+      Value<String?>? muacModelVersion,
+      Value<String?>? muacCalibrationVersion,
+      Value<bool?>? muacIsDirectMeasurement,
+      Value<bool?>? muacRequiresConfirmation,
+      Value<String?>? muacReferralGuidance,
+      Value<String?>? combinedStatus,
+      Value<String?>? combinedTriggeredBy,
+      Value<String?>? combinedRationale,
+      Value<String?>? combinedMethod,
+      Value<double?>? combinedConfidenceScore,
+      Value<String?>? combinedProtocolVersion}) {
     return MeasurementsCompanion(
       id: id ?? this.id,
       visitId: visitId ?? this.visitId,
@@ -2231,11 +3297,21 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
       predictedWeightKg: predictedWeightKg ?? this.predictedWeightKg,
       manualHeightCm: manualHeightCm ?? this.manualHeightCm,
       manualWeightKg: manualWeightKg ?? this.manualWeightKg,
+      effectiveHeightCm: effectiveHeightCm ?? this.effectiveHeightCm,
+      effectiveWeightKg: effectiveWeightKg ?? this.effectiveWeightKg,
+      heightMethod: heightMethod ?? this.heightMethod,
+      weightMethod: weightMethod ?? this.weightMethod,
+      bmi: bmi ?? this.bmi,
+      bmiStatus: bmiStatus ?? this.bmiStatus,
       hazZscore: hazZscore ?? this.hazZscore,
       whzZscore: whzZscore ?? this.whzZscore,
       hazStatus: hazStatus ?? this.hazStatus,
       whzStatus: whzStatus ?? this.whzStatus,
       confidenceScore: confidenceScore ?? this.confidenceScore,
+      heightConfidence: heightConfidence ?? this.heightConfidence,
+      weightConfidence: weightConfidence ?? this.weightConfidence,
+      classificationConfidence:
+          classificationConfidence ?? this.classificationConfidence,
       bodyBuild: bodyBuild ?? this.bodyBuild,
       estimationMethod: estimationMethod ?? this.estimationMethod,
       sideViewUsed: sideViewUsed ?? this.sideViewUsed,
@@ -2250,9 +3326,32 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
       overweightProbability:
           overweightProbability ?? this.overweightProbability,
       wastingStatus: wastingStatus ?? this.wastingStatus,
+      wastingMethod: wastingMethod ?? this.wastingMethod,
       muacCm: muacCm ?? this.muacCm,
       muacStatus: muacStatus ?? this.muacStatus,
       muacMethod: muacMethod ?? this.muacMethod,
+      muacAgeInRange: muacAgeInRange ?? this.muacAgeInRange,
+      muacConfidence: muacConfidence ?? this.muacConfidence,
+      muacUncertaintyLowerCm:
+          muacUncertaintyLowerCm ?? this.muacUncertaintyLowerCm,
+      muacUncertaintyUpperCm:
+          muacUncertaintyUpperCm ?? this.muacUncertaintyUpperCm,
+      muacModelVersion: muacModelVersion ?? this.muacModelVersion,
+      muacCalibrationVersion:
+          muacCalibrationVersion ?? this.muacCalibrationVersion,
+      muacIsDirectMeasurement:
+          muacIsDirectMeasurement ?? this.muacIsDirectMeasurement,
+      muacRequiresConfirmation:
+          muacRequiresConfirmation ?? this.muacRequiresConfirmation,
+      muacReferralGuidance: muacReferralGuidance ?? this.muacReferralGuidance,
+      combinedStatus: combinedStatus ?? this.combinedStatus,
+      combinedTriggeredBy: combinedTriggeredBy ?? this.combinedTriggeredBy,
+      combinedRationale: combinedRationale ?? this.combinedRationale,
+      combinedMethod: combinedMethod ?? this.combinedMethod,
+      combinedConfidenceScore:
+          combinedConfidenceScore ?? this.combinedConfidenceScore,
+      combinedProtocolVersion:
+          combinedProtocolVersion ?? this.combinedProtocolVersion,
     );
   }
 
@@ -2277,6 +3376,24 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     if (manualWeightKg.present) {
       map['manual_weight_kg'] = Variable<double>(manualWeightKg.value);
     }
+    if (effectiveHeightCm.present) {
+      map['effective_height_cm'] = Variable<double>(effectiveHeightCm.value);
+    }
+    if (effectiveWeightKg.present) {
+      map['effective_weight_kg'] = Variable<double>(effectiveWeightKg.value);
+    }
+    if (heightMethod.present) {
+      map['height_method'] = Variable<String>(heightMethod.value);
+    }
+    if (weightMethod.present) {
+      map['weight_method'] = Variable<String>(weightMethod.value);
+    }
+    if (bmi.present) {
+      map['bmi'] = Variable<double>(bmi.value);
+    }
+    if (bmiStatus.present) {
+      map['bmi_status'] = Variable<String>(bmiStatus.value);
+    }
     if (hazZscore.present) {
       map['haz_zscore'] = Variable<double>(hazZscore.value);
     }
@@ -2291,6 +3408,16 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     }
     if (confidenceScore.present) {
       map['confidence_score'] = Variable<double>(confidenceScore.value);
+    }
+    if (heightConfidence.present) {
+      map['height_confidence'] = Variable<double>(heightConfidence.value);
+    }
+    if (weightConfidence.present) {
+      map['weight_confidence'] = Variable<double>(weightConfidence.value);
+    }
+    if (classificationConfidence.present) {
+      map['classification_confidence'] =
+          Variable<double>(classificationConfidence.value);
     }
     if (bodyBuild.present) {
       map['body_build'] = Variable<String>(bodyBuild.value);
@@ -2331,6 +3458,9 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     if (wastingStatus.present) {
       map['wasting_status'] = Variable<String>(wastingStatus.value);
     }
+    if (wastingMethod.present) {
+      map['wasting_method'] = Variable<String>(wastingMethod.value);
+    }
     if (muacCm.present) {
       map['muac_cm'] = Variable<double>(muacCm.value);
     }
@@ -2339,6 +3469,60 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     }
     if (muacMethod.present) {
       map['muac_method'] = Variable<String>(muacMethod.value);
+    }
+    if (muacAgeInRange.present) {
+      map['muac_age_in_range'] = Variable<bool>(muacAgeInRange.value);
+    }
+    if (muacConfidence.present) {
+      map['muac_confidence'] = Variable<double>(muacConfidence.value);
+    }
+    if (muacUncertaintyLowerCm.present) {
+      map['muac_uncertainty_lower_cm'] =
+          Variable<double>(muacUncertaintyLowerCm.value);
+    }
+    if (muacUncertaintyUpperCm.present) {
+      map['muac_uncertainty_upper_cm'] =
+          Variable<double>(muacUncertaintyUpperCm.value);
+    }
+    if (muacModelVersion.present) {
+      map['muac_model_version'] = Variable<String>(muacModelVersion.value);
+    }
+    if (muacCalibrationVersion.present) {
+      map['muac_calibration_version'] =
+          Variable<String>(muacCalibrationVersion.value);
+    }
+    if (muacIsDirectMeasurement.present) {
+      map['muac_is_direct_measurement'] =
+          Variable<bool>(muacIsDirectMeasurement.value);
+    }
+    if (muacRequiresConfirmation.present) {
+      map['muac_requires_confirmation'] =
+          Variable<bool>(muacRequiresConfirmation.value);
+    }
+    if (muacReferralGuidance.present) {
+      map['muac_referral_guidance'] =
+          Variable<String>(muacReferralGuidance.value);
+    }
+    if (combinedStatus.present) {
+      map['combined_status'] = Variable<String>(combinedStatus.value);
+    }
+    if (combinedTriggeredBy.present) {
+      map['combined_triggered_by'] =
+          Variable<String>(combinedTriggeredBy.value);
+    }
+    if (combinedRationale.present) {
+      map['combined_rationale'] = Variable<String>(combinedRationale.value);
+    }
+    if (combinedMethod.present) {
+      map['combined_method'] = Variable<String>(combinedMethod.value);
+    }
+    if (combinedConfidenceScore.present) {
+      map['combined_confidence_score'] =
+          Variable<double>(combinedConfidenceScore.value);
+    }
+    if (combinedProtocolVersion.present) {
+      map['combined_protocol_version'] =
+          Variable<String>(combinedProtocolVersion.value);
     }
     return map;
   }
@@ -2352,11 +3536,20 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
           ..write('predictedWeightKg: $predictedWeightKg, ')
           ..write('manualHeightCm: $manualHeightCm, ')
           ..write('manualWeightKg: $manualWeightKg, ')
+          ..write('effectiveHeightCm: $effectiveHeightCm, ')
+          ..write('effectiveWeightKg: $effectiveWeightKg, ')
+          ..write('heightMethod: $heightMethod, ')
+          ..write('weightMethod: $weightMethod, ')
+          ..write('bmi: $bmi, ')
+          ..write('bmiStatus: $bmiStatus, ')
           ..write('hazZscore: $hazZscore, ')
           ..write('whzZscore: $whzZscore, ')
           ..write('hazStatus: $hazStatus, ')
           ..write('whzStatus: $whzStatus, ')
           ..write('confidenceScore: $confidenceScore, ')
+          ..write('heightConfidence: $heightConfidence, ')
+          ..write('weightConfidence: $weightConfidence, ')
+          ..write('classificationConfidence: $classificationConfidence, ')
           ..write('bodyBuild: $bodyBuild, ')
           ..write('estimationMethod: $estimationMethod, ')
           ..write('sideViewUsed: $sideViewUsed, ')
@@ -2369,9 +3562,25 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
           ..write('riskOverweightProbability: $riskOverweightProbability, ')
           ..write('overweightProbability: $overweightProbability, ')
           ..write('wastingStatus: $wastingStatus, ')
+          ..write('wastingMethod: $wastingMethod, ')
           ..write('muacCm: $muacCm, ')
           ..write('muacStatus: $muacStatus, ')
-          ..write('muacMethod: $muacMethod')
+          ..write('muacMethod: $muacMethod, ')
+          ..write('muacAgeInRange: $muacAgeInRange, ')
+          ..write('muacConfidence: $muacConfidence, ')
+          ..write('muacUncertaintyLowerCm: $muacUncertaintyLowerCm, ')
+          ..write('muacUncertaintyUpperCm: $muacUncertaintyUpperCm, ')
+          ..write('muacModelVersion: $muacModelVersion, ')
+          ..write('muacCalibrationVersion: $muacCalibrationVersion, ')
+          ..write('muacIsDirectMeasurement: $muacIsDirectMeasurement, ')
+          ..write('muacRequiresConfirmation: $muacRequiresConfirmation, ')
+          ..write('muacReferralGuidance: $muacReferralGuidance, ')
+          ..write('combinedStatus: $combinedStatus, ')
+          ..write('combinedTriggeredBy: $combinedTriggeredBy, ')
+          ..write('combinedRationale: $combinedRationale, ')
+          ..write('combinedMethod: $combinedMethod, ')
+          ..write('combinedConfidenceScore: $combinedConfidenceScore, ')
+          ..write('combinedProtocolVersion: $combinedProtocolVersion')
           ..write(')'))
         .toString();
   }
@@ -3675,11 +4884,20 @@ typedef $$MeasurementsTableCreateCompanionBuilder = MeasurementsCompanion
   Value<double?> predictedWeightKg,
   Value<double?> manualHeightCm,
   Value<double?> manualWeightKg,
+  Value<double?> effectiveHeightCm,
+  Value<double?> effectiveWeightKg,
+  Value<String?> heightMethod,
+  Value<String?> weightMethod,
+  Value<double?> bmi,
+  Value<String?> bmiStatus,
   Value<double?> hazZscore,
   Value<double?> whzZscore,
   Value<String?> hazStatus,
   Value<String?> whzStatus,
   Value<double?> confidenceScore,
+  Value<double?> heightConfidence,
+  Value<double?> weightConfidence,
+  Value<double?> classificationConfidence,
   Value<String?> bodyBuild,
   Value<String?> estimationMethod,
   Value<bool> sideViewUsed,
@@ -3692,9 +4910,25 @@ typedef $$MeasurementsTableCreateCompanionBuilder = MeasurementsCompanion
   Value<double?> riskOverweightProbability,
   Value<double?> overweightProbability,
   Value<String?> wastingStatus,
+  Value<String?> wastingMethod,
   Value<double?> muacCm,
   Value<String?> muacStatus,
   Value<String?> muacMethod,
+  Value<bool?> muacAgeInRange,
+  Value<double?> muacConfidence,
+  Value<double?> muacUncertaintyLowerCm,
+  Value<double?> muacUncertaintyUpperCm,
+  Value<String?> muacModelVersion,
+  Value<String?> muacCalibrationVersion,
+  Value<bool?> muacIsDirectMeasurement,
+  Value<bool?> muacRequiresConfirmation,
+  Value<String?> muacReferralGuidance,
+  Value<String?> combinedStatus,
+  Value<String?> combinedTriggeredBy,
+  Value<String?> combinedRationale,
+  Value<String?> combinedMethod,
+  Value<double?> combinedConfidenceScore,
+  Value<String?> combinedProtocolVersion,
 });
 typedef $$MeasurementsTableUpdateCompanionBuilder = MeasurementsCompanion
     Function({
@@ -3704,11 +4938,20 @@ typedef $$MeasurementsTableUpdateCompanionBuilder = MeasurementsCompanion
   Value<double?> predictedWeightKg,
   Value<double?> manualHeightCm,
   Value<double?> manualWeightKg,
+  Value<double?> effectiveHeightCm,
+  Value<double?> effectiveWeightKg,
+  Value<String?> heightMethod,
+  Value<String?> weightMethod,
+  Value<double?> bmi,
+  Value<String?> bmiStatus,
   Value<double?> hazZscore,
   Value<double?> whzZscore,
   Value<String?> hazStatus,
   Value<String?> whzStatus,
   Value<double?> confidenceScore,
+  Value<double?> heightConfidence,
+  Value<double?> weightConfidence,
+  Value<double?> classificationConfidence,
   Value<String?> bodyBuild,
   Value<String?> estimationMethod,
   Value<bool> sideViewUsed,
@@ -3721,9 +4964,25 @@ typedef $$MeasurementsTableUpdateCompanionBuilder = MeasurementsCompanion
   Value<double?> riskOverweightProbability,
   Value<double?> overweightProbability,
   Value<String?> wastingStatus,
+  Value<String?> wastingMethod,
   Value<double?> muacCm,
   Value<String?> muacStatus,
   Value<String?> muacMethod,
+  Value<bool?> muacAgeInRange,
+  Value<double?> muacConfidence,
+  Value<double?> muacUncertaintyLowerCm,
+  Value<double?> muacUncertaintyUpperCm,
+  Value<String?> muacModelVersion,
+  Value<String?> muacCalibrationVersion,
+  Value<bool?> muacIsDirectMeasurement,
+  Value<bool?> muacRequiresConfirmation,
+  Value<String?> muacReferralGuidance,
+  Value<String?> combinedStatus,
+  Value<String?> combinedTriggeredBy,
+  Value<String?> combinedRationale,
+  Value<String?> combinedMethod,
+  Value<double?> combinedConfidenceScore,
+  Value<String?> combinedProtocolVersion,
 });
 
 final class $$MeasurementsTableReferences
@@ -3773,6 +5032,26 @@ class $$MeasurementsTableFilterComposer
       column: $table.manualWeightKg,
       builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<double> get effectiveHeightCm => $composableBuilder(
+      column: $table.effectiveHeightCm,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get effectiveWeightKg => $composableBuilder(
+      column: $table.effectiveWeightKg,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get heightMethod => $composableBuilder(
+      column: $table.heightMethod, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get weightMethod => $composableBuilder(
+      column: $table.weightMethod, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get bmi => $composableBuilder(
+      column: $table.bmi, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get bmiStatus => $composableBuilder(
+      column: $table.bmiStatus, builder: (column) => ColumnFilters(column));
+
   ColumnFilters<double> get hazZscore => $composableBuilder(
       column: $table.hazZscore, builder: (column) => ColumnFilters(column));
 
@@ -3787,6 +5066,18 @@ class $$MeasurementsTableFilterComposer
 
   ColumnFilters<double> get confidenceScore => $composableBuilder(
       column: $table.confidenceScore,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get heightConfidence => $composableBuilder(
+      column: $table.heightConfidence,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get weightConfidence => $composableBuilder(
+      column: $table.weightConfidence,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get classificationConfidence => $composableBuilder(
+      column: $table.classificationConfidence,
       builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get bodyBuild => $composableBuilder(
@@ -3832,6 +5123,9 @@ class $$MeasurementsTableFilterComposer
   ColumnFilters<String> get wastingStatus => $composableBuilder(
       column: $table.wastingStatus, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<String> get wastingMethod => $composableBuilder(
+      column: $table.wastingMethod, builder: (column) => ColumnFilters(column));
+
   ColumnFilters<double> get muacCm => $composableBuilder(
       column: $table.muacCm, builder: (column) => ColumnFilters(column));
 
@@ -3840,6 +5134,66 @@ class $$MeasurementsTableFilterComposer
 
   ColumnFilters<String> get muacMethod => $composableBuilder(
       column: $table.muacMethod, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get muacAgeInRange => $composableBuilder(
+      column: $table.muacAgeInRange,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get muacConfidence => $composableBuilder(
+      column: $table.muacConfidence,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get muacUncertaintyLowerCm => $composableBuilder(
+      column: $table.muacUncertaintyLowerCm,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get muacUncertaintyUpperCm => $composableBuilder(
+      column: $table.muacUncertaintyUpperCm,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get muacModelVersion => $composableBuilder(
+      column: $table.muacModelVersion,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get muacCalibrationVersion => $composableBuilder(
+      column: $table.muacCalibrationVersion,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get muacIsDirectMeasurement => $composableBuilder(
+      column: $table.muacIsDirectMeasurement,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get muacRequiresConfirmation => $composableBuilder(
+      column: $table.muacRequiresConfirmation,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get muacReferralGuidance => $composableBuilder(
+      column: $table.muacReferralGuidance,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get combinedStatus => $composableBuilder(
+      column: $table.combinedStatus,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get combinedTriggeredBy => $composableBuilder(
+      column: $table.combinedTriggeredBy,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get combinedRationale => $composableBuilder(
+      column: $table.combinedRationale,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get combinedMethod => $composableBuilder(
+      column: $table.combinedMethod,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get combinedConfidenceScore => $composableBuilder(
+      column: $table.combinedConfidenceScore,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get combinedProtocolVersion => $composableBuilder(
+      column: $table.combinedProtocolVersion,
+      builder: (column) => ColumnFilters(column));
 
   $$VisitsTableFilterComposer get visitId {
     final $$VisitsTableFilterComposer composer = $composerBuilder(
@@ -3890,6 +5244,28 @@ class $$MeasurementsTableOrderingComposer
       column: $table.manualWeightKg,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<double> get effectiveHeightCm => $composableBuilder(
+      column: $table.effectiveHeightCm,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get effectiveWeightKg => $composableBuilder(
+      column: $table.effectiveWeightKg,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get heightMethod => $composableBuilder(
+      column: $table.heightMethod,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get weightMethod => $composableBuilder(
+      column: $table.weightMethod,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get bmi => $composableBuilder(
+      column: $table.bmi, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get bmiStatus => $composableBuilder(
+      column: $table.bmiStatus, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<double> get hazZscore => $composableBuilder(
       column: $table.hazZscore, builder: (column) => ColumnOrderings(column));
 
@@ -3904,6 +5280,18 @@ class $$MeasurementsTableOrderingComposer
 
   ColumnOrderings<double> get confidenceScore => $composableBuilder(
       column: $table.confidenceScore,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get heightConfidence => $composableBuilder(
+      column: $table.heightConfidence,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get weightConfidence => $composableBuilder(
+      column: $table.weightConfidence,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get classificationConfidence => $composableBuilder(
+      column: $table.classificationConfidence,
       builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get bodyBuild => $composableBuilder(
@@ -3952,6 +5340,10 @@ class $$MeasurementsTableOrderingComposer
       column: $table.wastingStatus,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get wastingMethod => $composableBuilder(
+      column: $table.wastingMethod,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<double> get muacCm => $composableBuilder(
       column: $table.muacCm, builder: (column) => ColumnOrderings(column));
 
@@ -3960,6 +5352,66 @@ class $$MeasurementsTableOrderingComposer
 
   ColumnOrderings<String> get muacMethod => $composableBuilder(
       column: $table.muacMethod, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get muacAgeInRange => $composableBuilder(
+      column: $table.muacAgeInRange,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get muacConfidence => $composableBuilder(
+      column: $table.muacConfidence,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get muacUncertaintyLowerCm => $composableBuilder(
+      column: $table.muacUncertaintyLowerCm,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get muacUncertaintyUpperCm => $composableBuilder(
+      column: $table.muacUncertaintyUpperCm,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get muacModelVersion => $composableBuilder(
+      column: $table.muacModelVersion,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get muacCalibrationVersion => $composableBuilder(
+      column: $table.muacCalibrationVersion,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get muacIsDirectMeasurement => $composableBuilder(
+      column: $table.muacIsDirectMeasurement,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get muacRequiresConfirmation => $composableBuilder(
+      column: $table.muacRequiresConfirmation,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get muacReferralGuidance => $composableBuilder(
+      column: $table.muacReferralGuidance,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get combinedStatus => $composableBuilder(
+      column: $table.combinedStatus,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get combinedTriggeredBy => $composableBuilder(
+      column: $table.combinedTriggeredBy,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get combinedRationale => $composableBuilder(
+      column: $table.combinedRationale,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get combinedMethod => $composableBuilder(
+      column: $table.combinedMethod,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get combinedConfidenceScore => $composableBuilder(
+      column: $table.combinedConfidenceScore,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get combinedProtocolVersion => $composableBuilder(
+      column: $table.combinedProtocolVersion,
+      builder: (column) => ColumnOrderings(column));
 
   $$VisitsTableOrderingComposer get visitId {
     final $$VisitsTableOrderingComposer composer = $composerBuilder(
@@ -4006,6 +5458,24 @@ class $$MeasurementsTableAnnotationComposer
   GeneratedColumn<double> get manualWeightKg => $composableBuilder(
       column: $table.manualWeightKg, builder: (column) => column);
 
+  GeneratedColumn<double> get effectiveHeightCm => $composableBuilder(
+      column: $table.effectiveHeightCm, builder: (column) => column);
+
+  GeneratedColumn<double> get effectiveWeightKg => $composableBuilder(
+      column: $table.effectiveWeightKg, builder: (column) => column);
+
+  GeneratedColumn<String> get heightMethod => $composableBuilder(
+      column: $table.heightMethod, builder: (column) => column);
+
+  GeneratedColumn<String> get weightMethod => $composableBuilder(
+      column: $table.weightMethod, builder: (column) => column);
+
+  GeneratedColumn<double> get bmi =>
+      $composableBuilder(column: $table.bmi, builder: (column) => column);
+
+  GeneratedColumn<String> get bmiStatus =>
+      $composableBuilder(column: $table.bmiStatus, builder: (column) => column);
+
   GeneratedColumn<double> get hazZscore =>
       $composableBuilder(column: $table.hazZscore, builder: (column) => column);
 
@@ -4020,6 +5490,15 @@ class $$MeasurementsTableAnnotationComposer
 
   GeneratedColumn<double> get confidenceScore => $composableBuilder(
       column: $table.confidenceScore, builder: (column) => column);
+
+  GeneratedColumn<double> get heightConfidence => $composableBuilder(
+      column: $table.heightConfidence, builder: (column) => column);
+
+  GeneratedColumn<double> get weightConfidence => $composableBuilder(
+      column: $table.weightConfidence, builder: (column) => column);
+
+  GeneratedColumn<double> get classificationConfidence => $composableBuilder(
+      column: $table.classificationConfidence, builder: (column) => column);
 
   GeneratedColumn<String> get bodyBuild =>
       $composableBuilder(column: $table.bodyBuild, builder: (column) => column);
@@ -4057,6 +5536,9 @@ class $$MeasurementsTableAnnotationComposer
   GeneratedColumn<String> get wastingStatus => $composableBuilder(
       column: $table.wastingStatus, builder: (column) => column);
 
+  GeneratedColumn<String> get wastingMethod => $composableBuilder(
+      column: $table.wastingMethod, builder: (column) => column);
+
   GeneratedColumn<double> get muacCm =>
       $composableBuilder(column: $table.muacCm, builder: (column) => column);
 
@@ -4065,6 +5547,51 @@ class $$MeasurementsTableAnnotationComposer
 
   GeneratedColumn<String> get muacMethod => $composableBuilder(
       column: $table.muacMethod, builder: (column) => column);
+
+  GeneratedColumn<bool> get muacAgeInRange => $composableBuilder(
+      column: $table.muacAgeInRange, builder: (column) => column);
+
+  GeneratedColumn<double> get muacConfidence => $composableBuilder(
+      column: $table.muacConfidence, builder: (column) => column);
+
+  GeneratedColumn<double> get muacUncertaintyLowerCm => $composableBuilder(
+      column: $table.muacUncertaintyLowerCm, builder: (column) => column);
+
+  GeneratedColumn<double> get muacUncertaintyUpperCm => $composableBuilder(
+      column: $table.muacUncertaintyUpperCm, builder: (column) => column);
+
+  GeneratedColumn<String> get muacModelVersion => $composableBuilder(
+      column: $table.muacModelVersion, builder: (column) => column);
+
+  GeneratedColumn<String> get muacCalibrationVersion => $composableBuilder(
+      column: $table.muacCalibrationVersion, builder: (column) => column);
+
+  GeneratedColumn<bool> get muacIsDirectMeasurement => $composableBuilder(
+      column: $table.muacIsDirectMeasurement, builder: (column) => column);
+
+  GeneratedColumn<bool> get muacRequiresConfirmation => $composableBuilder(
+      column: $table.muacRequiresConfirmation, builder: (column) => column);
+
+  GeneratedColumn<String> get muacReferralGuidance => $composableBuilder(
+      column: $table.muacReferralGuidance, builder: (column) => column);
+
+  GeneratedColumn<String> get combinedStatus => $composableBuilder(
+      column: $table.combinedStatus, builder: (column) => column);
+
+  GeneratedColumn<String> get combinedTriggeredBy => $composableBuilder(
+      column: $table.combinedTriggeredBy, builder: (column) => column);
+
+  GeneratedColumn<String> get combinedRationale => $composableBuilder(
+      column: $table.combinedRationale, builder: (column) => column);
+
+  GeneratedColumn<String> get combinedMethod => $composableBuilder(
+      column: $table.combinedMethod, builder: (column) => column);
+
+  GeneratedColumn<double> get combinedConfidenceScore => $composableBuilder(
+      column: $table.combinedConfidenceScore, builder: (column) => column);
+
+  GeneratedColumn<String> get combinedProtocolVersion => $composableBuilder(
+      column: $table.combinedProtocolVersion, builder: (column) => column);
 
   $$VisitsTableAnnotationComposer get visitId {
     final $$VisitsTableAnnotationComposer composer = $composerBuilder(
@@ -4116,11 +5643,20 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             Value<double?> predictedWeightKg = const Value.absent(),
             Value<double?> manualHeightCm = const Value.absent(),
             Value<double?> manualWeightKg = const Value.absent(),
+            Value<double?> effectiveHeightCm = const Value.absent(),
+            Value<double?> effectiveWeightKg = const Value.absent(),
+            Value<String?> heightMethod = const Value.absent(),
+            Value<String?> weightMethod = const Value.absent(),
+            Value<double?> bmi = const Value.absent(),
+            Value<String?> bmiStatus = const Value.absent(),
             Value<double?> hazZscore = const Value.absent(),
             Value<double?> whzZscore = const Value.absent(),
             Value<String?> hazStatus = const Value.absent(),
             Value<String?> whzStatus = const Value.absent(),
             Value<double?> confidenceScore = const Value.absent(),
+            Value<double?> heightConfidence = const Value.absent(),
+            Value<double?> weightConfidence = const Value.absent(),
+            Value<double?> classificationConfidence = const Value.absent(),
             Value<String?> bodyBuild = const Value.absent(),
             Value<String?> estimationMethod = const Value.absent(),
             Value<bool> sideViewUsed = const Value.absent(),
@@ -4133,9 +5669,25 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             Value<double?> riskOverweightProbability = const Value.absent(),
             Value<double?> overweightProbability = const Value.absent(),
             Value<String?> wastingStatus = const Value.absent(),
+            Value<String?> wastingMethod = const Value.absent(),
             Value<double?> muacCm = const Value.absent(),
             Value<String?> muacStatus = const Value.absent(),
             Value<String?> muacMethod = const Value.absent(),
+            Value<bool?> muacAgeInRange = const Value.absent(),
+            Value<double?> muacConfidence = const Value.absent(),
+            Value<double?> muacUncertaintyLowerCm = const Value.absent(),
+            Value<double?> muacUncertaintyUpperCm = const Value.absent(),
+            Value<String?> muacModelVersion = const Value.absent(),
+            Value<String?> muacCalibrationVersion = const Value.absent(),
+            Value<bool?> muacIsDirectMeasurement = const Value.absent(),
+            Value<bool?> muacRequiresConfirmation = const Value.absent(),
+            Value<String?> muacReferralGuidance = const Value.absent(),
+            Value<String?> combinedStatus = const Value.absent(),
+            Value<String?> combinedTriggeredBy = const Value.absent(),
+            Value<String?> combinedRationale = const Value.absent(),
+            Value<String?> combinedMethod = const Value.absent(),
+            Value<double?> combinedConfidenceScore = const Value.absent(),
+            Value<String?> combinedProtocolVersion = const Value.absent(),
           }) =>
               MeasurementsCompanion(
             id: id,
@@ -4144,11 +5696,20 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             predictedWeightKg: predictedWeightKg,
             manualHeightCm: manualHeightCm,
             manualWeightKg: manualWeightKg,
+            effectiveHeightCm: effectiveHeightCm,
+            effectiveWeightKg: effectiveWeightKg,
+            heightMethod: heightMethod,
+            weightMethod: weightMethod,
+            bmi: bmi,
+            bmiStatus: bmiStatus,
             hazZscore: hazZscore,
             whzZscore: whzZscore,
             hazStatus: hazStatus,
             whzStatus: whzStatus,
             confidenceScore: confidenceScore,
+            heightConfidence: heightConfidence,
+            weightConfidence: weightConfidence,
+            classificationConfidence: classificationConfidence,
             bodyBuild: bodyBuild,
             estimationMethod: estimationMethod,
             sideViewUsed: sideViewUsed,
@@ -4161,9 +5722,25 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             riskOverweightProbability: riskOverweightProbability,
             overweightProbability: overweightProbability,
             wastingStatus: wastingStatus,
+            wastingMethod: wastingMethod,
             muacCm: muacCm,
             muacStatus: muacStatus,
             muacMethod: muacMethod,
+            muacAgeInRange: muacAgeInRange,
+            muacConfidence: muacConfidence,
+            muacUncertaintyLowerCm: muacUncertaintyLowerCm,
+            muacUncertaintyUpperCm: muacUncertaintyUpperCm,
+            muacModelVersion: muacModelVersion,
+            muacCalibrationVersion: muacCalibrationVersion,
+            muacIsDirectMeasurement: muacIsDirectMeasurement,
+            muacRequiresConfirmation: muacRequiresConfirmation,
+            muacReferralGuidance: muacReferralGuidance,
+            combinedStatus: combinedStatus,
+            combinedTriggeredBy: combinedTriggeredBy,
+            combinedRationale: combinedRationale,
+            combinedMethod: combinedMethod,
+            combinedConfidenceScore: combinedConfidenceScore,
+            combinedProtocolVersion: combinedProtocolVersion,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -4172,11 +5749,20 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             Value<double?> predictedWeightKg = const Value.absent(),
             Value<double?> manualHeightCm = const Value.absent(),
             Value<double?> manualWeightKg = const Value.absent(),
+            Value<double?> effectiveHeightCm = const Value.absent(),
+            Value<double?> effectiveWeightKg = const Value.absent(),
+            Value<String?> heightMethod = const Value.absent(),
+            Value<String?> weightMethod = const Value.absent(),
+            Value<double?> bmi = const Value.absent(),
+            Value<String?> bmiStatus = const Value.absent(),
             Value<double?> hazZscore = const Value.absent(),
             Value<double?> whzZscore = const Value.absent(),
             Value<String?> hazStatus = const Value.absent(),
             Value<String?> whzStatus = const Value.absent(),
             Value<double?> confidenceScore = const Value.absent(),
+            Value<double?> heightConfidence = const Value.absent(),
+            Value<double?> weightConfidence = const Value.absent(),
+            Value<double?> classificationConfidence = const Value.absent(),
             Value<String?> bodyBuild = const Value.absent(),
             Value<String?> estimationMethod = const Value.absent(),
             Value<bool> sideViewUsed = const Value.absent(),
@@ -4189,9 +5775,25 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             Value<double?> riskOverweightProbability = const Value.absent(),
             Value<double?> overweightProbability = const Value.absent(),
             Value<String?> wastingStatus = const Value.absent(),
+            Value<String?> wastingMethod = const Value.absent(),
             Value<double?> muacCm = const Value.absent(),
             Value<String?> muacStatus = const Value.absent(),
             Value<String?> muacMethod = const Value.absent(),
+            Value<bool?> muacAgeInRange = const Value.absent(),
+            Value<double?> muacConfidence = const Value.absent(),
+            Value<double?> muacUncertaintyLowerCm = const Value.absent(),
+            Value<double?> muacUncertaintyUpperCm = const Value.absent(),
+            Value<String?> muacModelVersion = const Value.absent(),
+            Value<String?> muacCalibrationVersion = const Value.absent(),
+            Value<bool?> muacIsDirectMeasurement = const Value.absent(),
+            Value<bool?> muacRequiresConfirmation = const Value.absent(),
+            Value<String?> muacReferralGuidance = const Value.absent(),
+            Value<String?> combinedStatus = const Value.absent(),
+            Value<String?> combinedTriggeredBy = const Value.absent(),
+            Value<String?> combinedRationale = const Value.absent(),
+            Value<String?> combinedMethod = const Value.absent(),
+            Value<double?> combinedConfidenceScore = const Value.absent(),
+            Value<String?> combinedProtocolVersion = const Value.absent(),
           }) =>
               MeasurementsCompanion.insert(
             id: id,
@@ -4200,11 +5802,20 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             predictedWeightKg: predictedWeightKg,
             manualHeightCm: manualHeightCm,
             manualWeightKg: manualWeightKg,
+            effectiveHeightCm: effectiveHeightCm,
+            effectiveWeightKg: effectiveWeightKg,
+            heightMethod: heightMethod,
+            weightMethod: weightMethod,
+            bmi: bmi,
+            bmiStatus: bmiStatus,
             hazZscore: hazZscore,
             whzZscore: whzZscore,
             hazStatus: hazStatus,
             whzStatus: whzStatus,
             confidenceScore: confidenceScore,
+            heightConfidence: heightConfidence,
+            weightConfidence: weightConfidence,
+            classificationConfidence: classificationConfidence,
             bodyBuild: bodyBuild,
             estimationMethod: estimationMethod,
             sideViewUsed: sideViewUsed,
@@ -4217,9 +5828,25 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             riskOverweightProbability: riskOverweightProbability,
             overweightProbability: overweightProbability,
             wastingStatus: wastingStatus,
+            wastingMethod: wastingMethod,
             muacCm: muacCm,
             muacStatus: muacStatus,
             muacMethod: muacMethod,
+            muacAgeInRange: muacAgeInRange,
+            muacConfidence: muacConfidence,
+            muacUncertaintyLowerCm: muacUncertaintyLowerCm,
+            muacUncertaintyUpperCm: muacUncertaintyUpperCm,
+            muacModelVersion: muacModelVersion,
+            muacCalibrationVersion: muacCalibrationVersion,
+            muacIsDirectMeasurement: muacIsDirectMeasurement,
+            muacRequiresConfirmation: muacRequiresConfirmation,
+            muacReferralGuidance: muacReferralGuidance,
+            combinedStatus: combinedStatus,
+            combinedTriggeredBy: combinedTriggeredBy,
+            combinedRationale: combinedRationale,
+            combinedMethod: combinedMethod,
+            combinedConfidenceScore: combinedConfidenceScore,
+            combinedProtocolVersion: combinedProtocolVersion,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (
