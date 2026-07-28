@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../constants/config.dart';
 import '../../l10n/l10n_provider.dart';
 import '../../models/assessment_result.dart';
 import '../../providers/assessment_provider.dart';
@@ -70,34 +69,25 @@ class ResultScreen extends ConsumerWidget {
   ) {
     final haz = result.nutrition.hazStatus;
 
-    // WHO CMAM OR-rule: banner severity reflects WHZ, MUAC, AND the ML wasting
-    // classifier together — not WHZ alone — so a tape-measured or ML-detected
-    // SAM/MAM child is never shown the green "Normal" banner.
-    final combined = result.combinedNutrition.status;
+    final poshan = result.poshan.finalStatus;
 
     String title;
     String message;
     Color color;
 
-    if (combined == 'SAM') {
+    if (poshan == 'SAM') {
       title = t('banner_sam_title', ref);
       message = t('banner_sam_msg', ref);
       color = Colors.red;
-    } else if (combined == 'MAM') {
+    } else if (poshan == 'MAM') {
       title = t('banner_mam_title', ref);
       message = t('banner_mam_msg', ref);
       color = Colors.orange;
-    } else if (combined == 'RISK_OVERWEIGHT' ||
-        combined == 'OVERWEIGHT' ||
-        combined == 'OBESE') {
-      title = wastingStatusLabel(combined);
-      message = result.combinedNutrition.rationale;
-      color = Colors.amber.shade800;
     } else if (haz != null && haz.toLowerCase().contains('stunted')) {
       title = haz;
       message = t('banner_stunted_msg', ref);
       color = Colors.amber.shade700;
-    } else if (combined == 'NORMAL') {
+    } else if (poshan == 'Normal') {
       title = t('banner_normal_title', ref);
       message = t('banner_normal_msg', ref);
       color = Colors.green;
@@ -126,19 +116,18 @@ class ResultScreen extends ConsumerWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 4),
           Text(message),
           const SizedBox(height: 6),
           Text(
-            'Final wasting status: ${wastingStatusLabel(combined)}',
+            'Poshan Setu status: $poshan',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-          if (result.combinedNutrition.rationale.isNotEmpty)
-            Text(result.combinedNutrition.rationale),
+          if (result.poshan.rationale.isNotEmpty) Text(result.poshan.rationale),
           if (result.mlPrediction == null) ...[
             const SizedBox(height: 6),
             Container(
@@ -208,9 +197,15 @@ class ResultScreen extends ConsumerWidget {
       children: [
         Card(
           child: ListTile(
-            title: const Text('BMI+MUAC protocol classification'),
-            subtitle: Text('BMI: ${result.bmiValue?.toStringAsFixed(2) ?? '—'} (${result.bmiStatus})\nWHO wasting (WHZ): ${result.nutrition.whzStatus ?? 'Insufficient data'} · Stunting (HAZ): ${result.nutrition.hazStatus ?? 'Insufficient data'}'),
-            trailing: StatusBadge(status: result.protocolStatus),
+            title: const Text('Poshan Setu v1 classification'),
+            subtitle: Text(
+              'BMI: ${result.poshan.bmi?.toStringAsFixed(2) ?? '—'} '
+              '(${result.poshan.bmiStatus}) · Measured MUAC: '
+              '${result.poshan.muacStatus}\nWHO/MUAC screening: '
+              '${result.combinedNutrition.status} · Stunting (HAZ): '
+              '${result.nutrition.hazStatus ?? 'Insufficient data'}',
+            ),
+            trailing: StatusBadge(status: result.poshan.finalStatus),
           ),
         ),
         const SizedBox(height: 8),
@@ -223,8 +218,8 @@ class ResultScreen extends ConsumerWidget {
           source: result.measurement.heightMethod == 'manual'
               ? t('badge_manual', ref)
               : result.measurement.heightMethod == 'image_estimated'
-              ? t('badge_image', ref)
-              : t('badge_undetected', ref),
+                  ? t('badge_image', ref)
+                  : t('badge_undetected', ref),
           zscore: result.nutrition.hazZscore,
           status: result.nutrition.hazStatus,
         ),
@@ -233,15 +228,14 @@ class ResultScreen extends ConsumerWidget {
           context,
           ref,
           title: t('metric_weight', ref),
-          value:
-              result.measurement.predictedWeightKg ??
+          value: result.measurement.predictedWeightKg ??
               result.measurement.manualWeightKg,
           unit: 'kg',
           source: result.measurement.manualWeightKg != null
               ? t('badge_manual', ref)
               : result.measurement.predictedWeightKg != null
-              ? t('badge_image', ref)
-              : t('badge_undetected', ref),
+                  ? t('badge_image', ref)
+                  : t('badge_undetected', ref),
           zscore: result.nutrition.whzZscore,
           status: result.nutrition.whzStatus,
           extras: _weightExtras(context, ref, result.measurement),

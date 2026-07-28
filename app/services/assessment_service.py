@@ -26,13 +26,14 @@ from app.schemas.assessment import (
     MLPrediction,
     MUACDetail,
     NutritionDetail,
+    PoshanDetail,
 )
 from app.services.age_service import AgeService
 from app.services.measurement_service import MeasurementOutput, MeasurementService
 from app.services.ml_service import MLService
 from app.services.muac_service import MUACService
 from app.services.nutrition_service import NutritionService
-from app.services.protocol_classification_service import ProtocolClassificationService
+from app.services.poshan_setu_service import classify_poshan_setu
 from app.services.who_data_service import WHODataService
 from config import WASTING_STATUS_LABELS, WastingStatus
 
@@ -206,6 +207,27 @@ class AssessmentService:
             landmark_visibility=(meas.body_segments.arm_confidence if meas.body_segments else None),
         )
 
+        # Poshan Setu is deliberately provenance-gated. Image/ML/WHO-derived
+        # values remain useful screening evidence but cannot certify a result.
+        height_source = (
+            "manual"
+            if height_method == "manual"
+            else "reference_object"
+            if meas.estimation_method == "reference_object"
+            and meas.reference_object_detected
+            else "unavailable"
+        )
+        poshan = classify_poshan_setu(
+            sex=sex,
+            age_months=age_months,
+            weight_kg=effective_weight,
+            height_cm=effective_height,
+            weight_source=weight_source,
+            height_source=height_source,
+            muac_cm=muac_result.muac_cm,
+            muac_method=muac_result.muac_method,
+        )
+
         # 5c. Combine MUAC + WHZ via WHO OR-rule for the final clinical call
         combined_status = MUACService.combine_with_whz_status(
             muac_status=muac_result.muac_status,
@@ -219,16 +241,10 @@ class AssessmentService:
             meas.confidence_score,
         )
 
-        bmi = None
-        if (
-            effective_height is not None
-            and effective_weight is not None
-            and effective_height > 0
-        ):
-            bmi = round(effective_weight / ((effective_height / 100.0) ** 2), 2)
-        # Raw BMI is retained as evidence. It is not interpreted here using
-        # adult/fixed cut-offs for a child under five.
-        bmi_status = None
+        # Persist only the provenance-eligible BMI interpretation. Estimated
+        # inputs remain available in their own evidence fields.
+        bmi = round(poshan.bmi, 2) if poshan.bmi is not None else None
+        bmi_status = poshan.bmi_status
         classification_confidence = combined_confidence
 
         body_build_str = None
@@ -325,6 +341,11 @@ class AssessmentService:
             combined_method="who_muac_whz_or_rule",
             combined_confidence_score=combined_confidence,
             combined_protocol_version=self.PROTOCOL_VERSION,
+            poshan_status=poshan.final_status,
+            poshan_triggered_by=json.dumps(poshan.triggered_by),
+            classification_method=poshan.classification_method,
+            classification_rationale=poshan.rationale,
+            poshan_complete=poshan.complete,
         )
         db.add(measurement_record)
         db.commit()
@@ -341,6 +362,7 @@ class AssessmentService:
             meas.reference_object_detected,
             muac_result.muac_cm,
             muac_result.muac_status,
+            poshan.final_status,
         )
 
         return AssessmentResponse(
@@ -412,11 +434,16 @@ class AssessmentService:
                 method="who_muac_whz_or_rule",
                 confidence_score=combined_confidence,
             ),
-            bmi_value=protocol.bmi_value,
-            bmi_status=protocol.bmi_status,
-            protocol_status=protocol.final_status,
-            triggered_indicators=protocol.triggered_indicators,
-            measurement_methods=measurement_methods,
+            poshan=PoshanDetail(
+                bmi=poshan.bmi,
+                bmi_status=poshan.bmi_status,
+                muac_status=poshan.muac_status,
+                final_status=poshan.final_status,
+                triggered_by=list(poshan.triggered_by),
+                classification_method=poshan.classification_method,
+                rationale=poshan.rationale,
+                complete=poshan.complete,
+            ),
             summary=summary,
             warnings=assessment_warnings,
         )
@@ -471,7 +498,7 @@ class AssessmentService:
     def _build_summary(
         name, age_months, effective_height, height_method,
         weight, haz_status, combined_status, ref_detected,
-        muac_cm=None, muac_status=None,
+        muac_cm=None, muac_status=None, poshan_status=None,
     ) -> str:
         """Build a human-readable summary string."""
         lines = [f"Assessment for {name} ({age_months:.1f} months old):"]
@@ -497,9 +524,13 @@ class AssessmentService:
 
         if haz_status:
             lines.append(f"  Stunting (HAZ): {haz_status}")
+        if poshan_status:
+            lines.append(f"  Poshan Setu status: {poshan_status}")
         if combined_status:
             status = WastingStatus(combined_status)
-            lines.append(f"  Final wasting status: {WASTING_STATUS_LABELS[status]}")
+            lines.append(
+                f"  WHO/MUAC screening status: {WASTING_STATUS_LABELS[status]}"
+            )
 
         if not haz_status and not combined_status:
             lines.append("  Nutritional status could not be determined.")

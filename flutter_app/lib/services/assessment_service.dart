@@ -15,7 +15,7 @@ import 'ml_inference_service.dart';
 import 'muac_service.dart';
 import 'nutrition_service.dart';
 import 'pose_source.dart';
-import 'protocol_classification_service.dart';
+import 'poshan_setu_service.dart';
 import 'who_data_service.dart';
 
 /// Thrown when on-device pose detection fails to produce a usable result.
@@ -43,15 +43,15 @@ class AssessmentService {
     required WhoDataService who,
     required MlInferenceService ml,
     required ImagePersister persistImage,
-  }) : _childDao = childDao,
-       _visitDao = visitDao,
-       _syncQueueDao = syncQueueDao,
-       _pose = pose,
-       _measurement = measurement,
-       _nutrition = nutrition,
-       _who = who,
-       _ml = ml,
-       _persistImage = persistImage;
+  })  : _childDao = childDao,
+        _visitDao = visitDao,
+        _syncQueueDao = syncQueueDao,
+        _pose = pose,
+        _measurement = measurement,
+        _nutrition = nutrition,
+        _who = who,
+        _ml = ml,
+        _persistImage = persistImage;
 
   final ChildDao _childDao;
   final VisitDao _visitDao;
@@ -81,12 +81,10 @@ class AssessmentService {
     final ageMonths = DateTime.now().difference(dob).inDays / daysPerMonth;
 
     final frontPath = await _persistImage(frontImagePath);
-    final sidePath = sideImagePath != null
-        ? await _persistImage(sideImagePath)
-        : null;
-    final backPath = backImagePath != null
-        ? await _persistImage(backImagePath)
-        : null;
+    final sidePath =
+        sideImagePath != null ? await _persistImage(sideImagePath) : null;
+    final backPath =
+        backImagePath != null ? await _persistImage(backImagePath) : null;
 
     final segments = await _detectFront(frontPath);
     if (segments.totalHeightPx == null || segments.totalHeightPx! <= 0) {
@@ -170,13 +168,23 @@ class AssessmentService {
 
     final hazStatus = haz != null ? classifyHaz(haz) : null;
     final whzStatus = whz != null ? classifyWhz(whz) : null;
-    final protocol = ProtocolClassificationService.classify(
-        effectiveWeight, m.effectiveHeightCm, sex, muacResult.muacStatus);
-    final methods = <String, String>{
-      'height': manualHeightCm != null ? 'manual' : m.estimationMethod,
-      'weight': manualWeightKg != null ? 'manual' : (prediction != null ? 'ml_estimated' : 'who_median_estimated'),
-      'muac': muacResult.muacMethod,
-    };
+    final weightMethod = manualWeightKg != null
+        ? 'manual'
+        : prediction?.estimatedWeightKg == effectiveWeight
+            ? 'ml_estimated'
+            : effectiveWeight != null
+                ? 'who_statistical'
+                : 'unavailable';
+    final poshan = const PoshanSetuService().classify(
+      sex: sex,
+      ageMonths: ageMonths,
+      heightCm: m.effectiveHeightCm,
+      heightSource: manualHeightCm != null ? 'manual' : 'unavailable',
+      weightKg: effectiveWeight,
+      weightSource: weightMethod,
+      muacCm: muacResult.muacCm,
+      muacSource: muacResult.muacMethod,
+    );
 
     // Only WHZ and independently tape-measured MUAC define the headline
     // clinical verdict. ML and WHZ-derived MUAC remain decision support.
@@ -196,14 +204,7 @@ class AssessmentService {
     final rationale = triggeredBy.isEmpty
         ? 'No direct MUAC or WHZ flag triggered'
         : '$summaryStatus flagged by ${triggeredBy.join(' or ')} (WHO OR-rule)';
-    final bmi = effectiveWeight == null
-        ? null
-        : effectiveWeight / ((m.effectiveHeightCm / 100) * (m.effectiveHeightCm / 100));
-    final weightMethod = manualWeightKg != null
-        ? 'manual'
-        : prediction?.estimatedWeightKg == effectiveWeight
-            ? 'ml_estimated'
-            : 'who_median_estimated';
+    final bmi = poshan.bmi;
 
     final child = await _childDao.findOrCreate(
       name: childName,
@@ -232,7 +233,7 @@ class AssessmentService {
         ),
         weightMethod: Value(weightMethod),
         bmi: Value(bmi),
-        bmiStatus: const Value(null),
+        bmiStatus: Value(poshan.bmiStatus),
         hazZscore: Value(haz),
         whzZscore: Value(whz),
         hazStatus: Value(hazStatus),
@@ -255,7 +256,8 @@ class AssessmentService {
         riskOverweightProbability: Value(prediction?.riskProbability),
         overweightProbability: Value(prediction?.overweightProbability),
         wastingStatus: Value(prediction?.wastingStatus ?? 'who_fallback'),
-        wastingMethod: Value(prediction == null ? 'unavailable' : 'ml_classifier'),
+        wastingMethod:
+            Value(prediction == null ? 'unavailable' : 'ml_classifier'),
         muacCm: Value(muacResult.muacCm),
         muacStatus: Value(muacResult.muacStatus),
         muacMethod: Value(muacResult.muacMethod),
@@ -276,6 +278,11 @@ class AssessmentService {
           triggeredBy.contains('muac') ? 1.0 : poseConfidence,
         ),
         combinedProtocolVersion: const Value(protocolVersion),
+        poshanStatus: Value(poshan.finalStatus),
+        poshanTriggeredBy: Value(jsonEncode(poshan.triggeredBy)),
+        classificationMethod: Value(poshan.classificationMethod),
+        classificationRationale: Value(poshan.rationale),
+        poshanComplete: Value(poshan.complete),
       ),
     );
     await _syncQueueDao.enqueue(visitId);
@@ -284,7 +291,7 @@ class AssessmentService {
       childName: childName,
       sex: sex,
       ageMonths: ageMonths,
-      summary: summaryStatus,
+      summary: poshan.finalStatus,
       combinedNutrition: ar.CombinedNutritionDetail(
         status: summaryStatus,
         triggeredBy: triggeredBy,
@@ -294,6 +301,16 @@ class AssessmentService {
         method: 'who_muac_whz_or_rule',
         confidenceScore: poseConfidence,
       ),
+      poshan: ar.PoshanDetail(
+        bmi: poshan.bmi,
+        bmiStatus: poshan.bmiStatus,
+        muacStatus: poshan.muacStatus,
+        finalStatus: poshan.finalStatus,
+        triggeredBy: poshan.triggeredBy,
+        classificationMethod: poshan.classificationMethod,
+        rationale: poshan.rationale,
+        complete: poshan.complete,
+      ),
       measurement: ar.Measurement(
         effectiveHeightCm: m.effectiveHeightCm,
         heightMethod: manualHeightCm != null ? 'manual' : 'image_estimated',
@@ -301,6 +318,10 @@ class AssessmentService {
         predictedWeightKg: effectiveWeight,
         manualHeightCm: manualHeightCm,
         manualWeightKg: manualWeightKg,
+        effectiveWeightKg: effectiveWeight,
+        weightMethod: weightMethod,
+        heightConfidence: manualHeightCm != null ? 1.0 : poseConfidence,
+        weightConfidence: manualWeightKg != null ? 1.0 : poseConfidence,
         confidenceScore: poseConfidence,
         estimationMethod: m.estimationMethod,
         bodyBuild: m.bodyBuild,
@@ -314,6 +335,8 @@ class AssessmentService {
         hazStatus: hazStatus,
         whzStatus: whzStatus,
         ageMonths: ageMonths,
+        bmi: poshan.bmi,
+        bmiStatus: poshan.bmiStatus,
       ),
       mlPrediction: prediction == null
           ? null
@@ -340,11 +363,6 @@ class AssessmentService {
         requiresConfirmation: muacResult.requiresConfirmation,
         referralGuidance: muacResult.referralGuidance,
       ),
-      bmiValue: protocol.bmiValue,
-      bmiStatus: protocol.bmiStatus,
-      protocolStatus: protocol.finalStatus,
-      triggeredIndicators: protocol.triggeredIndicators,
-      measurementMethods: methods,
     );
   }
 

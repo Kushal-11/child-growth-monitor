@@ -3,7 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/native.dart';
 
-import 'package:child_growth_monitor_app/database/database.dart' show AppDatabase;
+import 'package:child_growth_monitor_app/database/database.dart'
+    show AppDatabase;
 import 'package:child_growth_monitor_app/providers/database_provider.dart';
 import 'package:child_growth_monitor_app/providers/assessment_provider.dart';
 import 'package:child_growth_monitor_app/models/assessment_result.dart';
@@ -17,7 +18,16 @@ AssessmentResult _samViaMuacOnly() => AssessmentResult(
       ageMonths: 29,
       summary: 'SAM',
       combinedNutrition: const CombinedNutritionDetail(
-        status: 'SAM', triggeredBy: ['muac'], rationale: 'SAM flagged by muac'),
+          status: 'SAM',
+          triggeredBy: ['muac'],
+          rationale: 'SAM flagged by muac'),
+      poshan: const PoshanDetail(
+        bmiStatus: 'Indeterminate',
+        muacStatus: 'SAM',
+        finalStatus: 'SAM',
+        triggeredBy: ['muac'],
+        rationale: 'Eligible measured MUAC classified as SAM.',
+      ),
       measurement: Measurement(
         effectiveHeightCm: 87.0,
         heightMethod: 'image_estimated',
@@ -60,8 +70,7 @@ AssessmentResult _manualHeightWins() => AssessmentResult(
     );
 
 void main() {
-  testWidgets(
-      'banner shows SAM when MUAC is SAM even though WHZ is Normal',
+  testWidgets('banner shows SAM when eligible Poshan MUAC is SAM',
       (tester) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     final container = ProviderContainer(overrides: [

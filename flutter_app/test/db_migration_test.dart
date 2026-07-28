@@ -6,7 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:child_growth_monitor_app/database/database.dart';
 
 void main() {
-  test('schema v4 fresh DB has evidence columns and inserts work', () async {
+  test('schema v5 fresh DB has evidence columns and inserts work', () async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     final id = await db.into(db.children).insert(
           ChildrenCompanion.insert(
@@ -86,7 +86,7 @@ void main() {
     await legacy.close();
 
     // 2) Reopen with migrations enabled. Drift sees user_version < schemaVersion
-    //    (4) and runs the real onUpgrade migrator. A query forces it to open.
+    //    (5) and runs the real onUpgrade migrator. A query forces it to open.
     final upgraded = AppDatabase.forTesting(NativeDatabase(file));
     final rows = await upgraded.select(upgraded.children).get();
     expect(rows, isA<List>());
@@ -109,9 +109,12 @@ void main() {
       'muac_requires_confirmation',
       'combined_triggered_by',
       'combined_protocol_version',
+      'poshan_status',
+      'classification_rationale',
+      'poshan_complete',
     ]) {
       expect(measurementNames.contains(name), true,
-          reason: 'measurements.$name missing after v$legacyVersion -> v4');
+          reason: 'measurements.$name missing after v$legacyVersion -> v5');
     }
 
     // New children columns must exist and be usable.
@@ -131,17 +134,59 @@ void main() {
     await upgraded.close();
   }
 
-  test('v2 -> v4 upgrade adds visit and evidence columns',
-      () async {
+  test('v2 -> v5 upgrade adds visit and evidence columns', () async {
     await runUpgradeFrom(2);
   });
 
-  test('v1 -> v4 upgrade runs without duplicate columns',
-      () async {
+  test('v1 -> v5 upgrade runs without duplicate columns', () async {
     // Regression: a v1 DB hits the from < 2 destructive recreate (which builds
     // visits at the current schema, already including the new columns) AND the
     // from < 3 block. Without the from == 2 guard the visits addColumns would
     // run on already-present columns -> "duplicate column name" crash.
     await runUpgradeFrom(1);
+  });
+
+  test('v4 -> v5 upgrade adds only Poshan Setu columns', () async {
+    final dir = await Directory.systemTemp.createTemp('cgm_mig_v4_test');
+    addTearDown(() async {
+      if (await dir.exists()) await dir.delete(recursive: true);
+    });
+    final file = File(p.join(dir.path, 'mig_v4.sqlite'));
+
+    final current = AppDatabase.forTesting(NativeDatabase(file));
+    await current.select(current.children).get();
+    await current.close();
+
+    final legacy = AppDatabase.forTesting(
+      NativeDatabase(file, enableMigrations: false),
+    );
+    for (final column in [
+      'poshan_status',
+      'poshan_triggered_by',
+      'classification_method',
+      'classification_rationale',
+      'poshan_complete',
+    ]) {
+      await legacy.customStatement(
+        'ALTER TABLE measurements DROP COLUMN $column',
+      );
+    }
+    await legacy.customStatement('PRAGMA user_version = 4');
+    await legacy.close();
+
+    final upgraded = AppDatabase.forTesting(NativeDatabase(file));
+    final columns =
+        await upgraded.customSelect('PRAGMA table_info(measurements)').get();
+    final names = columns.map((row) => row.data['name'] as String).toSet();
+    expect(
+        names,
+        containsAll([
+          'poshan_status',
+          'poshan_triggered_by',
+          'classification_method',
+          'classification_rationale',
+          'poshan_complete',
+        ]));
+    await upgraded.close();
   });
 }

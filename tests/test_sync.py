@@ -47,7 +47,7 @@ def _payload():
         "child_name": "Test Child",
         "date_of_birth": "2024-01-01",
         "sex": "M",
-        "age_months": "16.0",
+        "age_months": "28.1",
         "visit_date": "2026-05-05T10:00:00",
         "predicted_height_cm": "78.0",
         "predicted_weight_kg": "9.5",
@@ -141,8 +141,8 @@ def test_sync_missing_required_field_returns_422():
     assert response.status_code == 422
 
 
-def test_sync_persists_all_mobile_fields():
-    """All mobile-computed fields must round-trip into measurement_results."""
+def test_sync_persists_evidence_but_recomputes_client_verdicts():
+    """Raw evidence persists while unverified client labels are ignored."""
     from app.models.database import SessionLocal
     from app.models.measurement import MeasurementResult
     from app.models.visit import Visit
@@ -171,7 +171,7 @@ def test_sync_persists_all_mobile_fields():
         assert m.abd_depth_cm == 8.5
         assert m.ml_wasting_status == "Normal"
         assert m.muac_cm == 14.0
-        assert m.muac_status == "NORMAL"
+        assert m.muac_status == "Normal"
         assert m.muac_method == "manual"
         assert m.sam_probability == 0.02
         assert m.mam_probability == 0.10
@@ -181,14 +181,14 @@ def test_sync_persists_all_mobile_fields():
         assert m.confidence_score == 0.85
         assert m.effective_height_cm == 78.0
         assert m.effective_weight_kg == 9.5
-        assert m.height_method == "who_statistical"
+        assert m.height_method == "unavailable"
         assert m.weight_method == "ml_estimated"
         assert m.estimation_method == "who_statistical"
-        assert m.bmi == 15.61
-        assert m.bmi_status == "Normal"
+        assert m.bmi is None
+        assert m.bmi_status == "Indeterminate"
         assert m.height_confidence == 0.85
         assert m.weight_confidence == 0.81
-        assert m.classification_confidence == 0.92
+        assert m.classification_confidence is None
         assert m.ml_wasting_method == "ml_classifier"
         assert m.muac_age_in_range is True
         assert m.muac_confidence == 1.0
@@ -199,14 +199,19 @@ def test_sync_persists_all_mobile_fields():
         assert m.muac_requires_confirmation is False
         assert m.combined_status == "NORMAL"
         assert m.combined_triggered_by == "[]"
-        assert m.combined_rationale == "No direct MUAC or WHZ flag triggered"
+        assert m.combined_rationale == "No MUAC or WHZ flag triggered"
         assert m.combined_method == "who_muac_whz_or_rule"
         assert m.combined_confidence_score == 0.85
         assert m.combined_protocol_version == "WHO-CMAM-OR-2009/2013-v1"
+        assert m.poshan_status == "Indeterminate"
+        assert m.poshan_triggered_by == "[]"
+        assert m.classification_method == "poshan_setu_v1"
+        assert "final Indeterminate" in m.classification_rationale
+        assert m.poshan_complete is False
         assert m.predicted_height_cm == 78.0
         assert m.predicted_weight_kg == 9.5
-        assert m.haz_zscore == -1.0
-        assert m.whz_zscore == -0.5
+        assert m.haz_zscore is None
+        assert m.whz_zscore is None
     finally:
         db.close()
 
@@ -221,30 +226,60 @@ def test_sync_persists_all_mobile_fields():
         if v["visit_id"] == visit_id
     )
     assert restored["combined_triggered_by"] == []
-    for key in (
-        "haz_status", "whz_status", "muac_status", "muac_method",
-        "ml_wasting_status", "ml_wasting_method", "height_method",
-        "weight_method", "estimation_method", "bmi_status", "combined_status",
-        "confidence_score", "height_confidence", "weight_confidence",
-        "classification_confidence", "sam_probability", "mam_probability",
-        "normal_probability", "risk_probability", "overweight_probability",
-        "muac_confidence", "muac_uncertainty_lower_cm",
-        "muac_uncertainty_upper_cm", "muac_calibration_version",
-        "muac_is_direct_measurement", "muac_requires_confirmation",
-        "combined_rationale", "combined_method", "combined_confidence_score",
-        "combined_protocol_version",
-    ):
-        expected = body[key]
-        if (
-            key.endswith("confidence")
-            or key.endswith("confidence_score")
-            or key.endswith("probability")
-            or key.endswith("_cm")
-        ):
-            expected = float(expected)
-        elif key in ("muac_is_direct_measurement", "muac_requires_confirmation"):
-            expected = expected == "true"
-        assert restored[key] == expected, key
+    assert restored["poshan_triggered_by"] == []
+    assert restored["poshan_status"] == "Indeterminate"
+    assert restored["classification_method"] == "poshan_setu_v1"
+    assert restored["bmi_status"] == "Indeterminate"
+    assert restored["haz_status"] is None
+    assert restored["whz_status"] is None
+
+
+def test_sync_rejects_tampered_normal_verdict_and_recomputes_sam():
+    from app.models.database import SessionLocal
+    from app.models.measurement import MeasurementResult
+
+    body = _payload()
+    body.update(
+        {
+            "local_uuid": str(uuid.uuid4()),
+            "manual_height_cm": "100.0",
+            "manual_weight_kg": "12.0",
+            "muac_cm": "14.0",
+            "muac_method": "manual",
+            "muac_is_direct_measurement": "true",
+            "bmi": "20.0",
+            "bmi_status": "Normal",
+            "poshan_status": "Normal",
+            "poshan_triggered_by": "[]",
+            "classification_method": "client_supplied",
+            "classification_rationale": "tampered normal verdict",
+            "combined_status": "NORMAL",
+        }
+    )
+    response = client.post(
+        "/api/v1/sync",
+        data=body,
+        headers=AUTH_HEADERS,
+    )
+    assert response.status_code == 200
+    assert response.json()["poshan"]["final_status"] == "SAM"
+    assert response.json()["poshan"]["triggered_by"] == ["bmi"]
+
+    db = SessionLocal()
+    try:
+        stored = (
+            db.query(MeasurementResult)
+            .filter(
+                MeasurementResult.visit_id == response.json()["server_visit_id"]
+            )
+            .one()
+        )
+        assert stored.poshan_status == "SAM"
+        assert stored.bmi_status == "SAM"
+        assert stored.classification_method == "poshan_setu_v1"
+        assert "tampered normal verdict" not in stored.classification_rationale
+    finally:
+        db.close()
 
 
 def test_sync_concurrent_duplicate_returns_already_synced(monkeypatch):

@@ -65,6 +65,11 @@ _MIGRATIONS = [
     ("measurement_results", "muac_is_direct_measurement", "BOOLEAN"),
     ("measurement_results", "muac_requires_confirmation", "BOOLEAN"),
     ("measurement_results", "muac_referral_guidance", "TEXT"),
+    ("measurement_results", "poshan_status", "VARCHAR(30)"),
+    ("measurement_results", "poshan_triggered_by", "VARCHAR(100)"),
+    ("measurement_results", "classification_method", "VARCHAR(50)"),
+    ("measurement_results", "classification_rationale", "TEXT"),
+    ("measurement_results", "poshan_complete", "BOOLEAN"),
 ]
 
 # Indexes mirroring the index=True model columns, for the migration path.

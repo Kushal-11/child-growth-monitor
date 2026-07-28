@@ -53,4 +53,9 @@ class Measurements extends Table {
   TextColumn get combinedMethod => text().nullable()();
   RealColumn get combinedConfidenceScore => real().nullable()();
   TextColumn get combinedProtocolVersion => text().nullable()();
+  TextColumn get poshanStatus => text().nullable()();
+  TextColumn get poshanTriggeredBy => text().nullable()();
+  TextColumn get classificationMethod => text().nullable()();
+  TextColumn get classificationRationale => text().nullable()();
+  BoolColumn get poshanComplete => boolean().nullable()();
 }

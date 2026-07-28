@@ -44,6 +44,30 @@ def test_migration_noop_when_table_absent():
     dbmod.run_migrations(engine)  # no tables yet — must not raise
 
 
+def test_migration_adds_poshan_setu_columns_to_existing_measurements():
+    engine = create_engine(
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}
+    )
+    with engine.begin() as connection:
+        connection.execute(
+            text("CREATE TABLE measurement_results (id INTEGER PRIMARY KEY)")
+        )
+    dbmod.run_migrations(engine)
+    columns = {
+        column["name"]
+        for column in inspect(engine).get_columns("measurement_results")
+    }
+    assert {
+        "bmi",
+        "bmi_status",
+        "poshan_status",
+        "poshan_triggered_by",
+        "classification_method",
+        "classification_rationale",
+        "poshan_complete",
+    } <= columns
+
+
 def test_migration_matches_create_all_for_new_columns_and_indexes():
     from sqlalchemy import create_engine, inspect
     from app.models.database import Base, run_migrations

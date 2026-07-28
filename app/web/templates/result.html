@@ -17,7 +17,7 @@
         {% set muac_st = (result.muac.muac_status or "") if result.muac else "" %}
         {% set ml_st = (result.ml_prediction.wasting_status or "") if result.ml_prediction else "" %}
         {% set haz = result.nutrition.haz_status or "" %}
-        {% set combined = result.combined_nutrition.status.value %}
+        {% set poshan = result.poshan.final_status %}
         {% set status_labels = {
             "SAM": "Severe Acute Malnutrition (SAM)",
             "MAM": "Moderate Acute Malnutrition (MAM)",
@@ -26,23 +26,20 @@
             "OVERWEIGHT": "Overweight",
             "OBESE": "Obese",
             "UNKNOWN": "Unknown"
+            ,"Normal": "Normal"
+            ,"Indeterminate": "Indeterminate"
         } %}
 
-        {% if combined == "SAM" %}
+        {% if poshan == "SAM" %}
             {% set banner_class = "status-sam" %}
             {% set banner_icon = "⚠" %}
             {% set banner_title = t.banner_sam_title %}
             {% set banner_msg = t.banner_sam_msg %}
-        {% elif combined == "MAM" %}
+        {% elif poshan == "MAM" %}
             {% set banner_class = "status-mam" %}
             {% set banner_icon = "⚠" %}
             {% set banner_title = t.banner_mam_title %}
             {% set banner_msg = t.banner_mam_msg %}
-        {% elif combined in ["RISK_OVERWEIGHT", "OVERWEIGHT", "OBESE"] %}
-            {% set banner_class = "status-stunted" %}
-            {% set banner_icon = "⚠" %}
-            {% set banner_title = status_labels[combined] %}
-            {% set banner_msg = result.combined_nutrition.rationale %}
         {% elif "Stunted" in haz %}
             {% set banner_class = "status-stunted" %}
             {% set banner_icon = "📋" %}
@@ -52,7 +49,7 @@
                 {% set banner_title = t.haz_stunted %}
             {% endif %}
             {% set banner_msg = t.banner_stunted_msg %}
-        {% elif combined != "UNKNOWN" %}
+        {% elif poshan == "Normal" %}
             {% set banner_class = "status-normal" %}
             {% set banner_icon = "✓" %}
             {% set banner_title = t.banner_normal_title %}
@@ -71,8 +68,8 @@
                 <div class="flex-grow-1">
                     <div class="status-banner-title">{{ banner_title }}</div>
                     <div class="status-banner-msg">{{ banner_msg }}</div>
-                    <div class="fw-bold mt-1">Final wasting status: {{ status_labels[combined] }}</div>
-                    <div class="small opacity-75">{{ result.combined_nutrition.rationale }}</div>
+                    <div class="fw-bold mt-1">Poshan Setu status: {{ status_labels[poshan] }}</div>
+                    <div class="small opacity-75">{{ result.poshan.rationale }}</div>
                 </div>
                 <div class="text-end d-none d-sm-block">
                     <div class="small opacity-75">{{ result.child_name }}</div>
@@ -148,10 +145,11 @@
                 <div class="row g-2 mb-3">
                     <div class="col-12 mb-2">
                         <div class="card"><div class="card-body py-2">
-                            <strong>BMI+MUAC protocol classification:</strong> {{ result.protocol_status }}
+                            <strong>Poshan Setu v1 classification:</strong> {{ result.poshan.final_status }}
                             &nbsp;|&nbsp; <strong>BMI:</strong>
-                            {% if result.bmi_value is not none %}{{ "%.2f"|format(result.bmi_value) }} ({{ result.bmi_status }}){% else %}{{ result.bmi_status }}{% endif %}
-                            <br><small class="text-muted">WHO wasting classification (WHZ): {{ result.nutrition.whz_status or "Insufficient data" }} · Stunting (HAZ): {{ result.nutrition.haz_status or "Insufficient data" }}</small>
+                            {% if result.poshan.bmi is not none %}{{ "%.2f"|format(result.poshan.bmi) }} ({{ result.poshan.bmi_status }}){% else %}{{ result.poshan.bmi_status }}{% endif %}
+                            &nbsp;|&nbsp; <strong>Measured MUAC:</strong> {{ result.poshan.muac_status }}
+                            <br><small class="text-muted">WHO/MUAC screening: {{ result.combined_nutrition.status.value }} · Stunting (HAZ): {{ result.nutrition.haz_status or "Insufficient data" }}</small>
                         </div></div>
                     </div>
                     <div class="col-4">
