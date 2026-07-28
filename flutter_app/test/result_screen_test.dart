@@ -16,6 +16,8 @@ AssessmentResult _samViaMuacOnly() => AssessmentResult(
       sex: 'F',
       ageMonths: 29,
       summary: 'SAM',
+      combinedNutrition: const CombinedNutritionDetail(
+        status: 'SAM', triggeredBy: ['muac'], rationale: 'SAM flagged by muac'),
       measurement: Measurement(
         effectiveHeightCm: 87.0,
         heightMethod: 'image_estimated',
@@ -28,7 +30,7 @@ AssessmentResult _samViaMuacOnly() => AssessmentResult(
         hazZscore: -0.5,
         whzZscore: -0.3,
         hazStatus: 'Normal',
-        whzStatus: 'Normal',
+        whzStatus: 'NORMAL',
         ageMonths: 29,
       ),
       muac: MuacDetail(
@@ -44,6 +46,10 @@ AssessmentResult _manualHeightWins() => AssessmentResult(
       sex: 'F',
       ageMonths: 30,
       summary: 'Normal',
+      combinedNutrition: const CombinedNutritionDetail(
+        status: 'NORMAL',
+        rationale: 'No wasting indicator triggered',
+      ),
       measurement: Measurement(
         effectiveHeightCm: 80.0,
         heightMethod: 'manual',

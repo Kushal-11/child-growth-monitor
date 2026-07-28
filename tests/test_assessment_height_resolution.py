@@ -14,6 +14,7 @@ from app.models.database import Base, get_db
 from app.services.assessment_service import AssessmentService
 from app.services.measurement_service import BodySegments, MeasurementOutput, SideViewSegments
 from app.services.muac_service import MUACResult, MUACService
+from config import WastingStatus
 from main import app
 
 
@@ -62,13 +63,15 @@ def _service_with_spies(monkeypatch):
     service.nutrition_svc.compute_haz.return_value = -1.0
     service.nutrition_svc.compute_whz.return_value = -0.5
     service.nutrition_svc.classify_haz.return_value = "Normal"
-    service.nutrition_svc.classify_whz.return_value = "Normal"
+    service.nutrition_svc.classify_whz.return_value = WastingStatus.NORMAL
 
     muac_calls = []
 
     def fake_muac(**kwargs):
         muac_calls.append(kwargs)
-        return MUACResult(12.5, "Normal", "estimated_from_landmarks", True)
+        return MUACResult(
+            12.5, WastingStatus.NORMAL, "estimated_from_landmarks", True
+        )
 
     monkeypatch.setattr(MUACService, "estimate", staticmethod(fake_muac))
     return service, muac_calls

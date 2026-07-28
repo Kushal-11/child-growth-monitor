@@ -5,6 +5,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 from app.services.age_service import AgeService
+from config import WastingStatus
 
 
 class AssessmentRequest(BaseModel):
@@ -61,7 +62,7 @@ class NutritionDetail(BaseModel):
     haz_zscore: Optional[float] = None
     whz_zscore: Optional[float] = None
     haz_status: Optional[str] = None
-    whz_status: Optional[str] = None
+    whz_status: Optional[WastingStatus] = None
     age_months: float
 
 
@@ -80,9 +81,19 @@ class MLPrediction(BaseModel):
 class MUACDetail(BaseModel):
     """MUAC measurement or estimate."""
     muac_cm: Optional[float] = None
-    muac_status: Optional[str] = None  # "SAM" | "At Risk (MAM)" | "Normal"
+    muac_status: Optional[WastingStatus] = None
     muac_method: str = "estimated_from_whz"  # "manual" | "estimated_from_whz"
     age_in_range: bool = True  # False if age outside 6-59 months
+
+
+class CombinedNutritionDetail(BaseModel):
+    """Final clinical wasting verdict after combining all applicable arms."""
+
+    status: WastingStatus
+    triggered_by: list[str]
+    rationale: str
+    method: str = "who_or_rule"
+    confidence_score: Optional[float] = None
 
 
 class AssessmentResponse(BaseModel):
@@ -93,5 +104,6 @@ class AssessmentResponse(BaseModel):
     nutrition: NutritionDetail
     ml_prediction: Optional[MLPrediction] = None
     muac: Optional[MUACDetail] = None
+    combined_nutrition: CombinedNutritionDetail
     summary: str
     warnings: List[str] = Field(default_factory=list)

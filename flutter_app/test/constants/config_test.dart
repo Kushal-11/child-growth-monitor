@@ -39,22 +39,22 @@ void main() {
 
   group('classifyWhz', () {
     test('z < -3 is SAM', () {
-      expect(classifyWhz(-3.5), 'Severe Acute Malnutrition (SAM)');
+      expect(classifyWhz(-3.5), 'SAM');
     });
     test('z = -2.5 is MAM', () {
-      expect(classifyWhz(-2.5), 'Moderate Acute Malnutrition (MAM)');
+      expect(classifyWhz(-2.5), 'MAM');
     });
     test('z = 0 is Normal', () {
-      expect(classifyWhz(0), 'Normal');
+      expect(classifyWhz(0), 'NORMAL');
     });
     test('z = 1.5 is Risk of Overweight', () {
-      expect(classifyWhz(1.5), 'Possible Risk of Overweight');
+      expect(classifyWhz(1.5), 'RISK_OVERWEIGHT');
     });
     test('z = 2.5 is Overweight', () {
-      expect(classifyWhz(2.5), 'Overweight');
+      expect(classifyWhz(2.5), 'OVERWEIGHT');
     });
     test('z = 3.5 is Obese', () {
-      expect(classifyWhz(3.5), 'Obese');
+      expect(classifyWhz(3.5), 'OBESE');
     });
   });
 
@@ -63,10 +63,10 @@ void main() {
       expect(classifyMuac(11.0, true), 'SAM');
     });
     test('11.5-12.5 is At Risk (MAM)', () {
-      expect(classifyMuac(12.0, true), 'At Risk (MAM)');
+      expect(classifyMuac(12.0, true), 'MAM');
     });
     test('>= 12.5 is Normal', () {
-      expect(classifyMuac(13.0, true), 'Normal');
+      expect(classifyMuac(13.0, true), 'NORMAL');
     });
     test('returns null when age not in range', () {
       expect(classifyMuac(11.0, false), isNull);
@@ -78,25 +78,25 @@ void main() {
   // that would misclassify a malnourished child as healthy is caught in CI.
   group('classifyWhz exact boundaries', () {
     test('z == -3.0 is MAM (not SAM)', () {
-      expect(classifyWhz(-3.0), 'Moderate Acute Malnutrition (MAM)');
+      expect(classifyWhz(-3.0), 'MAM');
     });
     test('z just below -3 is SAM', () {
-      expect(classifyWhz(-3.01), 'Severe Acute Malnutrition (SAM)');
+      expect(classifyWhz(-3.01), 'SAM');
     });
     test('z == -2.0 is Normal (not MAM)', () {
-      expect(classifyWhz(-2.0), 'Normal');
+      expect(classifyWhz(-2.0), 'NORMAL');
     });
     test('z just below -2 is MAM', () {
-      expect(classifyWhz(-2.01), 'Moderate Acute Malnutrition (MAM)');
+      expect(classifyWhz(-2.01), 'MAM');
     });
     test('z == 1.0 is Possible Risk of Overweight', () {
-      expect(classifyWhz(1.0), 'Possible Risk of Overweight');
+      expect(classifyWhz(1.0), 'RISK_OVERWEIGHT');
     });
     test('z == 2.0 is Overweight', () {
-      expect(classifyWhz(2.0), 'Overweight');
+      expect(classifyWhz(2.0), 'OVERWEIGHT');
     });
     test('z == 3.0 is Obese', () {
-      expect(classifyWhz(3.0), 'Obese');
+      expect(classifyWhz(3.0), 'OBESE');
     });
   });
 
@@ -120,16 +120,16 @@ void main() {
 
   group('classifyMuac exact WHO boundaries', () {
     test('11.5 is At Risk (MAM), not SAM', () {
-      expect(classifyMuac(11.5, true), 'At Risk (MAM)');
+      expect(classifyMuac(11.5, true), 'MAM');
     });
     test('just below 11.5 is SAM', () {
       expect(classifyMuac(11.49, true), 'SAM');
     });
     test('12.5 is Normal, not MAM', () {
-      expect(classifyMuac(12.5, true), 'Normal');
+      expect(classifyMuac(12.5, true), 'NORMAL');
     });
     test('just below 12.5 is At Risk (MAM)', () {
-      expect(classifyMuac(12.49, true), 'At Risk (MAM)');
+      expect(classifyMuac(12.49, true), 'MAM');
     });
   });
 
@@ -137,7 +137,7 @@ void main() {
   group('combineNutritionStatus', () {
     test('MUAC SAM escalates over Normal WHZ (false-negative guard)', () {
       expect(
-        combineNutritionStatus(whzStatus: 'Normal', muacStatus: 'SAM'),
+        combineNutritionStatus(whzStatus: 'NORMAL', muacStatus: 'SAM'),
         'SAM',
       );
     });
@@ -145,7 +145,7 @@ void main() {
       expect(
         combineNutritionStatus(
           whzStatus: 'Severe Acute Malnutrition (SAM)',
-          muacStatus: 'Normal',
+          muacStatus: 'NORMAL',
         ),
         'SAM',
       );
@@ -153,7 +153,7 @@ void main() {
     test('ML SAM escalates over Normal WHZ with no MUAC', () {
       expect(
         combineNutritionStatus(
-          whzStatus: 'Normal',
+          whzStatus: 'NORMAL',
           muacStatus: null,
           mlStatus: 'SAM',
         ),
@@ -163,7 +163,7 @@ void main() {
     test('MUAC At Risk (MAM) escalates over Normal WHZ', () {
       expect(
         combineNutritionStatus(
-            whzStatus: 'Normal', muacStatus: 'At Risk (MAM)'),
+            whzStatus: 'NORMAL', muacStatus: 'MAM'),
         'MAM',
       );
     });
@@ -171,7 +171,7 @@ void main() {
       expect(
         combineNutritionStatus(
           whzStatus: 'Moderate Acute Malnutrition (MAM)',
-          muacStatus: 'Normal',
+          muacStatus: 'NORMAL',
         ),
         'MAM',
       );
@@ -179,7 +179,7 @@ void main() {
     test('ML MAM escalates over Normal WHZ', () {
       expect(
         combineNutritionStatus(
-            whzStatus: 'Normal', muacStatus: null, mlStatus: 'MAM'),
+            whzStatus: 'NORMAL', muacStatus: null, mlStatus: 'MAM'),
         'MAM',
       );
     });
@@ -201,20 +201,20 @@ void main() {
     test('all Normal is Normal', () {
       expect(
         combineNutritionStatus(
-            whzStatus: 'Normal', muacStatus: 'Normal', mlStatus: 'Normal'),
-        'Normal',
+            whzStatus: 'NORMAL', muacStatus: 'NORMAL', mlStatus: 'NORMAL'),
+        'NORMAL',
       );
     });
     test('all null is Unknown', () {
       expect(
         combineNutritionStatus(whzStatus: null, muacStatus: null),
-        'Unknown',
+        'UNKNOWN',
       );
     });
     test('WHZ overweight surfaces when nothing more severe', () {
       expect(
-        combineNutritionStatus(whzStatus: 'Overweight', muacStatus: 'Normal'),
-        'Overweight',
+        combineNutritionStatus(whzStatus: 'OVERWEIGHT', muacStatus: 'NORMAL'),
+        'OVERWEIGHT',
       );
     });
   });

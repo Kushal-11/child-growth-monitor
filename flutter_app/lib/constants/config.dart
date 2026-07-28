@@ -60,19 +60,19 @@ String classifyHaz(double z) {
 }
 
 String classifyWhz(double z) {
-  if (z < -3) return 'Severe Acute Malnutrition (SAM)';
-  if (z < -2) return 'Moderate Acute Malnutrition (MAM)';
-  if (z < 1) return 'Normal';
-  if (z < 2) return 'Possible Risk of Overweight';
-  if (z < 3) return 'Overweight';
-  return 'Obese';
+  if (z < -3) return 'SAM';
+  if (z < -2) return 'MAM';
+  if (z < 1) return 'NORMAL';
+  if (z < 2) return 'RISK_OVERWEIGHT';
+  if (z < 3) return 'OVERWEIGHT';
+  return 'OBESE';
 }
 
 String? classifyMuac(double muacCm, bool ageInRange) {
   if (!ageInRange) return null;
   if (muacCm < 11.5) return 'SAM';
-  if (muacCm < 12.5) return 'At Risk (MAM)';
-  return 'Normal';
+  if (muacCm < 12.5) return 'MAM';
+  return 'NORMAL';
 }
 
 /// Combine WHZ, MUAC, and the ML wasting classifier into a single nutrition
@@ -104,13 +104,18 @@ String combineNutritionStatus({
 int _nutritionStatusRank(String? canonical) {
   switch (canonical) {
     case 'SAM':
-      return 5;
+      return 6;
     case 'MAM':
+      return 5;
+    case 'OBESE':
       return 4;
+    case 'OVERWEIGHT':
     case 'Overweight':
       return 3;
+    case 'RISK_OVERWEIGHT':
     case 'Risk_Overweight':
       return 2;
+    case 'NORMAL':
     case 'Normal':
       return 1;
     default:
@@ -120,18 +125,20 @@ int _nutritionStatusRank(String? canonical) {
 
 String _rankToNutritionStatus(int rank) {
   switch (rank) {
-    case 5:
+    case 6:
       return 'SAM';
-    case 4:
+    case 5:
       return 'MAM';
+    case 4:
+      return 'OBESE';
     case 3:
-      return 'Overweight';
+      return 'OVERWEIGHT';
     case 2:
-      return 'Risk_Overweight';
+      return 'RISK_OVERWEIGHT';
     case 1:
-      return 'Normal';
+      return 'NORMAL';
     default:
-      return 'Unknown';
+      return 'UNKNOWN';
   }
 }
 
@@ -140,9 +147,33 @@ String? _canonicalWhz(String? s) {
   if (s == null) return null;
   if (s.contains('SAM')) return 'SAM';
   if (s.contains('MAM')) return 'MAM';
-  if (s.contains('Risk')) return 'Risk_Overweight';
-  if (s == 'Overweight' || s == 'Obese') return 'Overweight';
-  return 'Normal';
+  if (s.contains('RISK') || s.contains('Risk')) return 'RISK_OVERWEIGHT';
+  if (s == 'OBESE' || s == 'Obese') return 'OBESE';
+  if (s == 'OVERWEIGHT' || s == 'Overweight') return 'OVERWEIGHT';
+  return 'NORMAL';
+}
+
+String wastingStatusLabel(String status) {
+  switch (status) {
+    case 'SAM':
+      return 'Severe Acute Malnutrition (SAM)';
+    case 'MAM':
+      return 'Moderate Acute Malnutrition (MAM)';
+    case 'NORMAL':
+    case 'Normal':
+      return 'Normal';
+    case 'RISK_OVERWEIGHT':
+    case 'Risk_Overweight':
+      return 'Possible Risk of Overweight';
+    case 'OVERWEIGHT':
+    case 'Overweight':
+      return 'Overweight';
+    case 'OBESE':
+    case 'Obese':
+      return 'Obese';
+    default:
+      return 'Unknown';
+  }
 }
 
 /// MUAC arrives as [classifyMuac] codes: 'SAM' | 'At Risk (MAM)' | 'Normal'.
@@ -150,7 +181,7 @@ String? _canonicalMuac(String? s) {
   if (s == null) return null;
   if (s == 'SAM') return 'SAM';
   if (s.contains('MAM')) return 'MAM';
-  return 'Normal';
+  return 'NORMAL';
 }
 
 /// ML wasting status uses the training labels (see [wastingLabels]). Anything

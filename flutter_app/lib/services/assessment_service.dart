@@ -216,6 +216,13 @@ class AssessmentService {
       sex: sex,
       ageMonths: ageMonths,
       summary: summaryStatus,
+      combinedNutrition: ar.CombinedNutritionDetail(
+        status: summaryStatus,
+        triggeredBy: const [],
+        rationale: 'Combined from available WHZ, MUAC, and on-device ML signals',
+        method: 'who_muac_whz_or_rule',
+        confidenceScore: poseConfidence,
+      ),
       measurement: ar.Measurement(
         effectiveHeightCm: m.effectiveHeightCm,
         heightMethod: manualHeightCm != null ? 'manual' : 'image_estimated',
