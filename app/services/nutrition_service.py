@@ -13,7 +13,7 @@ we use linear interpolation between the provided Z-score boundary values.
 import math
 from typing import List, Optional, Tuple
 
-from config import ZSCORE_CLASSIFICATIONS
+from config import WastingStatus, ZSCORE_CLASSIFICATIONS
 from app.services.who_data_service import WHODataService
 
 
@@ -99,13 +99,13 @@ class NutritionService:
         """Classify HAZ Z-score into nutritional status."""
         return self._classify(z, ZSCORE_CLASSIFICATIONS["haz"])
 
-    def classify_whz(self, z: float) -> str:
+    def classify_whz(self, z: float) -> WastingStatus:
         """Classify WHZ Z-score into nutritional status."""
-        return self._classify(z, ZSCORE_CLASSIFICATIONS["whz"])
+        return self._classify(z, ZSCORE_CLASSIFICATIONS["whz"], WastingStatus.UNKNOWN)
 
     @staticmethod
-    def _classify(z: float, thresholds: dict) -> str:
+    def _classify(z: float, thresholds: dict, unknown="Unknown"):
         for (low, high), label in thresholds.items():
             if low <= z < high:
                 return label
-        return "Unknown"
+        return unknown

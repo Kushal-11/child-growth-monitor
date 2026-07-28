@@ -9,6 +9,7 @@ Height resolution priority:
   2. Manual height_cm input (fallback when image detection fails)
 """
 from datetime import date, datetime
+import json
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -18,6 +19,7 @@ from app.models.measurement import MeasurementResult
 from app.models.visit import Visit
 from app.schemas.assessment import (
     AssessmentResponse,
+    CombinedNutritionDetail,
     MeasurementDetail,
     MLPrediction,
     MUACDetail,
@@ -28,6 +30,7 @@ from app.services.ml_service import MLService
 from app.services.muac_service import MUACService
 from app.services.nutrition_service import NutritionService
 from app.services.who_data_service import WHODataService
+from config import WASTING_STATUS_LABELS, WastingStatus
 
 
 class AssessmentService:
@@ -90,7 +93,6 @@ class AssessmentService:
         # Priority: manual_weight > ML-estimated > WHO-median (slender/stocky adjusted)
         effective_weight = weight_kg
         estimated_weight = None
-        weight_source = "manual" if weight_kg is not None else None
 
         if effective_weight is None:
             # Try ML weight estimate first (captures wasting signal)
@@ -110,7 +112,6 @@ class AssessmentService:
                 if weight_in_bounds:
                     effective_weight = ml_weight
                     estimated_weight = effective_weight
-                    weight_source = "ml_estimated"
 
             if effective_weight is None and effective_height is not None:
                 # Fall back to WHO median with body build adjustment
@@ -121,7 +122,6 @@ class AssessmentService:
                     weight_adjustment = getattr(meas, 'weight_adjustment', 1.0)
                     estimated_weight = round(estimated_weight * weight_adjustment, 2)
                 effective_weight = estimated_weight
-                weight_source = "who_median_estimated"
 
         # 5. Compute Z-scores
         haz_z = None
@@ -176,7 +176,11 @@ class AssessmentService:
         # 5c. Combine MUAC + WHZ via WHO OR-rule for the final clinical call
         combined_status = MUACService.combine_with_whz_status(
             muac_status=muac_result.muac_status,
-            whz_status=whz_status,
+            whz_status=whz_status.value if whz_status else None,
+        )
+        combined_confidence = self._combined_confidence(
+            combined_status.triggered_by, muac_result.muac_method,
+            meas.confidence_score,
         )
 
         # 6. Persist to database
@@ -202,8 +206,13 @@ class AssessmentService:
             haz_zscore=haz_z,
             whz_zscore=whz_z,
             haz_status=haz_status,
-            whz_status=whz_status,
+            whz_status=whz_status.value if whz_status else None,
             confidence_score=meas.confidence_score,
+            combined_status=combined_status.status.value,
+            combined_triggered_by=json.dumps(combined_status.triggered_by),
+            combined_rationale=combined_status.rationale,
+            combined_method="who_muac_whz_or_rule",
+            combined_confidence_score=combined_confidence,
         )
         db.add(measurement_record)
         db.commit()
@@ -217,7 +226,7 @@ class AssessmentService:
             height_cm,
             effective_weight,
             haz_status,
-            whz_status,
+            combined_status.status,
             meas.reference_object_detected,
             muac_result.muac_cm,
             muac_result.muac_status,
@@ -288,6 +297,13 @@ class AssessmentService:
                 muac_method=muac_result.muac_method,
                 age_in_range=muac_result.age_in_range,
             ),
+            combined_nutrition=CombinedNutritionDetail(
+                status=combined_status.status,
+                triggered_by=combined_status.triggered_by,
+                rationale=combined_status.rationale,
+                method="who_muac_whz_or_rule",
+                confidence_score=combined_confidence,
+            ),
             summary=summary,
         )
 
@@ -331,7 +347,7 @@ class AssessmentService:
     @staticmethod
     def _build_summary(
         name, age_months, effective_height, predicted_height, manual_height,
-        weight, haz_status, whz_status, ref_detected,
+        weight, haz_status, combined_status, ref_detected,
         muac_cm=None, muac_status=None,
     ) -> str:
         """Build a human-readable summary string."""
@@ -358,10 +374,18 @@ class AssessmentService:
 
         if haz_status:
             lines.append(f"  Stunting (HAZ): {haz_status}")
-        if whz_status:
-            lines.append(f"  Wasting (WHZ): {whz_status}")
+        if combined_status:
+            status = WastingStatus(combined_status)
+            lines.append(f"  Final wasting status: {WASTING_STATUS_LABELS[status]}")
 
-        if not haz_status and not whz_status:
+        if not haz_status and not combined_status:
             lines.append("  Nutritional status could not be determined.")
 
         return "\n".join(lines)
+
+    @staticmethod
+    def _combined_confidence(triggered_by, muac_method, pose_confidence):
+        """Expose how strongly the measurements supporting the final call were observed."""
+        if "muac" in triggered_by and muac_method == "manual":
+            return 1.0
+        return pose_confidence

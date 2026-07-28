@@ -16,6 +16,8 @@ AssessmentResult _samViaMuacOnly() => AssessmentResult(
       sex: 'F',
       ageMonths: 29,
       summary: 'SAM',
+      combinedNutrition: const CombinedNutritionDetail(
+        status: 'SAM', triggeredBy: ['muac'], rationale: 'SAM flagged by muac'),
       measurement: Measurement(
         predictedHeightCm: 87.0,
         predictedWeightKg: 12.0,
@@ -26,7 +28,7 @@ AssessmentResult _samViaMuacOnly() => AssessmentResult(
         hazZscore: -0.5,
         whzZscore: -0.3,
         hazStatus: 'Normal',
-        whzStatus: 'Normal',
+        whzStatus: 'NORMAL',
         ageMonths: 29,
       ),
       muac: MuacDetail(

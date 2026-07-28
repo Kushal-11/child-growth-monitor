@@ -8,6 +8,7 @@ class AssessmentResult {
     required this.nutrition,
     this.mlPrediction,
     this.muac,
+    required this.combinedNutrition,
   });
 
   final String childName;
@@ -18,6 +19,7 @@ class AssessmentResult {
   final Nutrition nutrition;
   final MlPrediction? mlPrediction;
   final MuacDetail? muac;
+  final CombinedNutritionDetail combinedNutrition;
 
   factory AssessmentResult.fromJson(Map<String, dynamic> json) {
     return AssessmentResult(
@@ -37,6 +39,37 @@ class AssessmentResult {
       muac: json['muac'] == null
           ? null
           : MuacDetail.fromJson(json['muac'] as Map<String, dynamic>),
+      combinedNutrition: CombinedNutritionDetail.fromJson(
+        json['combined_nutrition'] as Map<String, dynamic>? ?? const {},
+      ),
+    );
+  }
+}
+
+class CombinedNutritionDetail {
+  const CombinedNutritionDetail({
+    required this.status,
+    this.triggeredBy = const [],
+    this.rationale = '',
+    this.method = 'who_muac_whz_or_rule',
+    this.confidenceScore,
+  });
+
+  final String status;
+  final List<String> triggeredBy;
+  final String rationale;
+  final String method;
+  final double? confidenceScore;
+
+  factory CombinedNutritionDetail.fromJson(Map<String, dynamic> json) {
+    return CombinedNutritionDetail(
+      status: json['status'] as String? ?? 'UNKNOWN',
+      triggeredBy: (json['triggered_by'] as List<dynamic>? ?? const [])
+          .map((value) => value.toString())
+          .toList(),
+      rationale: json['rationale'] as String? ?? '',
+      method: json['method'] as String? ?? 'who_muac_whz_or_rule',
+      confidenceScore: (json['confidence_score'] as num?)?.toDouble(),
     );
   }
 }

@@ -5,6 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
+from config import WastingStatus
 from app.services.nutrition_service import NutritionService
 from app.services.who_data_service import WHODataService
 
@@ -66,13 +67,13 @@ class TestClassification:
         assert nutrition_svc.classify_whz(0.0) == "Normal"
 
     def test_whz_mam(self, nutrition_svc):
-        assert nutrition_svc.classify_whz(-2.5) == "Moderate Acute Malnutrition (MAM)"
+        assert nutrition_svc.classify_whz(-2.5) == WastingStatus.MAM
 
     def test_whz_sam(self, nutrition_svc):
-        assert nutrition_svc.classify_whz(-3.5) == "Severe Acute Malnutrition (SAM)"
+        assert nutrition_svc.classify_whz(-3.5) == WastingStatus.SAM
 
     def test_whz_overweight(self, nutrition_svc):
-        assert nutrition_svc.classify_whz(2.5) == "Overweight"
+        assert nutrition_svc.classify_whz(2.5) == WastingStatus.OVERWEIGHT
 
 
 class TestLMSFormula:

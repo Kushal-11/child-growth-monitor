@@ -39,6 +39,11 @@ _MIGRATIONS = [
     ("children", "is_archived", "BOOLEAN NOT NULL DEFAULT 0"),
     ("visits", "user_id", "INTEGER"),
     ("visits", "entry_method", "VARCHAR(20) NOT NULL DEFAULT 'assessment'"),
+    ("measurement_results", "combined_status", "VARCHAR(30)"),
+    ("measurement_results", "combined_triggered_by", "VARCHAR(100)"),
+    ("measurement_results", "combined_rationale", "VARCHAR(255)"),
+    ("measurement_results", "combined_method", "VARCHAR(50)"),
+    ("measurement_results", "combined_confidence_score", "FLOAT"),
 ]
 
 # Indexes mirroring the index=True model columns, for the migration path.

@@ -70,11 +70,7 @@ class ResultScreen extends ConsumerWidget {
     // WHO CMAM OR-rule: banner severity reflects WHZ, MUAC, AND the ML wasting
     // classifier together — not WHZ alone — so a tape-measured or ML-detected
     // SAM/MAM child is never shown the green "Normal" banner.
-    final combined = combineNutritionStatus(
-      whzStatus: result.nutrition.whzStatus,
-      muacStatus: result.muac?.muacStatus,
-      mlStatus: result.mlPrediction?.wastingStatus,
-    );
+    final combined = result.combinedNutrition.status;
 
     String title;
     String message;
@@ -88,11 +84,17 @@ class ResultScreen extends ConsumerWidget {
       title = t('banner_mam_title', ref);
       message = t('banner_mam_msg', ref);
       color = Colors.orange;
+    } else if (combined == 'RISK_OVERWEIGHT' ||
+        combined == 'OVERWEIGHT' ||
+        combined == 'OBESE') {
+      title = wastingStatusLabel(combined);
+      message = result.combinedNutrition.rationale;
+      color = Colors.amber.shade800;
     } else if (haz != null && haz.toLowerCase().contains('stunted')) {
       title = haz;
       message = t('banner_stunted_msg', ref);
       color = Colors.amber.shade700;
-    } else if (combined == 'Normal') {
+    } else if (combined == 'NORMAL') {
       title = t('banner_normal_title', ref);
       message = t('banner_normal_msg', ref);
       color = Colors.green;
@@ -127,6 +129,13 @@ class ResultScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(message),
+          const SizedBox(height: 6),
+          Text(
+            'Final wasting status: ${wastingStatusLabel(combined)}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          if (result.combinedNutrition.rationale.isNotEmpty)
+            Text(result.combinedNutrition.rationale),
           if (result.mlPrediction == null) ...[
             const SizedBox(height: 6),
             Container(

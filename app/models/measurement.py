@@ -54,6 +54,13 @@ class MeasurementResult(Base):
     muac_status = Column(String(50), nullable=True)
     muac_method = Column(String(50), nullable=True)  # manual / estimated_from_whz
 
+    # Final combined clinical classification (MUAC + WHZ WHO OR-rule)
+    combined_status = Column(String(30), nullable=True)
+    combined_triggered_by = Column(String(100), nullable=True)  # JSON list
+    combined_rationale = Column(String(255), nullable=True)
+    combined_method = Column(String(50), nullable=True)
+    combined_confidence_score = Column(Float, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     visit = relationship("Visit", back_populates="measurement")
