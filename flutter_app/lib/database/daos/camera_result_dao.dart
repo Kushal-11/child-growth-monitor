@@ -43,9 +43,10 @@ class CameraResultDao {
         );
       }
       if (visit.captureState != 'processing' &&
+          visit.captureState != 'estimated_report' &&
           visit.captureState != 'measured_report') {
         throw StateError(
-          'Camera results require processing or measured reprocessing state',
+          'Camera results require processing or report reprocessing state',
         );
       }
       final maxVersion = _db.cameraResults.version.max();

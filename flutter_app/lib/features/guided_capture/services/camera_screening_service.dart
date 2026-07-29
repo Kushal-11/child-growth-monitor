@@ -337,7 +337,7 @@ class CameraScreeningWorkflow {
         ownerUserId: ownerUserId,
         visitUuid: visitUuid,
       );
-      processingStarted = true;
+      processingStarted = visit.captureState == 'processing';
       final child = await (_database.select(_database.children)
             ..where(
               (row) =>

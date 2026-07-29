@@ -360,9 +360,53 @@ void main() {
         ownerUserId: 7,
         visitUuid: screeningVisit().visitUuid,
       );
+      final visit = await visitDao.getByUuid(
+        ownerUserId: 7,
+        visitUuid: screeningVisit().visitUuid,
+      );
       expect(versions.map((result) => result.version), [1, 2]);
       expect(versions.map((result) => result.estimatedHeightCm), [88, 89]);
       expect(versions[1].supersedesResultUuid, versions[0].resultUuid);
+      expect(visit!.captureState, 'estimated_report');
+    });
+
+    test('failed reprocessing preserves the last estimated report', () async {
+      final initialWorkflow = CameraScreeningWorkflow(
+        database: db,
+        visitDao: visitDao,
+        cameraResultDao: resultDao,
+        runner: _VersionedRunner(),
+      );
+      await initialWorkflow.process(
+        ownerUserId: 7,
+        visitUuid: screeningVisit().visitUuid,
+      );
+
+      final retryWorkflow = CameraScreeningWorkflow(
+        database: db,
+        visitDao: visitDao,
+        cameraResultDao: resultDao,
+        runner: _FailingRunner(),
+      );
+      await expectLater(
+        retryWorkflow.process(
+          ownerUserId: 7,
+          visitUuid: screeningVisit().visitUuid,
+        ),
+        throwsStateError,
+      );
+
+      final visit = await visitDao.getByUuid(
+        ownerUserId: 7,
+        visitUuid: screeningVisit().visitUuid,
+      );
+      final versions = await resultDao.getVersions(
+        ownerUserId: 7,
+        visitUuid: screeningVisit().visitUuid,
+      );
+      expect(visit!.captureState, 'estimated_report');
+      expect(versions, hasLength(1));
+      expect(await db.select(db.captureAssets).get(), hasLength(2));
     });
 
     test('failure keeps accepted assets and marks processing_failed', () async {

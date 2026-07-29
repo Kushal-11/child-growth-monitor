@@ -158,9 +158,12 @@ class GuidedVisitDao {
         throw StateError('Owner-scoped visit was not found');
       }
       if (visit.captureState == 'processing') return visit;
+      if (visit.captureState == 'estimated_report' ||
+          visit.captureState == 'measured_report') {
+        return visit;
+      }
       if (visit.captureState != 'draft_capture' &&
-          visit.captureState != 'processing_failed' &&
-          visit.captureState != 'estimated_report') {
+          visit.captureState != 'processing_failed') {
         throw StateError(
           'Camera processing cannot start from ${visit.captureState}',
         );
