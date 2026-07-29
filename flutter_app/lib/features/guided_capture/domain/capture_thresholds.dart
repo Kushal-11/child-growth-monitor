@@ -23,3 +23,8 @@ const double captureMinSharpness = 0.03;
 const double captureMinBurstOverallScore = 0.55;
 const double captureLiveScoreWeight = 0.55;
 const double captureStillScoreWeight = 0.45;
+
+/// Burst-controller defaults.
+const int captureStableFrameCount = 8;
+const int captureBurstFrameCount = 3;
+const int captureRetainedFrameCount = 2;
