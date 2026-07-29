@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 
+import '../../features/guided_capture/domain/capture_models.dart';
 import '../../l10n/l10n_provider.dart';
 import '../../services/camera_frame_converter.dart';
 import '../../services/capture_quality.dart';
@@ -144,12 +145,16 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
       );
       if (frame == null) return;
       final poses = await _liveDetector.processImage(frame.inputImage);
-      final landmarks =
-          poses.isEmpty ? const <PoseLandmark>[] : poses.first.landmarks.values.toList();
+      final landmarks = poses.isEmpty
+          ? const <PoseLandmark>[]
+          : poses.first.landmarks.values.toList();
       final quality = evaluateCaptureQuality(
         landmarks,
+        poseCount: poses.length,
+        role: CaptureAssetRole.fromWire(widget.role),
         imageWidth: frame.uprightSize.width,
         imageHeight: frame.uprightSize.height,
+        tiltDegrees: null,
       );
       final shouldFire = _autoCapture && _gate.onFrame(quality.ready);
       if (!mounted) return;
@@ -211,8 +216,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
     final controller = _controller;
     if (controller == null) return;
     try {
-      await controller
-          .setFlashMode(_torchOn ? FlashMode.off : FlashMode.torch);
+      await controller.setFlashMode(_torchOn ? FlashMode.off : FlashMode.torch);
       setState(() => _torchOn = !_torchOn);
     } on CameraException {
       // Device has no torch; ignore.
@@ -234,16 +238,24 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
     switch (_quality.issue) {
       case CaptureIssue.noPose:
         return t('cap_no_pose', ref);
+      case CaptureIssue.multiplePoses:
+        return t('cap_multiple_poses', ref);
+      case CaptureIssue.wrongOrientation:
+        return t('cap_wrong_orientation', ref);
       case CaptureIssue.cutOffTop:
         return t('cap_cut_top', ref);
       case CaptureIssue.cutOffBottom:
         return t('cap_cut_bottom', ref);
-      case CaptureIssue.lowVisibility:
-        return t('cap_low_visibility', ref);
+      case CaptureIssue.missingRequiredLandmark:
+        return t('cap_missing_landmark', ref);
       case CaptureIssue.tooFar:
         return t('cap_too_far', ref);
       case CaptureIssue.offCenter:
         return t('cap_center', ref);
+      case CaptureIssue.lowVisibility:
+        return t('cap_low_visibility', ref);
+      case CaptureIssue.excessiveTilt:
+        return t('cap_tilt', ref);
       case null:
         return t('cap_ready', ref);
     }
@@ -373,16 +385,15 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
                       ),
                       Text(
                         t('cap_auto', ref),
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 12),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 12),
                       ),
                     ],
                   ),
                 ),
                 FloatingActionButton(
                   heroTag: 'shutter',
-                  backgroundColor:
-                      _quality.ready ? Colors.green : Colors.white,
+                  backgroundColor: _quality.ready ? Colors.green : Colors.white,
                   onPressed: _capturing ? null : _takePicture,
                   child: _capturing
                       ? const SizedBox(
@@ -465,8 +476,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
             ),
             const SizedBox(height: 8),
             OutlinedButton(
-              onPressed: () =>
-                  context.pop(const CaptureResult.systemCamera()),
+              onPressed: () => context.pop(const CaptureResult.systemCamera()),
               child: Text(
                 t('cap_open_system_camera', ref),
                 style: const TextStyle(color: Colors.white),

@@ -1,73 +1,77 @@
+import 'dart:math' as math;
+
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 
+import '../features/guided_capture/domain/capture_models.dart';
+import '../features/guided_capture/domain/capture_thresholds.dart';
 import 'pose_service.dart';
 
 /// Why a live frame is not yet good enough to capture, in priority order.
 /// Each issue maps to one actionable on-screen instruction.
 enum CaptureIssue {
-  /// No pose detected in the frame at all.
   noPose,
-
-  /// The estimated head top is at/beyond the top edge of the frame.
+  multiplePoses,
+  wrongOrientation,
   cutOffTop,
-
-  /// The heels are at/beyond the bottom edge of the frame.
   cutOffBottom,
-
-  /// A key landmark is inside the frame but below the likelihood threshold
-  /// (e.g. occluded or blurred).
-  lowVisibility,
-
-  /// The body is fully visible but fills too little of the frame for a
-  /// reliable pixel-ratio measurement.
+  missingRequiredLandmark,
   tooFar,
-
-  /// The torso midline is too far from the horizontal center.
   offCenter,
+  lowVisibility,
+  excessiveTilt,
 }
 
-/// Result of evaluating one live camera frame against the capture gate.
+/// Normalized live-frame component scores plus one actionable issue.
 class CaptureQuality {
-  const CaptureQuality._(this.issue);
+  const CaptureQuality.ok()
+      : issue = null,
+        poseScore = 1,
+        coverageScore = 1,
+        orientationScore = 1,
+        overallScore = 1;
 
-  const CaptureQuality.ok() : this._(null);
-  const CaptureQuality.blocked(CaptureIssue issue) : this._(issue);
+  const CaptureQuality.accepted({
+    required this.poseScore,
+    required this.coverageScore,
+    required this.orientationScore,
+  })  : issue = null,
+        overallScore = (poseScore + coverageScore + orientationScore) / 3;
 
-  /// The highest-priority framing problem, or null when the frame is good.
+  const CaptureQuality.blocked(
+    this.issue, {
+    this.poseScore = 0,
+    this.coverageScore = 0,
+    this.orientationScore = 0,
+  }) : overallScore = (poseScore + coverageScore + orientationScore) / 3;
+
   final CaptureIssue? issue;
+  final double poseScore;
+  final double coverageScore;
+  final double orientationScore;
+  final double overallScore;
 
   bool get ready => issue == null;
 }
 
-/// Minimum ML Kit likelihood for a key landmark to count as clearly visible.
-/// Matches the threshold PoseService uses for segment extraction.
-const double captureMinLandmarkLikelihood = 0.5;
-
-/// Head top / heels must stay this fraction of the frame away from the edge.
-const double captureEdgeMarginFrac = 0.02;
-
-/// Head-to-heel span must cover at least this fraction of the frame height.
-const double captureMinBodyFrac = 0.5;
-
-/// Torso midline may deviate at most this fraction of the frame width from
-/// the horizontal center.
-const double captureMaxCenterOffsetFrac = 0.20;
-
-/// Evaluate a single frame's pose landmarks (pixel coordinates in the upright
-/// frame) against the live capture gate. Pure — unit-testable without ML Kit.
+/// Evaluate one upright live frame without performing any IO.
 ///
-/// Coordinate-based cut-off checks run BEFORE the likelihood check: ML Kit
-/// infers out-of-frame landmarks with low likelihood but out-of-bounds
-/// coordinates, and "move back" is more actionable than "body not visible".
+/// Pose cardinality is checked before individual landmarks so a second person
+/// can never be hidden by evaluating only the first detected pose.
 CaptureQuality evaluateCaptureQuality(
   List<PoseLandmark> landmarks, {
+  required int poseCount,
+  required CaptureAssetRole role,
   required double imageWidth,
   required double imageHeight,
+  required double? tiltDegrees,
 }) {
-  if (landmarks.isEmpty) {
+  if (poseCount <= 0 || landmarks.isEmpty) {
     return const CaptureQuality.blocked(CaptureIssue.noPose);
   }
-  final lm = {for (final l in landmarks) l.type: l};
+  if (poseCount > 1) {
+    return const CaptureQuality.blocked(CaptureIssue.multiplePoses);
+  }
+  final lm = {for (final landmark in landmarks) landmark.type: landmark};
 
   final nose = lm[PoseLandmarkType.nose];
   final leftEye = lm[PoseLandmarkType.leftEye];
@@ -75,56 +79,99 @@ CaptureQuality evaluateCaptureQuality(
 
   double? headTopY;
   if (nose != null && leftEye != null && rightEye != null) {
-    final leftEar = lm[PoseLandmarkType.leftEar];
-    final rightEar = lm[PoseLandmarkType.rightEar];
     headTopY = PoseService.estimateHeadTopY(
       noseY: nose.y,
       leftEyeY: leftEye.y,
       rightEyeY: rightEye.y,
-      leftEarY: leftEar?.y,
-      rightEarY: rightEar?.y,
+      leftEarY: lm[PoseLandmarkType.leftEar]?.y,
+      rightEarY: lm[PoseLandmarkType.rightEar]?.y,
     );
-  }
-
-  final edgeMargin = captureEdgeMarginFrac * imageHeight;
-  if (headTopY != null && headTopY < edgeMargin) {
-    return const CaptureQuality.blocked(CaptureIssue.cutOffTop);
   }
 
   final heels = [
     lm[PoseLandmarkType.leftHeel],
     lm[PoseLandmarkType.rightHeel],
-  ].whereType<PoseLandmark>().toList();
+  ].whereType<PoseLandmark>();
   double? heelY;
   for (final heel in heels) {
     heelY = heelY == null || heel.y > heelY ? heel.y : heelY;
   }
-  if (heelY != null && heelY > imageHeight - edgeMargin) {
-    return const CaptureQuality.blocked(CaptureIssue.cutOffBottom);
-  }
 
-  // Same seven key landmarks PoseService.computeConfidence averages.
-  final keyLandmarks = [
-    nose,
+  final bodyTopY = headTopY ?? nose?.y;
+  final bodySpan = bodyTopY != null && heelY != null
+      ? math.max(heelY - bodyTopY, 1.0)
+      : null;
+  final shoulderWidth = _pairWidth(
     lm[PoseLandmarkType.leftShoulder],
     lm[PoseLandmarkType.rightShoulder],
+  );
+  final hipWidth = _pairWidth(
     lm[PoseLandmarkType.leftHip],
     lm[PoseLandmarkType.rightHip],
-    lm[PoseLandmarkType.leftHeel],
-    lm[PoseLandmarkType.rightHeel],
-  ];
-  final allClear = keyLandmarks.every(
-    (l) => l != null && l.likelihood >= captureMinLandmarkLikelihood,
   );
-  if (!allClear) {
-    return const CaptureQuality.blocked(CaptureIssue.lowVisibility);
+  final visibleWidth = shoulderWidth == null
+      ? hipWidth
+      : hipWidth == null
+          ? shoulderWidth
+          : math.max(shoulderWidth, hipWidth);
+  final widthToBody =
+      visibleWidth != null && bodySpan != null ? visibleWidth / bodySpan : null;
+  final isProfileRole =
+      role == CaptureAssetRole.side || role == CaptureAssetRole.armSide;
+  final orientationScore = _orientationScore(widthToBody, isProfileRole);
+
+  if (widthToBody != null) {
+    if (isProfileRole && widthToBody > captureSideMaxWidthToBodyFraction) {
+      return CaptureQuality.blocked(
+        CaptureIssue.wrongOrientation,
+        orientationScore: orientationScore,
+      );
+    }
+    if (!isProfileRole && widthToBody < captureFrontMinWidthToBodyFraction) {
+      return CaptureQuality.blocked(
+        CaptureIssue.wrongOrientation,
+        orientationScore: orientationScore,
+      );
+    }
   }
 
+  final edgeMargin = captureEdgeMarginFraction * imageHeight;
+  if (headTopY != null && headTopY < edgeMargin) {
+    return CaptureQuality.blocked(
+      CaptureIssue.cutOffTop,
+      orientationScore: orientationScore,
+    );
+  }
+  if (heelY != null && heelY > imageHeight - edgeMargin) {
+    return CaptureQuality.blocked(
+      CaptureIssue.cutOffBottom,
+      orientationScore: orientationScore,
+    );
+  }
+
+  final requiredLandmarks = _requiredLandmarks(lm, role);
+  if (requiredLandmarks == null) {
+    return CaptureQuality.blocked(
+      CaptureIssue.missingRequiredLandmark,
+      orientationScore: orientationScore,
+    );
+  }
+
+  var coverageScore = 0.0;
   if (headTopY != null && heelY != null) {
-    final bodyFrac = (heelY - headTopY) / imageHeight;
-    if (bodyFrac < captureMinBodyFrac) {
-      return const CaptureQuality.blocked(CaptureIssue.tooFar);
+    final bodyFraction = (heelY - headTopY) / imageHeight;
+    final bodyCoverageScore = ((bodyFraction - captureMinBodyCoverageFraction) /
+            (captureTargetBodyCoverageFraction -
+                captureMinBodyCoverageFraction))
+        .clamp(0.0, 1.0);
+    if (bodyFraction < captureMinBodyCoverageFraction) {
+      return CaptureQuality.blocked(
+        CaptureIssue.tooFar,
+        coverageScore: bodyCoverageScore,
+        orientationScore: orientationScore,
+      );
     }
+    coverageScore = bodyCoverageScore;
   }
 
   final torsoXs = [
@@ -132,30 +179,134 @@ CaptureQuality evaluateCaptureQuality(
     lm[PoseLandmarkType.rightShoulder],
     lm[PoseLandmarkType.leftHip],
     lm[PoseLandmarkType.rightHip],
-  ].whereType<PoseLandmark>().map((l) => l.x).toList();
+  ].whereType<PoseLandmark>().map((landmark) => landmark.x).toList();
   if (torsoXs.isNotEmpty) {
-    final midX = torsoXs.reduce((a, b) => a + b) / torsoXs.length;
+    final midX = torsoXs.reduce((left, right) => left + right) / torsoXs.length;
     final offset = (midX - imageWidth / 2).abs();
-    if (offset > captureMaxCenterOffsetFrac * imageWidth) {
-      return const CaptureQuality.blocked(CaptureIssue.offCenter);
+    final maxOffset = captureMaxCenterOffsetFraction * imageWidth;
+    final centerScore = (1 - offset / maxOffset).clamp(0.0, 1.0);
+    coverageScore = math.min(coverageScore, centerScore);
+    if (offset > maxOffset) {
+      return CaptureQuality.blocked(
+        CaptureIssue.offCenter,
+        coverageScore: coverageScore,
+        orientationScore: orientationScore,
+      );
     }
   }
 
-  return const CaptureQuality.ok();
+  final poseScore = requiredLandmarks
+          .map((landmark) => landmark.likelihood.clamp(0.0, 1.0))
+          .reduce((left, right) => left + right) /
+      requiredLandmarks.length;
+  if (requiredLandmarks.any(
+    (landmark) => landmark.likelihood < captureMinLandmarkLikelihood,
+  )) {
+    return CaptureQuality.blocked(
+      CaptureIssue.lowVisibility,
+      poseScore: poseScore,
+      coverageScore: coverageScore,
+      orientationScore: orientationScore,
+    );
+  }
+
+  if (tiltDegrees != null && tiltDegrees.abs() > captureMaxTiltDegrees) {
+    return CaptureQuality.blocked(
+      CaptureIssue.excessiveTilt,
+      poseScore: poseScore,
+      coverageScore: coverageScore,
+      orientationScore: orientationScore,
+    );
+  }
+
+  return CaptureQuality.accepted(
+    poseScore: poseScore,
+    coverageScore: coverageScore,
+    orientationScore: orientationScore,
+  );
 }
 
-/// Debounces auto-capture: fires once after [requiredGoodFrames] consecutive
-/// good frames, then requires a fresh streak. Pure state machine — no timers.
+double? _pairWidth(PoseLandmark? left, PoseLandmark? right) {
+  if (left == null || right == null) return null;
+  return (left.x - right.x).abs();
+}
+
+double _orientationScore(double? widthToBody, bool isProfileRole) {
+  if (widthToBody == null) return 0;
+  if (isProfileRole) {
+    return ((captureSideMaxWidthToBodyFraction - widthToBody) /
+            (captureSideMaxWidthToBodyFraction -
+                captureSideTargetWidthToBodyFraction))
+        .clamp(0.0, 1.0);
+  }
+  return ((widthToBody - captureFrontMinWidthToBodyFraction) /
+          (captureFrontTargetWidthToBodyFraction -
+              captureFrontMinWidthToBodyFraction))
+      .clamp(0.0, 1.0);
+}
+
+List<PoseLandmark>? _requiredLandmarks(
+  Map<PoseLandmarkType, PoseLandmark> landmarks,
+  CaptureAssetRole role,
+) {
+  PoseLandmark? at(PoseLandmarkType type) => landmarks[type];
+
+  final head = [
+    at(PoseLandmarkType.nose),
+    at(PoseLandmarkType.leftEye),
+    at(PoseLandmarkType.rightEye),
+  ];
+  if (head.any((landmark) => landmark == null)) return null;
+
+  final isProfileRole =
+      role == CaptureAssetRole.side || role == CaptureAssetRole.armSide;
+  if (isProfileRole) {
+    final leftChain = [
+      at(PoseLandmarkType.leftShoulder),
+      at(PoseLandmarkType.leftHip),
+      at(PoseLandmarkType.leftHeel),
+    ];
+    final rightChain = [
+      at(PoseLandmarkType.rightShoulder),
+      at(PoseLandmarkType.rightHip),
+      at(PoseLandmarkType.rightHeel),
+    ];
+    final chain = leftChain.every((landmark) => landmark != null)
+        ? leftChain
+        : rightChain.every((landmark) => landmark != null)
+            ? rightChain
+            : null;
+    if (chain == null) return null;
+    return [
+      ...head.whereType<PoseLandmark>(),
+      ...chain.whereType<PoseLandmark>(),
+    ];
+  }
+
+  final body = [
+    at(PoseLandmarkType.leftShoulder),
+    at(PoseLandmarkType.rightShoulder),
+    at(PoseLandmarkType.leftHip),
+    at(PoseLandmarkType.rightHip),
+    at(PoseLandmarkType.leftHeel),
+    at(PoseLandmarkType.rightHeel),
+  ];
+  if (body.any((landmark) => landmark == null)) return null;
+  return [
+    ...head.whereType<PoseLandmark>(),
+    ...body.whereType<PoseLandmark>(),
+  ];
+}
+
+/// Debounces auto-capture and fires once per stable quality streak.
 class AutoCaptureGate {
   AutoCaptureGate({this.requiredGoodFrames = 8});
 
   final int requiredGoodFrames;
   int _streak = 0;
 
-  /// Current streak as a 0..1 fraction, for a progress ring in the UI.
   double get progress => (_streak / requiredGoodFrames).clamp(0.0, 1.0);
 
-  /// Feed one frame's gate verdict; returns true when capture should fire.
   bool onFrame(bool good) {
     if (!good) {
       _streak = 0;

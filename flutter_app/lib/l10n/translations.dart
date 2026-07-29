@@ -390,6 +390,14 @@ const Map<String, Map<String, String>> translations = {
     'en': 'Position the child in the frame',
     'mr': 'मुलाला फ्रेममध्ये उभे करा',
   },
+  'cap_multiple_poses': {
+    'en': 'Keep only one child in the frame',
+    'mr': 'फ्रेममध्ये फक्त एकच मूल ठेवा',
+  },
+  'cap_wrong_orientation': {
+    'en': 'Turn the child to match the requested view',
+    'mr': 'मुलाला सांगितलेल्या दिशेला वळवा',
+  },
   'cap_cut_top': {
     'en': 'Move back — head is cut off',
     'mr': 'मागे जा — डोके फ्रेमबाहेर आहे',
@@ -397,6 +405,10 @@ const Map<String, Map<String, String>> translations = {
   'cap_cut_bottom': {
     'en': 'Move back — feet are not visible',
     'mr': 'मागे जा — पाय दिसत नाहीत',
+  },
+  'cap_missing_landmark': {
+    'en': 'Make the required body side fully visible',
+    'mr': 'आवश्यक शरीराची बाजू पूर्णपणे दिसू द्या',
   },
   'cap_low_visibility': {
     'en': 'Make sure the whole body is clearly visible',
@@ -409,6 +421,10 @@ const Map<String, Map<String, String>> translations = {
   'cap_center': {
     'en': 'Center the child in the frame',
     'mr': 'मुलाला फ्रेमच्या मध्यभागी आणा',
+  },
+  'cap_tilt': {
+    'en': 'Hold the phone upright',
+    'mr': 'फोन सरळ धरा',
   },
   'cap_ready': {
     'en': 'Good position — hold still',
