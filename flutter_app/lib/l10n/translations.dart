@@ -523,4 +523,107 @@ const Map<String, Map<String, String>> translations = {
     'en': 'Assessment data stays encrypted on this device.',
     'mr': 'मूल्यांकन माहिती या उपकरणावर कूटबद्ध राहते.',
   },
+  'back_view_archived_only': {
+    'en': 'Saved for record only — not used',
+    'mr': 'फक्त नोंदीसाठी जतन — वापरले जात नाही',
+  },
+  'under_five_error': {
+    'en': 'Child must be under five years old.',
+    'mr': 'मूल पाच वर्षांपेक्षा लहान असणे आवश्यक आहे.',
+  },
+  'badge_reference_object': {
+    'en': 'Reference object',
+    'mr': 'संदर्भ वस्तू',
+  },
+  'badge_ml_estimated': {'en': 'ML estimate', 'mr': 'ML अंदाज'},
+  'badge_who_statistical': {
+    'en': 'WHO statistical',
+    'mr': 'WHO सांख्यिकीय',
+  },
+  'badge_whz_derived': {'en': 'WHZ-derived', 'mr': 'WHZ-आधारित'},
+  'badge_unavailable': {'en': 'Unavailable', 'mr': 'अनुपलब्ध'},
+  'poshan_title': {
+    'en': 'Poshan Setu classification',
+    'mr': 'पोषण सेतू वर्गीकरण',
+  },
+  'poshan_final': {'en': 'Final status', 'mr': 'अंतिम स्थिती'},
+  'poshan_bmi': {'en': 'BMI component', 'mr': 'BMI घटक'},
+  'poshan_muac': {'en': 'MUAC component', 'mr': 'MUAC घटक'},
+  'poshan_method': {'en': 'Method', 'mr': 'पद्धत'},
+  'poshan_provenance': {'en': 'Provenance', 'mr': 'स्त्रोत'},
+  'measurement_required': {
+    'en': 'Direct measurements required',
+    'mr': 'थेट मोजमाप आवश्यक',
+  },
+  'secondary_screening': {
+    'en': 'Secondary WHO / ML screening',
+    'mr': 'दुय्यम WHO / ML तपासणी',
+  },
+  'select_date_of_birth': {
+    'en': 'Select date of birth',
+    'mr': 'जन्मतारीख निवडा',
+  },
+  'measurement_range_prefix': {
+    'en': 'Enter a plausible value:',
+    'mr': 'विश्वसनीय मूल्य भरा:',
+  },
+  'step_child_details': {'en': 'Child details', 'mr': 'मुलाची माहिती'},
+  'step_photos_measurements': {
+    'en': 'Photos & measurements',
+    'mr': 'फोटो आणि मोजमाप',
+  },
+  'step_review': {'en': 'Review', 'mr': 'पुनरावलोकन'},
+  'who_are_we_assessing': {
+    'en': 'Who are we assessing?',
+    'mr': 'आपण कोणाचे मूल्यांकन करत आहोत?',
+  },
+  'child_details_help': {
+    'en': 'Select a registered child or enter details for a new profile.',
+    'mr': 'नोंदणीकृत मूल निवडा किंवा नवीन प्रोफाइलची माहिती भरा.',
+  },
+  'select_registered_child': {
+    'en': 'Select a registered child',
+    'mr': 'नोंदणीकृत मूल निवडा',
+  },
+  'or_enter_new_profile': {
+    'en': 'Or continue with a new profile',
+    'mr': 'किंवा नवीन प्रोफाइलसह पुढे जा',
+  },
+  'enter_new_child_details': {
+    'en': 'Enter the child details below',
+    'mr': 'खाली मुलाची माहिती भरा',
+  },
+  'capture_measurements_heading': {
+    'en': 'Capture photos',
+    'mr': 'फोटो घ्या',
+  },
+  'capture_measurements_help': {
+    'en':
+        'Keep the full body visible in good light. Manual measurements are optional.',
+    'mr':
+        'चांगल्या प्रकाशात संपूर्ण शरीर दिसू द्या. हस्तलिखित मोजमाप ऐच्छिक आहेत.',
+  },
+  'front_photo_compact_help': {
+    'en': 'Child upright, facing the camera, with head and feet visible.',
+    'mr': 'मूल सरळ, कॅमेऱ्याकडे तोंड करून, डोके आणि पाय दिसतील असे उभे करा.',
+  },
+  'manual_measurements_priority_note': {
+    'en':
+        'Add scale or tape values when available. These take priority over estimates.',
+    'mr':
+        'उपलब्ध असल्यास वजनकाटा किंवा टेपचे मोजमाप भरा. त्यांना अंदाजापेक्षा प्राधान्य दिले जाते.',
+  },
+  'review_assessment_heading': {
+    'en': 'Review assessment',
+    'mr': 'मूल्यांकन तपासा',
+  },
+  'review_assessment_help': {
+    'en': 'Confirm the details before processing the assessment.',
+    'mr': 'मूल्यांकन प्रक्रिया सुरू करण्यापूर्वी माहिती तपासा.',
+  },
+  'photos': {'en': 'Photos', 'mr': 'फोटो'},
+  'ready': {'en': 'Ready', 'mr': 'तयार'},
+  'not_provided': {'en': 'Not provided', 'mr': 'दिलेले नाही'},
+  'back': {'en': 'Back', 'mr': 'मागे'},
+  'continue': {'en': 'Continue', 'mr': 'पुढे जा'},
 };

@@ -1,12 +1,57 @@
 """Shared, calendar-aware age calculation and clinical-range validation."""
 from calendar import monthrange
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 
 from config import CLINICAL_MAX_AGE_MONTHS, CLINICAL_MIN_AGE_MONTHS
 
 
 AVERAGE_DAYS_PER_MONTH = 365.25 / 12
+
+
+def _as_date(value: date | datetime) -> date:
+    return value.date() if isinstance(value, datetime) else value
+
+
+def _monthly_anniversary(date_of_birth: date, months: int) -> date:
+    """Shift a birth date by calendar months, clamping month-end birthdays."""
+    month_index = date_of_birth.year * 12 + date_of_birth.month - 1 + months
+    year, zero_based_month = divmod(month_index, 12)
+    month = zero_based_month + 1
+    day = min(date_of_birth.day, monthrange(year, month)[1])
+    return date(year, month, day)
+
+
+def completed_months(
+    date_of_birth: date | datetime,
+    assessment_date: date | datetime,
+) -> int:
+    """Return completed calendar months at the assessment date."""
+    birth = _as_date(date_of_birth)
+    assessed = _as_date(assessment_date)
+    if assessed < birth:
+        raise ValueError("assessment_date must not be before date_of_birth")
+
+    months = (assessed.year - birth.year) * 12 + assessed.month - birth.month
+    if assessed < _monthly_anniversary(birth, months):
+        months -= 1
+    return months
+
+
+def age_months_at(
+    date_of_birth: date | datetime,
+    assessment_date: date | datetime,
+) -> float:
+    """Return calendar-aware fractional age in months."""
+    birth = _as_date(date_of_birth)
+    assessed = _as_date(assessment_date)
+    months = completed_months(birth, assessed)
+    previous = _monthly_anniversary(birth, months)
+    following = _monthly_anniversary(birth, months + 1)
+    interval_days = (following - previous).days
+    if interval_days <= 0:
+        return float(months)
+    return months + (assessed - previous).days / interval_days
 
 
 @dataclass(frozen=True)

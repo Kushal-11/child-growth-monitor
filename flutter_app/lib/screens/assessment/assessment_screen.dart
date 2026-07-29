@@ -1,540 +1,852 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../../constants/config.dart';
 import '../../constants/feature_flags.dart';
+import '../../database/database.dart';
+import '../../features/assessment/providers/assessment_form_provider.dart';
+import '../../features/assessment/widgets/assessment_header.dart';
+import '../../features/assessment/widgets/assessment_progress.dart';
+import '../../features/assessment/widgets/child_selector_card.dart';
+import '../../features/assessment/widgets/photo_guidance_tile.dart';
 import '../../l10n/l10n_provider.dart';
-import '../../providers/assessment_service_provider.dart';
-import '../../providers/assessment_provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/children_provider.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
 import '../shared/app_scaffold.dart';
 import 'capture_screen.dart';
 
-class AssessmentScreen extends ConsumerStatefulWidget {
+class AssessmentScreen extends ConsumerWidget {
   const AssessmentScreen({super.key});
 
   @override
-  ConsumerState<AssessmentScreen> createState() => _AssessmentScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(assessmentFormProvider);
+    final notifier = ref.read(assessmentFormProvider.notifier);
+    final stepLabels = [
+      t('step_child_details', ref),
+      t('step_photos_measurements', ref),
+      t('step_review', ref),
+    ];
 
-class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _childNameController = TextEditingController();
-  final _dobController = TextEditingController();
-  final _ageMonthsController = TextEditingController();
-  final _weightController = TextEditingController();
-  final _heightValueController = TextEditingController();
-  final _muacController = TextEditingController();
-  final _guardianController = TextEditingController();
-  final _locationController = TextEditingController();
-
-  final ImagePicker _picker = ImagePicker();
-
-  String _sex = 'M';
-  String _heightUnit = 'cm';
-  bool _useDob = true;
-  bool _loading = false;
-  String? _error;
-
-  XFile? _frontImage;
-  XFile? _sideImage;
-  XFile? _backImage;
-
-  @override
-  void initState() {
-    super.initState();
-    _dobController.text = DateFormat('yyyy-MM-dd').format(
-      DateTime.now().subtract(const Duration(days: 365 * 3)),
-    );
-  }
-
-  @override
-  void dispose() {
-    _childNameController.dispose();
-    _dobController.dispose();
-    _ageMonthsController.dispose();
-    _weightController.dispose();
-    _heightValueController.dispose();
-    _muacController.dispose();
-    _guardianController.dispose();
-    _locationController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickImage(ImageSource source, String role) async {
-    XFile? file;
-    if (source == ImageSource.camera && FeatureFlags.liveCaptureEnabled) {
-      // In-app live capture with pose guidance; falls back to the system
-      // camera when the capture screen reports the camera is unusable.
-      final result = await context.push<CaptureResult>('/capture/$role');
-      if (result == null) return; // cancelled
-      file = result.useSystemCamera
-          ? await _picker.pickImage(source: source, imageQuality: 90)
-          : XFile(result.imagePath!);
-    } else {
-      file = await _picker.pickImage(source: source, imageQuality: 90);
-    }
-    if (!mounted || file == null) return;
-    setState(() {
-      switch (role) {
-        case 'front':
-          _frontImage = file;
-        case 'side':
-          _sideImage = file;
-        case 'back':
-          _backImage = file;
-      }
-    });
-  }
-
-  Future<void> _selectDob() async {
-    final initial = DateTime.tryParse(_dobController.text) ?? DateTime.now();
-    final selected = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
-    );
-    if (!mounted || selected == null) return;
-    setState(() {
-      _dobController.text = DateFormat('yyyy-MM-dd').format(selected);
-      // Sync age months
-      final days = DateTime.now().difference(selected).inDays;
-      _ageMonthsController.text = (days / 30.4375).toStringAsFixed(0);
-    });
-  }
-
-  void _onAgeMonthsChanged(String value) {
-    final months = double.tryParse(value);
-    if (months == null || months < 0) return;
-    final dob =
-        DateTime.now().subtract(Duration(days: (months * 30.4375).round()));
-    _dobController.text = DateFormat('yyyy-MM-dd').format(dob);
-  }
-
-  String _resolvedDob() {
-    if (_useDob) return _dobController.text.trim();
-    final months = double.tryParse(_ageMonthsController.text.trim());
-    if (months != null && months >= 0) {
-      final dob =
-          DateTime.now().subtract(Duration(days: (months * 30.4375).round()));
-      return DateFormat('yyyy-MM-dd').format(dob);
-    }
-    return _dobController.text.trim();
-  }
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_frontImage == null) {
-      setState(() => _error = t('front_image_required', ref));
-      return;
-    }
-
-    final heightValue = double.tryParse(_heightValueController.text.trim());
-    double? heightCm;
-    if (heightValue != null) {
-      heightCm = _heightUnit == 'inch' ? heightValue * 2.54 : heightValue;
-    }
-
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final ownerUserId = ref.read(authProvider).user?.id;
-      final svc = await ref.read(assessmentServiceProvider.future);
-      final result = await svc.runAssessment(
-        frontImagePath: _frontImage!.path,
-        sideImagePath: _sideImage?.path,
-        backImagePath: _backImage?.path,
-        childName: _childNameController.text.trim(),
-        dateOfBirth: _resolvedDob(),
-        sex: _sex,
-        manualWeightKg: double.tryParse(_weightController.text.trim()),
-        manualHeightCm: heightCm,
-        manualMuacCm: double.tryParse(_muacController.text.trim()),
-        guardianName: _guardianController.text.trim().isEmpty
-            ? null
-            : _guardianController.text.trim(),
-        location: _locationController.text.trim().isEmpty
-            ? null
-            : _locationController.text.trim(),
-        ownerUserId: ownerUserId,
-      );
-      if (!mounted) return;
-      ref.read(assessmentResultProvider.notifier).state = result;
-      ref.invalidate(childrenProvider);
-      context.go('/result');
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.toString());
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return AppScaffold(
       currentIndex: 0,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Text(
-                t('assess_heading', ref),
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                t('assess_subtitle', ref),
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-
-              // === IMAGES ===
-              _sectionHeader(t('front_view_photo', ref), required: true),
-              _photoGuidanceTips(),
-              const SizedBox(height: 8),
-              _imagePickerRow('front', _frontImage),
-              const SizedBox(height: 16),
-
-              _sectionHeader(
-                '${t('side_view', ref)} (${t('optional_label', ref)})',
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.teal.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    t('side_accuracy_badge', ref),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.teal.shade800,
-                    ),
-                  ),
+      showAppBar: false,
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            const AssessmentHeader(),
+            AssessmentProgress(step: state.step, label: stepLabels[state.step]),
+            Expanded(
+              child: SingleChildScrollView(
+                key: PageStorageKey('assessment_page_${state.step}'),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.lg,
+                  AppSpacing.xl,
+                  AppSpacing.section,
+                ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  child: switch (state.step) {
+                    0 => _ChildDetailsStep(
+                        key: const ValueKey('child-details'),
+                        state: state,
+                      ),
+                    1 => _PhotosStep(
+                        key: const ValueKey('photos'),
+                        state: state,
+                        onPickImage: (source, role) =>
+                            _pickImage(context, ref, source, role),
+                      ),
+                    _ => _ReviewStep(
+                        key: const ValueKey('review'),
+                        state: state,
+                      ),
+                  },
                 ),
               ),
-              Text(
-                t('side_view_help', ref),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 4),
-              _imagePickerRow('side', _sideImage),
-              const SizedBox(height: 16),
+            ),
+            _ActionBar(
+              state: state,
+              onBack: notifier.back,
+              onContinue: () async {
+                if (state.step < 2) {
+                  notifier.next();
+                  return;
+                }
+                final completed = await notifier.submit();
+                if (completed && context.mounted) context.go('/result');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-              _sectionHeader(
-                '${t('back_view', ref)} (${t('optional_label', ref)})',
-              ),
-              Text(
-                t('back_view_help', ref),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 4),
-              _imagePickerRow('back', _backImage),
+  Future<void> _pickImage(
+    BuildContext context,
+    WidgetRef ref,
+    ImageSource source,
+    String role,
+  ) async {
+    XFile? file;
+    if (source == ImageSource.camera && FeatureFlags.liveCaptureEnabled) {
+      final result = await context.push<CaptureResult>('/capture/$role');
+      if (result == null) return;
+      file = result.useSystemCamera
+          ? await ImagePicker().pickImage(source: source, imageQuality: 90)
+          : XFile(result.imagePath!);
+    } else {
+      file = await ImagePicker().pickImage(source: source, imageQuality: 90);
+    }
+    if (file == null || !context.mounted) return;
+    ref.read(assessmentFormProvider.notifier).setImage(role, file.path);
+  }
+}
 
-              const Divider(height: 32),
+class _ChildDetailsStep extends ConsumerWidget {
+  const _ChildDetailsStep({super.key, required this.state});
 
-              // === CHILD INFO ===
-              _sectionHeader(t('child_information', ref)),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _childNameController,
-                decoration: InputDecoration(
-                  labelText: '${t('child_name', ref)} *',
-                  border: const OutlineInputBorder(),
-                ),
-                maxLength: 100,
-                validator: (v) => (v == null || v.trim().isEmpty)
+  final AssessmentFormState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(assessmentFormProvider.notifier);
+    final children = ref.watch(assessmentChildrenProvider).value ?? const [];
+    final selected = children
+        .where((child) => child.id == state.selectedChildId)
+        .firstOrNull;
+
+    final dob = DateTime.tryParse(state.resolvedDateOfBirth);
+    final resolvedAge = state.resolvedAgeMonths;
+    final invalidDob = dob == null ||
+        dob.isAfter(DateTime.now()) ||
+        resolvedAge == null ||
+        resolvedAge < 0 ||
+        resolvedAge >= maxUnderFiveAgeMonths;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t('who_are_we_assessing', ref),
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          t('child_details_help', ref),
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        ChildSelectorCard(
+          title: selected?.name ?? t('select_registered_child', ref),
+          subtitle: selected == null
+              ? t('or_enter_new_profile', ref)
+              : '${selected.sex == 'M' ? t('male', ref) : t('female', ref)} · '
+                  '${selected.dateOfBirth}',
+          onTap: () => _showChildSelector(context, ref, children),
+        ),
+        const SizedBox(height: AppSpacing.xxl),
+        Text(
+          t('child_information', ref),
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        TextFormField(
+          key: ValueKey('assessment_child_name_${state.revision}'),
+          initialValue: state.childName,
+          onChanged: notifier.updateChildName,
+          maxLength: 100,
+          textInputAction: TextInputAction.next,
+          decoration: InputDecoration(
+            labelText: '${t('child_name', ref)} *',
+            errorText:
+                state.showValidationErrors && state.childName.trim().isEmpty
                     ? t('required_field', ref)
                     : null,
-              ),
-              const SizedBox(height: 12),
-              // Sex selection
-              Text(t('sex', ref),
-                  style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: 4),
-              SegmentedButton<String>(
-                segments: [
-                  ButtonSegment(value: 'M', label: Text(t('male', ref))),
-                  ButtonSegment(value: 'F', label: Text(t('female', ref))),
-                ],
-                selected: {_sex},
-                onSelectionChanged: (v) => setState(() => _sex = v.first),
-              ),
-              const SizedBox(height: 12),
-
-              // Age toggle
-              if (_useDob) ...[
-                TextFormField(
-                  controller: _dobController,
-                  decoration: InputDecoration(
-                    labelText: t('date_of_birth', ref),
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.calendar_today),
-                      onPressed: _selectDob,
-                    ),
-                  ),
-                  readOnly: true,
-                  onTap: _selectDob,
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return t('required_field', ref);
-                    }
-                    final parsed = DateTime.tryParse(v);
-                    if (parsed == null) return t('use_date_format', ref);
-                    if (parsed.isAfter(DateTime.now())) {
-                      return t('dob_future_error', ref);
-                    }
-                    return null;
-                  },
-                ),
-                TextButton(
-                  onPressed: () => setState(() => _useDob = false),
-                  child: Text(t('toggle_age_months', ref)),
-                ),
-              ] else ...[
-                TextFormField(
-                  controller: _ageMonthsController,
-                  decoration: InputDecoration(
-                    labelText: t('age_months', ref),
-                    hintText: t('placeholder_age_months', ref),
-                    border: const OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                  onChanged: _onAgeMonthsChanged,
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return t('required_field', ref);
-                    }
-                    final n = double.tryParse(v);
-                    if (n == null || n < 0) {
-                      return t('positive_number_error', ref);
-                    }
-                    return null;
-                  },
-                ),
-                TextButton(
-                  onPressed: () => setState(() => _useDob = true),
-                  child: Text(t('toggle_dob', ref)),
-                ),
-              ],
-
-              const Divider(height: 24),
-
-              // === OPTIONAL MEASUREMENTS ===
-              _sectionHeader(
-                '${t('optional_measurements', ref)} ${t('optional_measurements_note', ref)}',
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _weightController,
-                decoration: InputDecoration(
-                  labelText: t('weight_kg', ref),
-                  hintText: t('weight_placeholder', ref),
-                  helperText: t('weight_help', ref),
-                  border: const OutlineInputBorder(),
-                ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                validator: (v) => _validatePositive(v),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _muacController,
-                decoration: InputDecoration(
-                  labelText: t('muac_cm', ref),
-                  hintText: t('muac_placeholder', ref),
-                  helperText: t('muac_help', ref),
-                  border: const OutlineInputBorder(),
-                ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                validator: (v) => _validatePositive(v),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _heightValueController,
-                      decoration: InputDecoration(
-                        labelText: t('height', ref),
-                        hintText: t('height_placeholder', ref),
-                        helperText: t('height_fallback', ref),
-                        border: const OutlineInputBorder(),
-                      ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      validator: (v) => _validatePositive(v),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  SegmentedButton<String>(
-                    segments: [
-                      ButtonSegment(
-                          value: 'cm', label: Text(t('unit_cm', ref))),
-                      ButtonSegment(
-                          value: 'inch', label: Text(t('unit_inch', ref))),
-                    ],
-                    selected: {_heightUnit},
-                    onSelectionChanged: (v) =>
-                        setState(() => _heightUnit = v.first),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _guardianController,
-                decoration: InputDecoration(
-                  labelText: t('guardian_name', ref),
-                  hintText: t('placeholder_optional', ref),
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _locationController,
-                decoration: InputDecoration(
-                  labelText: t('location_clinic', ref),
-                  hintText: t('placeholder_optional', ref),
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // === SUBMIT ===
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: FilledButton(
-                  onPressed: _loading ? null : _submit,
-                  child: _loading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(t('run_assessment', ref)),
-                ),
-              ),
-
-              if (_error != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child:
-                      Text(_error!, style: const TextStyle(color: Colors.red)),
-                ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(t('sex', ref), style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: AppSpacing.sm),
+        SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<String>(
+            segments: [
+              ButtonSegment(value: 'M', label: Text(t('male', ref))),
+              ButtonSegment(value: 'F', label: Text(t('female', ref))),
             ],
+            selected: state.sex.isEmpty ? const {} : {state.sex},
+            emptySelectionAllowed: true,
+            onSelectionChanged: (selection) =>
+                notifier.updateSex(selection.firstOrNull ?? ''),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _sectionHeader(String text, {bool required = false}) {
-    return Text(
-      text,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
+        if (state.showValidationErrors && state.sex.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                t('required_field', ref),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontSize: 12,
+                ),
+              ),
+            ),
           ),
-    );
-  }
-
-  Widget _photoGuidanceTips() {
-    final tips = [
-      t('tip_front_1', ref),
-      t('tip_front_2', ref),
-      t('tip_front_3', ref),
-      t('tip_front_4', ref),
-    ];
-    return Container(
-      margin: const EdgeInsets.only(top: 4),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: tips
-            .map((tip) => Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('• ', style: TextStyle(fontSize: 12)),
-                      Expanded(
-                        child: Text(tip, style: const TextStyle(fontSize: 12)),
-                      ),
-                    ],
-                  ),
-                ))
-            .toList(),
-      ),
-    );
-  }
-
-  Widget _imagePickerRow(String role, XFile? image) {
-    return Row(
-      children: [
-        OutlinedButton.icon(
-          onPressed:
-              _loading ? null : () => _pickImage(ImageSource.camera, role),
-          icon: const Icon(Icons.camera_alt, size: 18),
-          label: Text(t('capture', ref)),
+        const SizedBox(height: AppSpacing.lg),
+        SegmentedButton<bool>(
+          segments: [
+            ButtonSegment(value: true, label: Text(t('date_of_birth', ref))),
+            ButtonSegment(value: false, label: Text(t('age_months', ref))),
+          ],
+          selected: {state.useDob},
+          onSelectionChanged: (selection) =>
+              notifier.updateUseDob(selection.first),
         ),
-        const SizedBox(width: 8),
-        OutlinedButton.icon(
-          onPressed:
-              _loading ? null : () => _pickImage(ImageSource.gallery, role),
-          icon: const Icon(Icons.photo_library, size: 18),
-          label: Text(t('gallery', ref)),
-        ),
-        const SizedBox(width: 8),
-        if (image != null)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: Image.file(
-              File(image.path),
-              width: 48,
-              height: 48,
-              fit: BoxFit.cover,
+        const SizedBox(height: AppSpacing.md),
+        if (state.useDob)
+          InkWell(
+            key: const Key('assessment_dob'),
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _selectDob(context, ref),
+            child: InputDecorator(
+              decoration: InputDecoration(
+                labelText: '${t('date_of_birth', ref)} *',
+                errorText: state.showValidationErrors && invalidDob
+                    ? resolvedAge != null &&
+                            resolvedAge >= maxUnderFiveAgeMonths
+                        ? t('under_five_error', ref)
+                        : t('err_invalid_date', ref)
+                    : null,
+                suffixIcon: const Icon(Icons.calendar_today_outlined),
+              ),
+              child: Text(
+                state.dateOfBirth.isEmpty
+                    ? t('select_date_of_birth', ref)
+                    : state.dateOfBirth,
+              ),
             ),
           )
         else
-          Text(
-            t('not_selected', ref),
-            style: Theme.of(context).textTheme.bodySmall,
+          TextFormField(
+            key: ValueKey('assessment_age_${state.revision}'),
+            initialValue: state.ageMonths,
+            onChanged: notifier.updateAgeMonths,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: '${t('age_months', ref)} *',
+              hintText: t('placeholder_age_months', ref),
+              errorText: state.showValidationErrors &&
+                      (double.tryParse(state.ageMonths) == null ||
+                          !(double.tryParse(state.ageMonths)?.isFinite ??
+                              false) ||
+                          (double.tryParse(state.ageMonths) ?? -1) < 0 ||
+                          (double.tryParse(state.ageMonths) ?? 60) >=
+                              maxUnderFiveAgeMonths)
+                  ? t('age_required_feedback', ref)
+                  : null,
+            ),
           ),
+        const SizedBox(height: AppSpacing.lg),
+        TextFormField(
+          key: ValueKey('assessment_guardian_${state.revision}'),
+          initialValue: state.guardianName,
+          onChanged: notifier.updateGuardianName,
+          textInputAction: TextInputAction.next,
+          decoration: InputDecoration(
+            labelText: t('guardian_name', ref),
+            hintText: t('placeholder_optional', ref),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        TextFormField(
+          key: ValueKey('assessment_location_${state.revision}'),
+          initialValue: state.location,
+          onChanged: notifier.updateLocation,
+          decoration: InputDecoration(
+            labelText: t('location_clinic', ref),
+            hintText: t('placeholder_optional', ref),
+          ),
+        ),
       ],
     );
   }
 
-  String? _validatePositive(String? value) {
-    if (value == null || value.trim().isEmpty) return null;
-    final n = double.tryParse(value);
-    if (n == null || n <= 0) return t('positive_number_error', ref);
-    return null;
+  Future<void> _selectDob(BuildContext context, WidgetRef ref) async {
+    final state = ref.read(assessmentFormProvider);
+    final now = DateTime.now();
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: DateTime.tryParse(state.dateOfBirth) ??
+          DateTime(now.year - 3, now.month, now.day),
+      firstDate: DateTime(now.year - 5, now.month, now.day)
+          .add(const Duration(days: 1)),
+      lastDate: now,
+    );
+    if (selected != null && context.mounted) {
+      ref
+          .read(assessmentFormProvider.notifier)
+          .updateDateOfBirth(DateFormat('yyyy-MM-dd').format(selected));
+    }
+  }
+
+  Future<void> _showChildSelector(
+    BuildContext context,
+    WidgetRef ref,
+    List<ChildrenData> children,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              0,
+              AppSpacing.xl,
+              AppSpacing.xl,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  t('select_registered_child', ref),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                ListTile(
+                  key: const Key('select_new_child'),
+                  contentPadding: EdgeInsets.zero,
+                  leading: const CircleAvatar(
+                    backgroundColor: AppColors.primaryContainer,
+                    child: Icon(Icons.person_add_alt_1_rounded),
+                  ),
+                  title: Text(t('new_child', ref)),
+                  subtitle: Text(t('enter_new_child_details', ref)),
+                  onTap: () {
+                    ref.read(assessmentFormProvider.notifier).useNewChild();
+                    Navigator.pop(sheetContext);
+                  },
+                ),
+                if (children.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.xl,
+                    ),
+                    child: Text(t('empty_children', ref)),
+                  )
+                else
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: children.length,
+                      itemBuilder: (context, index) {
+                        final child = children[index];
+                        return ListTile(
+                          key: Key('select_child_${child.id}'),
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(
+                            child: Text(
+                              child.name.isEmpty
+                                  ? '?'
+                                  : child.name.characters.first.toUpperCase(),
+                            ),
+                          ),
+                          title: Text(child.name),
+                          subtitle: Text(child.dateOfBirth),
+                          onTap: () {
+                            ref
+                                .read(assessmentFormProvider.notifier)
+                                .selectChild(child);
+                            Navigator.pop(sheetContext);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PhotosStep extends ConsumerWidget {
+  const _PhotosStep({
+    super.key,
+    required this.state,
+    required this.onPickImage,
+  });
+
+  final AssessmentFormState state;
+  final void Function(ImageSource source, String role) onPickImage;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(assessmentFormProvider.notifier);
+    final frontError = state.showValidationErrors && !state.photoValid
+        ? t('front_image_required', ref)
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t('capture_measurements_heading', ref),
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          t('capture_measurements_help', ref),
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        PhotoGuidanceTile(
+          role: 'front',
+          title: '${t('front_view_photo', ref)} *',
+          help: t('front_photo_compact_help', ref),
+          cameraLabel: t('capture', ref),
+          galleryLabel: t('gallery', ref),
+          imagePath: state.frontImagePath,
+          showGuide: true,
+          errorText: frontError,
+          onCamera: () => onPickImage(ImageSource.camera, 'front'),
+          onGallery: () => onPickImage(ImageSource.gallery, 'front'),
+          onRemove: () => notifier.removeImage('front'),
+        ),
+        const SizedBox(height: AppSpacing.xxl),
+        PhotoGuidanceTile(
+          role: 'side',
+          title: t('side_view', ref),
+          help: t('side_view_help', ref),
+          cameraLabel: t('capture', ref),
+          galleryLabel: t('gallery', ref),
+          imagePath: state.sideImagePath,
+          optionalLabel: t('optional_label', ref),
+          onCamera: () => onPickImage(ImageSource.camera, 'side'),
+          onGallery: () => onPickImage(ImageSource.gallery, 'side'),
+          onRemove: () => notifier.removeImage('side'),
+        ),
+        const SizedBox(height: AppSpacing.xxl),
+        PhotoGuidanceTile(
+          role: 'back',
+          title: t('back_view', ref),
+          help: t('back_view_help', ref),
+          cameraLabel: t('capture', ref),
+          galleryLabel: t('gallery', ref),
+          imagePath: state.backImagePath,
+          optionalLabel: t('optional_label', ref),
+          onCamera: () => onPickImage(ImageSource.camera, 'back'),
+          onGallery: () => onPickImage(ImageSource.gallery, 'back'),
+          onRemove: () => notifier.removeImage('back'),
+        ),
+        const SizedBox(height: AppSpacing.section),
+        _MeasurementsCard(state: state),
+      ],
+    );
+  }
+}
+
+class _MeasurementsCard extends ConsumerWidget {
+  const _MeasurementsCard({required this.state});
+
+  final AssessmentFormState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(assessmentFormProvider.notifier);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              t('optional_measurements', ref),
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              t('manual_measurements_priority_note', ref),
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _NumericField(
+              fieldKey: 'assessment_weight',
+              initialValue: state.weightKg,
+              label: t('weight_kg', ref),
+              hint: t('weight_placeholder', ref),
+              errorText: _rangeError(
+                state.weightKg,
+                ref,
+                min: minPlausibleWeightKg,
+                max: maxPlausibleWeightKg,
+                unit: 'kg',
+              ),
+              onChanged: notifier.updateWeight,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _NumericField(
+                    fieldKey: 'assessment_height',
+                    initialValue: state.heightValue,
+                    label: t('height', ref),
+                    hint: t('height_placeholder', ref),
+                    errorText: _rangeError(
+                      state.heightValue,
+                      ref,
+                      min: minPlausibleHeightCm,
+                      max: maxPlausibleHeightCm,
+                      unit: 'cm',
+                      multiplier: state.heightUnit == 'inch' ? 2.54 : 1,
+                    ),
+                    onChanged: notifier.updateHeight,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                DropdownButton<String>(
+                  value: state.heightUnit,
+                  items: [
+                    DropdownMenuItem(
+                      value: 'cm',
+                      child: Text(t('unit_cm', ref)),
+                    ),
+                    DropdownMenuItem(
+                      value: 'inch',
+                      child: Text(t('unit_inch', ref)),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) notifier.updateHeightUnit(value);
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _NumericField(
+              fieldKey: 'assessment_muac',
+              initialValue: state.muacCm,
+              label: t('muac_cm', ref),
+              hint: t('muac_placeholder', ref),
+              errorText: _rangeError(
+                state.muacCm,
+                ref,
+                min: minPlausibleMuacCm,
+                max: maxPlausibleMuacCm,
+                unit: 'cm',
+              ),
+              onChanged: notifier.updateMuac,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String? _rangeError(
+    String value,
+    WidgetRef ref, {
+    required double min,
+    required double max,
+    required String unit,
+    double multiplier = 1,
+  }) {
+    if (!state.showValidationErrors || value.trim().isEmpty) return null;
+    final parsed = double.tryParse(value.trim());
+    final canonical = parsed == null ? null : parsed * multiplier;
+    return canonical == null ||
+            !canonical.isFinite ||
+            canonical < min ||
+            canonical > max
+        ? '${t('measurement_range_prefix', ref)} $min–$max $unit'
+        : null;
+  }
+}
+
+class _NumericField extends StatelessWidget {
+  const _NumericField({
+    required this.fieldKey,
+    required this.initialValue,
+    required this.label,
+    required this.hint,
+    required this.errorText,
+    required this.onChanged,
+  });
+
+  final String fieldKey;
+  final String initialValue;
+  final String label;
+  final String hint;
+  final String? errorText;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      key: Key(fieldKey),
+      initialValue: initialValue,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        errorText: errorText,
+      ),
+    );
+  }
+}
+
+class _ReviewStep extends ConsumerWidget {
+  const _ReviewStep({super.key, required this.state});
+
+  final AssessmentFormState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t('review_assessment_heading', ref),
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          t('review_assessment_help', ref),
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        _ReviewCard(
+          title: t('child_information', ref),
+          icon: Icons.child_care_rounded,
+          rows: [
+            (t('child_name', ref), state.childName),
+            (t('date_of_birth', ref), state.resolvedDateOfBirth),
+            (
+              t('sex', ref),
+              state.sex == 'M' ? t('male', ref) : t('female', ref),
+            ),
+            if (state.guardianName.trim().isNotEmpty)
+              (t('guardian_name', ref), state.guardianName),
+            if (state.location.trim().isNotEmpty)
+              (t('location_clinic', ref), state.location),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _ReviewCard(
+          title: t('photos', ref),
+          icon: Icons.photo_camera_outlined,
+          rows: [
+            (
+              t('front_view_photo', ref),
+              state.frontImagePath == null
+                  ? t('not_selected', ref)
+                  : t('ready', ref),
+            ),
+            (
+              t('side_view', ref),
+              state.sideImagePath == null
+                  ? t('not_selected', ref)
+                  : t('ready', ref),
+            ),
+            (
+              t('back_view', ref),
+              state.backImagePath == null
+                  ? t('not_selected', ref)
+                  : t('back_view_archived_only', ref),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _ReviewCard(
+          title: t('optional_measurements', ref),
+          icon: Icons.straighten_rounded,
+          rows: [
+            (
+              t('weight_kg', ref),
+              state.weightKg.trim().isEmpty
+                  ? t('not_provided', ref)
+                  : state.weightKg,
+            ),
+            (
+              t('height', ref),
+              state.heightValue.trim().isEmpty
+                  ? t('not_provided', ref)
+                  : '${state.heightValue} ${state.heightUnit}',
+            ),
+            (
+              t('muac_cm', ref),
+              state.muacCm.trim().isEmpty
+                  ? t('not_provided', ref)
+                  : state.muacCm,
+            ),
+          ],
+        ),
+        if (state.error != null) ...[
+          const SizedBox(height: AppSpacing.lg),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFEDEA),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              state.error!,
+              style: const TextStyle(color: AppColors.error),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ReviewCard extends StatelessWidget {
+  const _ReviewCard({
+    required this.title,
+    required this.icon,
+    required this.rows,
+  });
+
+  final String title;
+  final IconData icon;
+  final List<(String, String)> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: AppColors.primary),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: AppSpacing.xxl),
+            for (final row in rows)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        row.$1,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Flexible(
+                      child: Text(
+                        row.$2,
+                        textAlign: TextAlign.end,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionBar extends ConsumerWidget {
+  const _ActionBar({
+    required this.state,
+    required this.onBack,
+    required this.onContinue,
+  });
+
+  final AssessmentFormState state;
+  final VoidCallback onBack;
+  final Future<void> Function() onContinue;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.xl,
+        AppSpacing.lg,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColors.progressTrack)),
+      ),
+      child: Row(
+        children: [
+          if (state.step > 0) ...[
+            OutlinedButton.icon(
+              key: const Key('assessment_back'),
+              onPressed: state.isSubmitting ? null : onBack,
+              icon: const Icon(Icons.arrow_back_rounded),
+              label: Text(t('back', ref)),
+            ),
+            const SizedBox(width: AppSpacing.md),
+          ],
+          Expanded(
+            child: FilledButton.icon(
+              key: Key(
+                state.step == 2 ? 'assessment_submit' : 'assessment_next',
+              ),
+              onPressed: state.isSubmitting ? null : onContinue,
+              icon: state.isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Icon(
+                      state.step == 2
+                          ? Icons.monitor_heart_outlined
+                          : Icons.arrow_forward_rounded,
+                    ),
+              label: Text(
+                state.isSubmitting
+                    ? t('processing', ref)
+                    : state.step == 2
+                        ? t('run_assessment', ref)
+                        : t('continue', ref),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

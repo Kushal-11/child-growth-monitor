@@ -48,6 +48,15 @@ const double segmentAgreementThreshold = 0.15;
 /// Minimum pose confidence to use measurement
 const double minConfidenceThreshold = 0.5;
 
+/// Conservative under-five entry plausibility gates.
+const double minPlausibleHeightCm = 30.0;
+const double maxPlausibleHeightCm = 130.0;
+const double minPlausibleWeightKg = 0.5;
+const double maxPlausibleWeightKg = 40.0;
+const double minPlausibleMuacCm = 5.0;
+const double maxPlausibleMuacCm = 25.0;
+const double maxUnderFiveAgeMonths = 60.0;
+
 /// ML weight must be 45-180% of WHO median
 const double mlWeightLowerBound = 0.45;
 const double mlWeightUpperBound = 1.80;
