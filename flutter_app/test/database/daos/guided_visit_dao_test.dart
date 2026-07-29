@@ -2,6 +2,7 @@ import 'package:child_growth_monitor_app/database/daos/camera_result_dao.dart';
 import 'package:child_growth_monitor_app/database/daos/capture_asset_dao.dart';
 import 'package:child_growth_monitor_app/database/daos/guided_visit_dao.dart';
 import 'package:child_growth_monitor_app/database/daos/measured_detail_revision_dao.dart';
+import 'package:child_growth_monitor_app/database/daos/sync_outbox_dao.dart';
 import 'package:child_growth_monitor_app/database/database.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
@@ -74,6 +75,36 @@ void main() {
 
     await expectLater(createDraft(), throwsA(isA<SqliteException>()));
     expect(await db.select(db.visits).get(), isEmpty);
+  });
+
+  test('markIncompleteCapture is owner scoped and refreshes visit outbox',
+      () async {
+    await createDraft();
+    final outbox = await db.select(db.syncOutbox).getSingle();
+    await SyncOutboxDao(db).acknowledge(
+      ownerUserId,
+      outbox.id,
+      '{"server_visit_id":42}',
+    );
+
+    await expectLater(
+      visitDao.markIncompleteCapture(
+        ownerUserId: ownerUserId + 1,
+        visitUuid: visitUuid,
+      ),
+      throwsStateError,
+    );
+
+    final visit = await visitDao.markIncompleteCapture(
+      ownerUserId: ownerUserId,
+      visitUuid: visitUuid,
+    );
+    final refreshedOutbox = await db.select(db.syncOutbox).getSingle();
+
+    expect(visit.captureState, 'incomplete_capture');
+    expect(refreshedOutbox.status, 'pending');
+    expect(refreshedOutbox.payloadJson, contains('incomplete_capture'));
+    expect(refreshedOutbox.payloadChecksum, hasLength(64));
   });
 
   test('saveAcceptedAssets rolls back every asset on a duplicate', () async {

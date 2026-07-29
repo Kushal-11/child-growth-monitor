@@ -90,4 +90,58 @@ class GuidedVisitDao {
           ))
         .getSingleOrNull();
   }
+
+  Future<Visit> markIncompleteCapture({
+    required int ownerUserId,
+    required String visitUuid,
+  }) {
+    return _db.transaction(() async {
+      final visit = await getByUuid(
+        ownerUserId: ownerUserId,
+        visitUuid: visitUuid,
+      );
+      if (visit == null) {
+        throw StateError('Owner-scoped visit was not found');
+      }
+      if (visit.captureState == 'incomplete_capture') return visit;
+      if (visit.captureState != 'draft_capture') {
+        throw StateError(
+          'Only a draft capture can be saved as incomplete',
+        );
+      }
+
+      final completedAt = DateTime.now();
+      await (_db.update(_db.visits)..where((row) => row.id.equals(visit.id)))
+          .write(
+        VisitsCompanion(
+          captureState: const Value('incomplete_capture'),
+          captureCompletedAt: Value(completedAt),
+        ),
+      );
+
+      final outbox = await (_db.select(_db.syncOutbox)
+            ..where(
+              (row) =>
+                  row.ownerUserId.equals(ownerUserId) &
+                  row.entityType.equals(SyncOutboxEntityType.visit) &
+                  row.entityUuid.equals(visitUuid),
+            ))
+          .getSingleOrNull();
+      if (outbox == null) {
+        throw StateError('Visit outbox record was not found');
+      }
+      final payload = jsonDecode(outbox.payloadJson) as Map<String, dynamic>;
+      payload['capture_state'] = 'incomplete_capture';
+      payload['capture_completed_at'] = completedAt.toIso8601String();
+      await SyncOutboxDao(_db).refreshPayload(
+        ownerUserId: ownerUserId,
+        entityType: SyncOutboxEntityType.visit,
+        entityUuid: visitUuid,
+        payloadJson: jsonEncode(payload),
+      );
+
+      return (_db.select(_db.visits)..where((row) => row.id.equals(visit.id)))
+          .getSingle();
+    });
+  }
 }

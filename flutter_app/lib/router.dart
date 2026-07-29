@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'providers/auth_provider.dart';
+import 'features/guided_capture/screens/capture_consent_screen.dart';
+import 'features/guided_capture/screens/capture_review_screen.dart';
+import 'features/guided_capture/screens/guided_capture_flow_screen.dart';
 import 'screens/assessment/assessment_screen.dart';
 import 'screens/assessment/capture_screen.dart';
 import 'screens/assessment/result_screen.dart';
@@ -50,18 +53,40 @@ GoRouter buildRouter(Ref ref) {
       ),
       GoRoute(path: '/result', builder: (c, s) => const ResultScreen()),
       GoRoute(path: '/children', builder: (c, s) => const ChildrenListScreen()),
-      GoRoute(path: '/children/new', builder: (c, s) => const ChildFormScreen()),
+      GoRoute(
+          path: '/children/new', builder: (c, s) => const ChildFormScreen()),
       GoRoute(
         path: '/children/:id',
-        builder: (c, s) => ChildDetailScreen(childId: int.parse(s.pathParameters['id']!)),
+        builder: (c, s) =>
+            ChildDetailScreen(childId: int.parse(s.pathParameters['id']!)),
       ),
       GoRoute(
         path: '/children/:id/edit',
-        builder: (c, s) => ChildFormScreen(childId: int.parse(s.pathParameters['id']!)),
+        builder: (c, s) =>
+            ChildFormScreen(childId: int.parse(s.pathParameters['id']!)),
       ),
       GoRoute(
         path: '/children/:id/measure',
-        builder: (c, s) => ManualMeasurementScreen(childId: int.parse(s.pathParameters['id']!)),
+        builder: (c, s) => ManualMeasurementScreen(
+            childId: int.parse(s.pathParameters['id']!)),
+      ),
+      GoRoute(
+        path: '/children/:id/photo-assessment/consent',
+        builder: (c, s) => CaptureConsentScreen(
+          childId: int.parse(s.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: '/visits/:visitUuid/capture',
+        builder: (c, s) => GuidedCaptureFlowScreen(
+          visitUuid: s.pathParameters['visitUuid']!,
+        ),
+      ),
+      GoRoute(
+        path: '/visits/:visitUuid/capture/review',
+        builder: (c, s) => CaptureReviewScreen(
+          visitUuid: s.pathParameters['visitUuid']!,
+        ),
       ),
       GoRoute(path: '/settings', builder: (c, s) => const SettingsScreen()),
     ],

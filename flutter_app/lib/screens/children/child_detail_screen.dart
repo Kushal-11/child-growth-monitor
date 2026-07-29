@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../constants/feature_flags.dart';
 import '../../l10n/l10n_provider.dart';
 import '../../models/child_detail.dart';
 import '../../providers/children_provider.dart';
@@ -65,6 +66,19 @@ class ChildDetailScreen extends ConsumerWidget {
                   ),
                 ],
               ),
+              if (FeatureFlags.liveCaptureEnabled) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.tonalIcon(
+                    onPressed: () => context.go(
+                      '/children/$childId/photo-assessment/consent',
+                    ),
+                    icon: const Icon(Icons.camera_alt_outlined),
+                    label: const Text('New photo assessment'),
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               if (_hasChartData(child)) ...[
                 _growthChart(context, ref, child),

@@ -99,6 +99,36 @@ class SyncOutboxDao {
     }).toList();
   }
 
+  Future<void> refreshPayload({
+    required int ownerUserId,
+    required String entityType,
+    required String entityUuid,
+    required String payloadJson,
+  }) async {
+    final updated = await (_db.update(_db.syncOutbox)
+          ..where(
+            (row) =>
+                row.ownerUserId.equals(ownerUserId) &
+                row.entityType.equals(entityType) &
+                row.entityUuid.equals(entityUuid),
+          ))
+        .write(
+      SyncOutboxCompanion(
+        payloadJson: Value(payloadJson),
+        payloadChecksum: Value(checksumForPayload(payloadJson)),
+        status: const Value('pending'),
+        retryCount: const Value(0),
+        lastAttemptAt: const Value(null),
+        acknowledgedAt: const Value(null),
+        acknowledgementPayloadJson: const Value(null),
+        errorMessage: const Value(null),
+      ),
+    );
+    if (updated != 1) {
+      throw StateError('Owner-scoped outbox entity was not found');
+    }
+  }
+
   Future<void> markSyncing(int ownerUserId, int id) {
     return (_db.update(_db.syncOutbox)
           ..where(
