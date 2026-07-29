@@ -9,6 +9,7 @@ import 'visits_table.dart';
 class CameraResults extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get resultUuid => text().unique()();
+  IntColumn get serverId => integer().nullable()();
   IntColumn get visitId => integer().references(
         Visits,
         #id,

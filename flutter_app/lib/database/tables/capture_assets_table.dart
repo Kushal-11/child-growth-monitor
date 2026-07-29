@@ -16,6 +16,7 @@ class CaptureAssets extends Table {
       )();
   TextColumn get role => text()();
   TextColumn get localPath => text().nullable()();
+  IntColumn get serverId => integer().nullable()();
   TextColumn get serverObjectId => text().nullable()();
   DateTimeColumn get capturedAt => dateTime()();
   IntColumn get selectedRank => integer().nullable()();

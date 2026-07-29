@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
 void main() {
-  test('v5 to v6 migration preserves legacy rows and adds guided schema',
+  test('v5 to v7 migration preserves legacy rows and adds guided schema',
       () async {
     final directory =
         await Directory.systemTemp.createTemp('guided-capture-migration-');
@@ -93,6 +93,7 @@ void main() {
         'consent_timestamp',
         'consent_operator_identifier',
         'media_deleted_at',
+        'server_id',
       ]),
     );
 
@@ -126,6 +127,19 @@ void main() {
         'sync_outbox',
       ]),
     );
+    for (final table in [
+      'capture_assets',
+      'camera_results',
+      'measured_detail_revisions',
+    ]) {
+      final columns =
+          await upgraded.customSelect('PRAGMA table_info($table)').get();
+      expect(
+        columns.map((row) => row.data['name']),
+        contains('server_id'),
+        reason: '$table should persist the server identity',
+      );
+    }
     final indexes = await upgraded
         .customSelect("SELECT name FROM sqlite_master WHERE type = 'index'")
         .get();

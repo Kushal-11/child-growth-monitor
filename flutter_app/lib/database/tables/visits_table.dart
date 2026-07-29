@@ -16,6 +16,7 @@ class Visits extends Table {
   TextColumn get backImagePath => text().nullable()();
   TextColumn get notes => text().nullable()();
   IntColumn get ownerUserId => integer().nullable()();
+  IntColumn get serverId => integer().nullable()();
   TextColumn get entryMethod =>
       text().withDefault(const Constant('assessment'))();
   TextColumn get captureState => text().nullable()();

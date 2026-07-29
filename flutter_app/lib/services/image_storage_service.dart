@@ -6,8 +6,8 @@ import 'package:uuid/uuid.dart';
 
 /// Manages the lifecycle of captured images on device storage.
 ///
-/// All images live under `<app documents>/images/`. The service never
-/// auto-deletes — callers (or the user via Settings) trigger `clearAll`.
+/// All images live under `<app documents>/images/`. Cleanup is allow-list
+/// based so pending or failed guided-capture media cannot be deleted broadly.
 class ImageStorageService {
   ImageStorageService({Directory? rootOverride}) : _rootOverride = rootOverride;
 
@@ -49,11 +49,25 @@ class ImageStorageService {
     return total;
   }
 
-  /// Deletes every file in the images directory. The directory itself remains.
-  Future<void> clearAll() async {
+  /// Deletes only the managed files explicitly supplied by a caller that has
+  /// already verified their individual server acknowledgements.
+  Future<int> deleteAcknowledged(Iterable<String> acknowledgedPaths) async {
     final dir = await _imagesDir();
-    await for (final entity in dir.list()) {
-      if (entity is File) await entity.delete();
+    final canonicalRoot = await dir.resolveSymbolicLinks();
+    var deleted = 0;
+    for (final rawPath in acknowledgedPaths.toSet()) {
+      final file = File(rawPath);
+      if (!await file.exists()) continue;
+      final canonicalFile = await file.resolveSymbolicLinks();
+      if (!p.isWithin(canonicalRoot, canonicalFile)) {
+        throw FileSystemException(
+          'Refusing to delete media outside managed image storage',
+          rawPath,
+        );
+      }
+      await file.delete();
+      deleted += 1;
     }
+    return deleted;
   }
 }

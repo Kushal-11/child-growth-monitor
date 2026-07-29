@@ -9,6 +9,7 @@ import 'visits_table.dart';
 class MeasuredDetailRevisions extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get revisionUuid => text().unique()();
+  IntColumn get serverId => integer().nullable()();
   IntColumn get visitId => integer().references(
         Visits,
         #id,

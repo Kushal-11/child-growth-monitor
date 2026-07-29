@@ -56,11 +56,12 @@ class MeasuredDetailRevisionDao {
             ..where(_db.measuredDetailRevisions.visitId.equals(visit.id)))
           .map((row) => row.read(maxRevision))
           .getSingle();
+      final revisionNumber = (latest ?? 0) + 1;
       await _db.into(_db.measuredDetailRevisions).insert(
             MeasuredDetailRevisionsCompanion.insert(
               revisionUuid: revisionUuid,
               visitId: visit.id,
-              revisionNumber: (latest ?? 0) + 1,
+              revisionNumber: revisionNumber,
               beforeJson: beforeJson,
               afterJson: afterJson,
               editorUserId: Value(ownerUserId),
@@ -97,7 +98,10 @@ class MeasuredDetailRevisionDao {
         entityType: SyncOutboxEntityType.measuredRevision,
         entityUuid: revisionUuid,
         dependencyEntityUuid: visitUuid,
-        payloadJson: payloadJson,
+        payloadJson: jsonEncode({
+          ...(jsonDecode(payloadJson) as Map<String, dynamic>),
+          'revision_number': revisionNumber,
+        }),
       );
       return (_db.select(_db.measurements)
             ..where((row) => row.visitId.equals(visit.id)))

@@ -8,13 +8,22 @@ import '../../providers/api_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../providers/sync_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../features/guided_capture/services/guided_sync_service.dart';
 import '../../services/image_storage_service.dart';
 import '../shared/app_scaffold.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
-  const SettingsScreen({super.key, this.imageStorageService});
+  const SettingsScreen({
+    super.key,
+    this.imageStorageService,
+    this.guidedSyncGateway,
+    this.ownerUserId,
+  });
 
   final ImageStorageService? imageStorageService;
+  final GuidedSyncGateway? guidedSyncGateway;
+  final int? ownerUserId;
 
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
@@ -23,18 +32,23 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _urlController = TextEditingController();
   late final ImageStorageService _imageStorageService;
+  late final GuidedSyncGateway _guidedSyncGateway;
   bool _loading = false;
   bool? _healthy;
   String? _error;
   bool _syncing = false;
   int? _bytesUsed;
+  GuidedMediaStatus? _mediaStatus;
 
   @override
   void initState() {
     super.initState();
     _imageStorageService = widget.imageStorageService ?? ImageStorageService();
+    _guidedSyncGateway =
+        widget.guidedSyncGateway ?? ref.read(guidedSyncServiceProvider);
     _loadUrl();
     _refreshStorage();
+    _refreshMediaStatus();
   }
 
   Future<void> _loadUrl() async {
@@ -99,15 +113,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _syncNow() async {
     setState(() => _syncing = true);
     try {
-      await ref.read(syncServiceProvider).runOnce();
+      await ref.read(syncCoordinatorProvider).runOnce();
+      await _refreshMediaStatus();
     } finally {
       if (mounted) setState(() => _syncing = false);
     }
   }
 
-  Future<void> _clearImages() async {
-    await _imageStorageService.clearAll();
+  int? get _ownerUserId =>
+      widget.ownerUserId ?? ref.read(authProvider).user?.id;
+
+  Future<void> _refreshMediaStatus() async {
+    final owner = _ownerUserId;
+    if (owner == null) return;
+    final status = await _guidedSyncGateway.mediaStatus(owner);
+    if (!mounted) return;
+    setState(() => _mediaStatus = status);
+  }
+
+  Future<void> _cleanupAcknowledgedImages() async {
+    final owner = _ownerUserId;
+    if (owner == null) return;
+    await _guidedSyncGateway.cleanupAcknowledgedMedia(owner);
     await _refreshStorage();
+    await _refreshMediaStatus();
   }
 
   String _formatBytes(int bytes) {
@@ -278,12 +307,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ? '...'
                         : '${t('storage_used', ref)}: ${_formatBytes(_bytesUsed!)}',
                   ),
+                  if (_mediaStatus case final status?) ...[
+                    const SizedBox(height: 8),
+                    Text('Acknowledged media: ${status.acknowledged}'),
+                    Text('Pending media: ${status.pending}'),
+                    Text('Failed media: ${status.failed}'),
+                    Text(
+                      'Deletion requested: ${status.deletionRequested}',
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     key: const Key('settings_clear_images'),
-                    onPressed: _clearImages,
+                    onPressed: (_mediaStatus?.acknowledged ?? 0) > 0
+                        ? _cleanupAcknowledgedImages
+                        : null,
                     icon: const Icon(Icons.delete_outline),
-                    label: Text(t('storage_clear', ref)),
+                    label: const Text('Clean up acknowledged media'),
                   ),
                 ],
               ),

@@ -143,6 +143,22 @@ class SyncOutboxDao {
     );
   }
 
+  Future<void> resetSyncing(int ownerUserId) {
+    return (_db.update(_db.syncOutbox)
+          ..where(
+            (row) =>
+                row.ownerUserId.equals(ownerUserId) &
+                row.status.equals('syncing'),
+          ))
+        .write(
+      const SyncOutboxCompanion(
+        status: Value('pending'),
+        lastAttemptAt: Value(null),
+        errorMessage: Value(null),
+      ),
+    );
+  }
+
   Future<void> acknowledge(
     int ownerUserId,
     int id,

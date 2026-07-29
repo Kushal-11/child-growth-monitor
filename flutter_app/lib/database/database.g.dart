@@ -630,6 +630,12 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
   late final GeneratedColumn<int> ownerUserId = GeneratedColumn<int>(
       'owner_user_id', aliasedName, true,
       type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _serverIdMeta =
+      const VerificationMeta('serverId');
+  @override
+  late final GeneratedColumn<int> serverId = GeneratedColumn<int>(
+      'server_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _entryMethodMeta =
       const VerificationMeta('entryMethod');
   @override
@@ -698,6 +704,7 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
         backImagePath,
         notes,
         ownerUserId,
+        serverId,
         entryMethod,
         captureState,
         captureStartedAt,
@@ -768,6 +775,10 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
           _ownerUserIdMeta,
           ownerUserId.isAcceptableOrUnknown(
               data['owner_user_id']!, _ownerUserIdMeta));
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(_serverIdMeta,
+          serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta));
     }
     if (data.containsKey('entry_method')) {
       context.handle(
@@ -853,6 +864,8 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
           .read(DriftSqlType.string, data['${effectivePrefix}notes']),
       ownerUserId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}owner_user_id']),
+      serverId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}server_id']),
       entryMethod: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}entry_method'])!,
       captureState: attachedDatabase.typeMapping
@@ -893,6 +906,7 @@ class Visit extends DataClass implements Insertable<Visit> {
   final String? backImagePath;
   final String? notes;
   final int? ownerUserId;
+  final int? serverId;
   final String entryMethod;
   final String? captureState;
   final DateTime? captureStartedAt;
@@ -913,6 +927,7 @@ class Visit extends DataClass implements Insertable<Visit> {
       this.backImagePath,
       this.notes,
       this.ownerUserId,
+      this.serverId,
       required this.entryMethod,
       this.captureState,
       this.captureStartedAt,
@@ -944,6 +959,9 @@ class Visit extends DataClass implements Insertable<Visit> {
     }
     if (!nullToAbsent || ownerUserId != null) {
       map['owner_user_id'] = Variable<int>(ownerUserId);
+    }
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<int>(serverId);
     }
     map['entry_method'] = Variable<String>(entryMethod);
     if (!nullToAbsent || captureState != null) {
@@ -995,6 +1013,9 @@ class Visit extends DataClass implements Insertable<Visit> {
       ownerUserId: ownerUserId == null && nullToAbsent
           ? const Value.absent()
           : Value(ownerUserId),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
       entryMethod: Value(entryMethod),
       captureState: captureState == null && nullToAbsent
           ? const Value.absent()
@@ -1038,6 +1059,7 @@ class Visit extends DataClass implements Insertable<Visit> {
       backImagePath: serializer.fromJson<String?>(json['backImagePath']),
       notes: serializer.fromJson<String?>(json['notes']),
       ownerUserId: serializer.fromJson<int?>(json['ownerUserId']),
+      serverId: serializer.fromJson<int?>(json['serverId']),
       entryMethod: serializer.fromJson<String>(json['entryMethod']),
       captureState: serializer.fromJson<String?>(json['captureState']),
       captureStartedAt:
@@ -1068,6 +1090,7 @@ class Visit extends DataClass implements Insertable<Visit> {
       'backImagePath': serializer.toJson<String?>(backImagePath),
       'notes': serializer.toJson<String?>(notes),
       'ownerUserId': serializer.toJson<int?>(ownerUserId),
+      'serverId': serializer.toJson<int?>(serverId),
       'entryMethod': serializer.toJson<String>(entryMethod),
       'captureState': serializer.toJson<String?>(captureState),
       'captureStartedAt': serializer.toJson<DateTime?>(captureStartedAt),
@@ -1092,6 +1115,7 @@ class Visit extends DataClass implements Insertable<Visit> {
           Value<String?> backImagePath = const Value.absent(),
           Value<String?> notes = const Value.absent(),
           Value<int?> ownerUserId = const Value.absent(),
+          Value<int?> serverId = const Value.absent(),
           String? entryMethod,
           Value<String?> captureState = const Value.absent(),
           Value<DateTime?> captureStartedAt = const Value.absent(),
@@ -1114,6 +1138,7 @@ class Visit extends DataClass implements Insertable<Visit> {
             backImagePath.present ? backImagePath.value : this.backImagePath,
         notes: notes.present ? notes.value : this.notes,
         ownerUserId: ownerUserId.present ? ownerUserId.value : this.ownerUserId,
+        serverId: serverId.present ? serverId.value : this.serverId,
         entryMethod: entryMethod ?? this.entryMethod,
         captureState:
             captureState.present ? captureState.value : this.captureState,
@@ -1154,6 +1179,7 @@ class Visit extends DataClass implements Insertable<Visit> {
       notes: data.notes.present ? data.notes.value : this.notes,
       ownerUserId:
           data.ownerUserId.present ? data.ownerUserId.value : this.ownerUserId,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
       entryMethod:
           data.entryMethod.present ? data.entryMethod.value : this.entryMethod,
       captureState: data.captureState.present
@@ -1196,6 +1222,7 @@ class Visit extends DataClass implements Insertable<Visit> {
           ..write('backImagePath: $backImagePath, ')
           ..write('notes: $notes, ')
           ..write('ownerUserId: $ownerUserId, ')
+          ..write('serverId: $serverId, ')
           ..write('entryMethod: $entryMethod, ')
           ..write('captureState: $captureState, ')
           ..write('captureStartedAt: $captureStartedAt, ')
@@ -1221,6 +1248,7 @@ class Visit extends DataClass implements Insertable<Visit> {
       backImagePath,
       notes,
       ownerUserId,
+      serverId,
       entryMethod,
       captureState,
       captureStartedAt,
@@ -1244,6 +1272,7 @@ class Visit extends DataClass implements Insertable<Visit> {
           other.backImagePath == this.backImagePath &&
           other.notes == this.notes &&
           other.ownerUserId == this.ownerUserId &&
+          other.serverId == this.serverId &&
           other.entryMethod == this.entryMethod &&
           other.captureState == this.captureState &&
           other.captureStartedAt == this.captureStartedAt &&
@@ -1266,6 +1295,7 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
   final Value<String?> backImagePath;
   final Value<String?> notes;
   final Value<int?> ownerUserId;
+  final Value<int?> serverId;
   final Value<String> entryMethod;
   final Value<String?> captureState;
   final Value<DateTime?> captureStartedAt;
@@ -1286,6 +1316,7 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
     this.backImagePath = const Value.absent(),
     this.notes = const Value.absent(),
     this.ownerUserId = const Value.absent(),
+    this.serverId = const Value.absent(),
     this.entryMethod = const Value.absent(),
     this.captureState = const Value.absent(),
     this.captureStartedAt = const Value.absent(),
@@ -1307,6 +1338,7 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
     this.backImagePath = const Value.absent(),
     this.notes = const Value.absent(),
     this.ownerUserId = const Value.absent(),
+    this.serverId = const Value.absent(),
     this.entryMethod = const Value.absent(),
     this.captureState = const Value.absent(),
     this.captureStartedAt = const Value.absent(),
@@ -1330,6 +1362,7 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
     Expression<String>? backImagePath,
     Expression<String>? notes,
     Expression<int>? ownerUserId,
+    Expression<int>? serverId,
     Expression<String>? entryMethod,
     Expression<String>? captureState,
     Expression<DateTime>? captureStartedAt,
@@ -1351,6 +1384,7 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
       if (backImagePath != null) 'back_image_path': backImagePath,
       if (notes != null) 'notes': notes,
       if (ownerUserId != null) 'owner_user_id': ownerUserId,
+      if (serverId != null) 'server_id': serverId,
       if (entryMethod != null) 'entry_method': entryMethod,
       if (captureState != null) 'capture_state': captureState,
       if (captureStartedAt != null) 'capture_started_at': captureStartedAt,
@@ -1377,6 +1411,7 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
       Value<String?>? backImagePath,
       Value<String?>? notes,
       Value<int?>? ownerUserId,
+      Value<int?>? serverId,
       Value<String>? entryMethod,
       Value<String?>? captureState,
       Value<DateTime?>? captureStartedAt,
@@ -1397,6 +1432,7 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
       backImagePath: backImagePath ?? this.backImagePath,
       notes: notes ?? this.notes,
       ownerUserId: ownerUserId ?? this.ownerUserId,
+      serverId: serverId ?? this.serverId,
       entryMethod: entryMethod ?? this.entryMethod,
       captureState: captureState ?? this.captureState,
       captureStartedAt: captureStartedAt ?? this.captureStartedAt,
@@ -1443,6 +1479,9 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
     if (ownerUserId.present) {
       map['owner_user_id'] = Variable<int>(ownerUserId.value);
     }
+    if (serverId.present) {
+      map['server_id'] = Variable<int>(serverId.value);
+    }
     if (entryMethod.present) {
       map['entry_method'] = Variable<String>(entryMethod.value);
     }
@@ -1488,6 +1527,7 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
           ..write('backImagePath: $backImagePath, ')
           ..write('notes: $notes, ')
           ..write('ownerUserId: $ownerUserId, ')
+          ..write('serverId: $serverId, ')
           ..write('entryMethod: $entryMethod, ')
           ..write('captureState: $captureState, ')
           ..write('captureStartedAt: $captureStartedAt, ')
@@ -5061,6 +5101,12 @@ class $CaptureAssetsTable extends CaptureAssets
   late final GeneratedColumn<String> localPath = GeneratedColumn<String>(
       'local_path', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _serverIdMeta =
+      const VerificationMeta('serverId');
+  @override
+  late final GeneratedColumn<int> serverId = GeneratedColumn<int>(
+      'server_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _serverObjectIdMeta =
       const VerificationMeta('serverObjectId');
   @override
@@ -5184,6 +5230,7 @@ class $CaptureAssetsTable extends CaptureAssets
         visitId,
         role,
         localPath,
+        serverId,
         serverObjectId,
         capturedAt,
         selectedRank,
@@ -5238,6 +5285,10 @@ class $CaptureAssetsTable extends CaptureAssets
     if (data.containsKey('local_path')) {
       context.handle(_localPathMeta,
           localPath.isAcceptableOrUnknown(data['local_path']!, _localPathMeta));
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(_serverIdMeta,
+          serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta));
     }
     if (data.containsKey('server_object_id')) {
       context.handle(
@@ -5372,6 +5423,8 @@ class $CaptureAssetsTable extends CaptureAssets
           .read(DriftSqlType.string, data['${effectivePrefix}role'])!,
       localPath: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}local_path']),
+      serverId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}server_id']),
       serverObjectId: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}server_object_id']),
       capturedAt: attachedDatabase.typeMapping
@@ -5428,6 +5481,7 @@ class CaptureAsset extends DataClass implements Insertable<CaptureAsset> {
   final int visitId;
   final String role;
   final String? localPath;
+  final int? serverId;
   final String? serverObjectId;
   final DateTime capturedAt;
   final int? selectedRank;
@@ -5453,6 +5507,7 @@ class CaptureAsset extends DataClass implements Insertable<CaptureAsset> {
       required this.visitId,
       required this.role,
       this.localPath,
+      this.serverId,
       this.serverObjectId,
       required this.capturedAt,
       this.selectedRank,
@@ -5481,6 +5536,9 @@ class CaptureAsset extends DataClass implements Insertable<CaptureAsset> {
     map['role'] = Variable<String>(role);
     if (!nullToAbsent || localPath != null) {
       map['local_path'] = Variable<String>(localPath);
+    }
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<int>(serverId);
     }
     if (!nullToAbsent || serverObjectId != null) {
       map['server_object_id'] = Variable<String>(serverObjectId);
@@ -5549,6 +5607,9 @@ class CaptureAsset extends DataClass implements Insertable<CaptureAsset> {
       localPath: localPath == null && nullToAbsent
           ? const Value.absent()
           : Value(localPath),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
       serverObjectId: serverObjectId == null && nullToAbsent
           ? const Value.absent()
           : Value(serverObjectId),
@@ -5614,6 +5675,7 @@ class CaptureAsset extends DataClass implements Insertable<CaptureAsset> {
       visitId: serializer.fromJson<int>(json['visitId']),
       role: serializer.fromJson<String>(json['role']),
       localPath: serializer.fromJson<String?>(json['localPath']),
+      serverId: serializer.fromJson<int?>(json['serverId']),
       serverObjectId: serializer.fromJson<String?>(json['serverObjectId']),
       capturedAt: serializer.fromJson<DateTime>(json['capturedAt']),
       selectedRank: serializer.fromJson<int?>(json['selectedRank']),
@@ -5647,6 +5709,7 @@ class CaptureAsset extends DataClass implements Insertable<CaptureAsset> {
       'visitId': serializer.toJson<int>(visitId),
       'role': serializer.toJson<String>(role),
       'localPath': serializer.toJson<String?>(localPath),
+      'serverId': serializer.toJson<int?>(serverId),
       'serverObjectId': serializer.toJson<String?>(serverObjectId),
       'capturedAt': serializer.toJson<DateTime>(capturedAt),
       'selectedRank': serializer.toJson<int?>(selectedRank),
@@ -5678,6 +5741,7 @@ class CaptureAsset extends DataClass implements Insertable<CaptureAsset> {
           int? visitId,
           String? role,
           Value<String?> localPath = const Value.absent(),
+          Value<int?> serverId = const Value.absent(),
           Value<String?> serverObjectId = const Value.absent(),
           DateTime? capturedAt,
           Value<int?> selectedRank = const Value.absent(),
@@ -5703,6 +5767,7 @@ class CaptureAsset extends DataClass implements Insertable<CaptureAsset> {
         visitId: visitId ?? this.visitId,
         role: role ?? this.role,
         localPath: localPath.present ? localPath.value : this.localPath,
+        serverId: serverId.present ? serverId.value : this.serverId,
         serverObjectId:
             serverObjectId.present ? serverObjectId.value : this.serverObjectId,
         capturedAt: capturedAt ?? this.capturedAt,
@@ -5751,6 +5816,7 @@ class CaptureAsset extends DataClass implements Insertable<CaptureAsset> {
       visitId: data.visitId.present ? data.visitId.value : this.visitId,
       role: data.role.present ? data.role.value : this.role,
       localPath: data.localPath.present ? data.localPath.value : this.localPath,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
       serverObjectId: data.serverObjectId.present
           ? data.serverObjectId.value
           : this.serverObjectId,
@@ -5812,6 +5878,7 @@ class CaptureAsset extends DataClass implements Insertable<CaptureAsset> {
           ..write('visitId: $visitId, ')
           ..write('role: $role, ')
           ..write('localPath: $localPath, ')
+          ..write('serverId: $serverId, ')
           ..write('serverObjectId: $serverObjectId, ')
           ..write('capturedAt: $capturedAt, ')
           ..write('selectedRank: $selectedRank, ')
@@ -5842,6 +5909,7 @@ class CaptureAsset extends DataClass implements Insertable<CaptureAsset> {
         visitId,
         role,
         localPath,
+        serverId,
         serverObjectId,
         capturedAt,
         selectedRank,
@@ -5871,6 +5939,7 @@ class CaptureAsset extends DataClass implements Insertable<CaptureAsset> {
           other.visitId == this.visitId &&
           other.role == this.role &&
           other.localPath == this.localPath &&
+          other.serverId == this.serverId &&
           other.serverObjectId == this.serverObjectId &&
           other.capturedAt == this.capturedAt &&
           other.selectedRank == this.selectedRank &&
@@ -5898,6 +5967,7 @@ class CaptureAssetsCompanion extends UpdateCompanion<CaptureAsset> {
   final Value<int> visitId;
   final Value<String> role;
   final Value<String?> localPath;
+  final Value<int?> serverId;
   final Value<String?> serverObjectId;
   final Value<DateTime> capturedAt;
   final Value<int?> selectedRank;
@@ -5923,6 +5993,7 @@ class CaptureAssetsCompanion extends UpdateCompanion<CaptureAsset> {
     this.visitId = const Value.absent(),
     this.role = const Value.absent(),
     this.localPath = const Value.absent(),
+    this.serverId = const Value.absent(),
     this.serverObjectId = const Value.absent(),
     this.capturedAt = const Value.absent(),
     this.selectedRank = const Value.absent(),
@@ -5949,6 +6020,7 @@ class CaptureAssetsCompanion extends UpdateCompanion<CaptureAsset> {
     required int visitId,
     required String role,
     this.localPath = const Value.absent(),
+    this.serverId = const Value.absent(),
     this.serverObjectId = const Value.absent(),
     required DateTime capturedAt,
     this.selectedRank = const Value.absent(),
@@ -5978,6 +6050,7 @@ class CaptureAssetsCompanion extends UpdateCompanion<CaptureAsset> {
     Expression<int>? visitId,
     Expression<String>? role,
     Expression<String>? localPath,
+    Expression<int>? serverId,
     Expression<String>? serverObjectId,
     Expression<DateTime>? capturedAt,
     Expression<int>? selectedRank,
@@ -6004,6 +6077,7 @@ class CaptureAssetsCompanion extends UpdateCompanion<CaptureAsset> {
       if (visitId != null) 'visit_id': visitId,
       if (role != null) 'role': role,
       if (localPath != null) 'local_path': localPath,
+      if (serverId != null) 'server_id': serverId,
       if (serverObjectId != null) 'server_object_id': serverObjectId,
       if (capturedAt != null) 'captured_at': capturedAt,
       if (selectedRank != null) 'selected_rank': selectedRank,
@@ -6035,6 +6109,7 @@ class CaptureAssetsCompanion extends UpdateCompanion<CaptureAsset> {
       Value<int>? visitId,
       Value<String>? role,
       Value<String?>? localPath,
+      Value<int?>? serverId,
       Value<String?>? serverObjectId,
       Value<DateTime>? capturedAt,
       Value<int?>? selectedRank,
@@ -6060,6 +6135,7 @@ class CaptureAssetsCompanion extends UpdateCompanion<CaptureAsset> {
       visitId: visitId ?? this.visitId,
       role: role ?? this.role,
       localPath: localPath ?? this.localPath,
+      serverId: serverId ?? this.serverId,
       serverObjectId: serverObjectId ?? this.serverObjectId,
       capturedAt: capturedAt ?? this.capturedAt,
       selectedRank: selectedRank ?? this.selectedRank,
@@ -6101,6 +6177,9 @@ class CaptureAssetsCompanion extends UpdateCompanion<CaptureAsset> {
     }
     if (localPath.present) {
       map['local_path'] = Variable<String>(localPath.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<int>(serverId.value);
     }
     if (serverObjectId.present) {
       map['server_object_id'] = Variable<String>(serverObjectId.value);
@@ -6173,6 +6252,7 @@ class CaptureAssetsCompanion extends UpdateCompanion<CaptureAsset> {
           ..write('visitId: $visitId, ')
           ..write('role: $role, ')
           ..write('localPath: $localPath, ')
+          ..write('serverId: $serverId, ')
           ..write('serverObjectId: $serverObjectId, ')
           ..write('capturedAt: $capturedAt, ')
           ..write('selectedRank: $selectedRank, ')
@@ -6220,6 +6300,12 @@ class $CameraResultsTable extends CameraResults
       type: DriftSqlType.string,
       requiredDuringInsert: true,
       defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _serverIdMeta =
+      const VerificationMeta('serverId');
+  @override
+  late final GeneratedColumn<int> serverId = GeneratedColumn<int>(
+      'server_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _visitIdMeta =
       const VerificationMeta('visitId');
   @override
@@ -6360,6 +6446,7 @@ class $CameraResultsTable extends CameraResults
   List<GeneratedColumn> get $columns => [
         id,
         resultUuid,
+        serverId,
         visitId,
         version,
         supersedesResultUuid,
@@ -6402,6 +6489,10 @@ class $CameraResultsTable extends CameraResults
               data['result_uuid']!, _resultUuidMeta));
     } else if (isInserting) {
       context.missing(_resultUuidMeta);
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(_serverIdMeta,
+          serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta));
     }
     if (data.containsKey('visit_id')) {
       context.handle(_visitIdMeta,
@@ -6555,6 +6646,8 @@ class $CameraResultsTable extends CameraResults
           .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
       resultUuid: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}result_uuid'])!,
+      serverId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}server_id']),
       visitId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}visit_id'])!,
       version: attachedDatabase.typeMapping
@@ -6616,6 +6709,7 @@ class $CameraResultsTable extends CameraResults
 class CameraResult extends DataClass implements Insertable<CameraResult> {
   final int id;
   final String resultUuid;
+  final int? serverId;
   final int visitId;
   final int version;
   final String? supersedesResultUuid;
@@ -6640,6 +6734,7 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
   const CameraResult(
       {required this.id,
       required this.resultUuid,
+      this.serverId,
       required this.visitId,
       required this.version,
       this.supersedesResultUuid,
@@ -6666,6 +6761,9 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['result_uuid'] = Variable<String>(resultUuid);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<int>(serverId);
+    }
     map['visit_id'] = Variable<int>(visitId);
     map['version'] = Variable<int>(version);
     if (!nullToAbsent || supersedesResultUuid != null) {
@@ -6726,6 +6824,9 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
     return CameraResultsCompanion(
       id: Value(id),
       resultUuid: Value(resultUuid),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
       visitId: Value(visitId),
       version: Value(version),
       supersedesResultUuid: supersedesResultUuid == null && nullToAbsent
@@ -6786,6 +6887,7 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
     return CameraResult(
       id: serializer.fromJson<int>(json['id']),
       resultUuid: serializer.fromJson<String>(json['resultUuid']),
+      serverId: serializer.fromJson<int?>(json['serverId']),
       visitId: serializer.fromJson<int>(json['visitId']),
       version: serializer.fromJson<int>(json['version']),
       supersedesResultUuid:
@@ -6824,6 +6926,7 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'resultUuid': serializer.toJson<String>(resultUuid),
+      'serverId': serializer.toJson<int?>(serverId),
       'visitId': serializer.toJson<int>(visitId),
       'version': serializer.toJson<int>(version),
       'supersedesResultUuid': serializer.toJson<String?>(supersedesResultUuid),
@@ -6857,6 +6960,7 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
   CameraResult copyWith(
           {int? id,
           String? resultUuid,
+          Value<int?> serverId = const Value.absent(),
           int? visitId,
           int? version,
           Value<String?> supersedesResultUuid = const Value.absent(),
@@ -6881,6 +6985,7 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
       CameraResult(
         id: id ?? this.id,
         resultUuid: resultUuid ?? this.resultUuid,
+        serverId: serverId.present ? serverId.value : this.serverId,
         visitId: visitId ?? this.visitId,
         version: version ?? this.version,
         supersedesResultUuid: supersedesResultUuid.present
@@ -6930,6 +7035,7 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
       id: data.id.present ? data.id.value : this.id,
       resultUuid:
           data.resultUuid.present ? data.resultUuid.value : this.resultUuid,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
       visitId: data.visitId.present ? data.visitId.value : this.visitId,
       version: data.version.present ? data.version.value : this.version,
       supersedesResultUuid: data.supersedesResultUuid.present
@@ -6992,6 +7098,7 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
     return (StringBuffer('CameraResult(')
           ..write('id: $id, ')
           ..write('resultUuid: $resultUuid, ')
+          ..write('serverId: $serverId, ')
           ..write('visitId: $visitId, ')
           ..write('version: $version, ')
           ..write('supersedesResultUuid: $supersedesResultUuid, ')
@@ -7021,6 +7128,7 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
   int get hashCode => Object.hashAll([
         id,
         resultUuid,
+        serverId,
         visitId,
         version,
         supersedesResultUuid,
@@ -7049,6 +7157,7 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
       (other is CameraResult &&
           other.id == this.id &&
           other.resultUuid == this.resultUuid &&
+          other.serverId == this.serverId &&
           other.visitId == this.visitId &&
           other.version == this.version &&
           other.supersedesResultUuid == this.supersedesResultUuid &&
@@ -7076,6 +7185,7 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
 class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
   final Value<int> id;
   final Value<String> resultUuid;
+  final Value<int?> serverId;
   final Value<int> visitId;
   final Value<int> version;
   final Value<String?> supersedesResultUuid;
@@ -7100,6 +7210,7 @@ class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
   const CameraResultsCompanion({
     this.id = const Value.absent(),
     this.resultUuid = const Value.absent(),
+    this.serverId = const Value.absent(),
     this.visitId = const Value.absent(),
     this.version = const Value.absent(),
     this.supersedesResultUuid = const Value.absent(),
@@ -7125,6 +7236,7 @@ class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
   CameraResultsCompanion.insert({
     this.id = const Value.absent(),
     required String resultUuid,
+    this.serverId = const Value.absent(),
     required int visitId,
     required int version,
     this.supersedesResultUuid = const Value.absent(),
@@ -7156,6 +7268,7 @@ class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
   static Insertable<CameraResult> custom({
     Expression<int>? id,
     Expression<String>? resultUuid,
+    Expression<int>? serverId,
     Expression<int>? visitId,
     Expression<int>? version,
     Expression<String>? supersedesResultUuid,
@@ -7181,6 +7294,7 @@ class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (resultUuid != null) 'result_uuid': resultUuid,
+      if (serverId != null) 'server_id': serverId,
       if (visitId != null) 'visit_id': visitId,
       if (version != null) 'version': version,
       if (supersedesResultUuid != null)
@@ -7215,6 +7329,7 @@ class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
   CameraResultsCompanion copyWith(
       {Value<int>? id,
       Value<String>? resultUuid,
+      Value<int?>? serverId,
       Value<int>? visitId,
       Value<int>? version,
       Value<String?>? supersedesResultUuid,
@@ -7239,6 +7354,7 @@ class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
     return CameraResultsCompanion(
       id: id ?? this.id,
       resultUuid: resultUuid ?? this.resultUuid,
+      serverId: serverId ?? this.serverId,
       visitId: visitId ?? this.visitId,
       version: version ?? this.version,
       supersedesResultUuid: supersedesResultUuid ?? this.supersedesResultUuid,
@@ -7277,6 +7393,9 @@ class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
     }
     if (resultUuid.present) {
       map['result_uuid'] = Variable<String>(resultUuid.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<int>(serverId.value);
     }
     if (visitId.present) {
       map['visit_id'] = Variable<int>(visitId.value);
@@ -7356,6 +7475,7 @@ class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
     return (StringBuffer('CameraResultsCompanion(')
           ..write('id: $id, ')
           ..write('resultUuid: $resultUuid, ')
+          ..write('serverId: $serverId, ')
           ..write('visitId: $visitId, ')
           ..write('version: $version, ')
           ..write('supersedesResultUuid: $supersedesResultUuid, ')
@@ -7405,6 +7525,12 @@ class $MeasuredDetailRevisionsTable extends MeasuredDetailRevisions
       type: DriftSqlType.string,
       requiredDuringInsert: true,
       defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _serverIdMeta =
+      const VerificationMeta('serverId');
+  @override
+  late final GeneratedColumn<int> serverId = GeneratedColumn<int>(
+      'server_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _visitIdMeta =
       const VerificationMeta('visitId');
   @override
@@ -7455,6 +7581,7 @@ class $MeasuredDetailRevisionsTable extends MeasuredDetailRevisions
   List<GeneratedColumn> get $columns => [
         id,
         revisionUuid,
+        serverId,
         visitId,
         revisionNumber,
         beforeJson,
@@ -7484,6 +7611,10 @@ class $MeasuredDetailRevisionsTable extends MeasuredDetailRevisions
               data['revision_uuid']!, _revisionUuidMeta));
     } else if (isInserting) {
       context.missing(_revisionUuidMeta);
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(_serverIdMeta,
+          serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta));
     }
     if (data.containsKey('visit_id')) {
       context.handle(_visitIdMeta,
@@ -7544,6 +7675,8 @@ class $MeasuredDetailRevisionsTable extends MeasuredDetailRevisions
           .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
       revisionUuid: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}revision_uuid'])!,
+      serverId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}server_id']),
       visitId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}visit_id'])!,
       revisionNumber: attachedDatabase.typeMapping
@@ -7571,6 +7704,7 @@ class MeasuredDetailRevision extends DataClass
     implements Insertable<MeasuredDetailRevision> {
   final int id;
   final String revisionUuid;
+  final int? serverId;
   final int visitId;
   final int revisionNumber;
   final String beforeJson;
@@ -7581,6 +7715,7 @@ class MeasuredDetailRevision extends DataClass
   const MeasuredDetailRevision(
       {required this.id,
       required this.revisionUuid,
+      this.serverId,
       required this.visitId,
       required this.revisionNumber,
       required this.beforeJson,
@@ -7593,6 +7728,9 @@ class MeasuredDetailRevision extends DataClass
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['revision_uuid'] = Variable<String>(revisionUuid);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<int>(serverId);
+    }
     map['visit_id'] = Variable<int>(visitId);
     map['revision_number'] = Variable<int>(revisionNumber);
     map['before_json'] = Variable<String>(beforeJson);
@@ -7611,6 +7749,9 @@ class MeasuredDetailRevision extends DataClass
     return MeasuredDetailRevisionsCompanion(
       id: Value(id),
       revisionUuid: Value(revisionUuid),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
       visitId: Value(visitId),
       revisionNumber: Value(revisionNumber),
       beforeJson: Value(beforeJson),
@@ -7630,6 +7771,7 @@ class MeasuredDetailRevision extends DataClass
     return MeasuredDetailRevision(
       id: serializer.fromJson<int>(json['id']),
       revisionUuid: serializer.fromJson<String>(json['revisionUuid']),
+      serverId: serializer.fromJson<int?>(json['serverId']),
       visitId: serializer.fromJson<int>(json['visitId']),
       revisionNumber: serializer.fromJson<int>(json['revisionNumber']),
       beforeJson: serializer.fromJson<String>(json['beforeJson']),
@@ -7645,6 +7787,7 @@ class MeasuredDetailRevision extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'revisionUuid': serializer.toJson<String>(revisionUuid),
+      'serverId': serializer.toJson<int?>(serverId),
       'visitId': serializer.toJson<int>(visitId),
       'revisionNumber': serializer.toJson<int>(revisionNumber),
       'beforeJson': serializer.toJson<String>(beforeJson),
@@ -7658,6 +7801,7 @@ class MeasuredDetailRevision extends DataClass
   MeasuredDetailRevision copyWith(
           {int? id,
           String? revisionUuid,
+          Value<int?> serverId = const Value.absent(),
           int? visitId,
           int? revisionNumber,
           String? beforeJson,
@@ -7668,6 +7812,7 @@ class MeasuredDetailRevision extends DataClass
       MeasuredDetailRevision(
         id: id ?? this.id,
         revisionUuid: revisionUuid ?? this.revisionUuid,
+        serverId: serverId.present ? serverId.value : this.serverId,
         visitId: visitId ?? this.visitId,
         revisionNumber: revisionNumber ?? this.revisionNumber,
         beforeJson: beforeJson ?? this.beforeJson,
@@ -7684,6 +7829,7 @@ class MeasuredDetailRevision extends DataClass
       revisionUuid: data.revisionUuid.present
           ? data.revisionUuid.value
           : this.revisionUuid,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
       visitId: data.visitId.present ? data.visitId.value : this.visitId,
       revisionNumber: data.revisionNumber.present
           ? data.revisionNumber.value
@@ -7704,6 +7850,7 @@ class MeasuredDetailRevision extends DataClass
     return (StringBuffer('MeasuredDetailRevision(')
           ..write('id: $id, ')
           ..write('revisionUuid: $revisionUuid, ')
+          ..write('serverId: $serverId, ')
           ..write('visitId: $visitId, ')
           ..write('revisionNumber: $revisionNumber, ')
           ..write('beforeJson: $beforeJson, ')
@@ -7716,14 +7863,15 @@ class MeasuredDetailRevision extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(id, revisionUuid, visitId, revisionNumber,
-      beforeJson, afterJson, editorUserId, createdAt, reason);
+  int get hashCode => Object.hash(id, revisionUuid, serverId, visitId,
+      revisionNumber, beforeJson, afterJson, editorUserId, createdAt, reason);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is MeasuredDetailRevision &&
           other.id == this.id &&
           other.revisionUuid == this.revisionUuid &&
+          other.serverId == this.serverId &&
           other.visitId == this.visitId &&
           other.revisionNumber == this.revisionNumber &&
           other.beforeJson == this.beforeJson &&
@@ -7737,6 +7885,7 @@ class MeasuredDetailRevisionsCompanion
     extends UpdateCompanion<MeasuredDetailRevision> {
   final Value<int> id;
   final Value<String> revisionUuid;
+  final Value<int?> serverId;
   final Value<int> visitId;
   final Value<int> revisionNumber;
   final Value<String> beforeJson;
@@ -7747,6 +7896,7 @@ class MeasuredDetailRevisionsCompanion
   const MeasuredDetailRevisionsCompanion({
     this.id = const Value.absent(),
     this.revisionUuid = const Value.absent(),
+    this.serverId = const Value.absent(),
     this.visitId = const Value.absent(),
     this.revisionNumber = const Value.absent(),
     this.beforeJson = const Value.absent(),
@@ -7758,6 +7908,7 @@ class MeasuredDetailRevisionsCompanion
   MeasuredDetailRevisionsCompanion.insert({
     this.id = const Value.absent(),
     required String revisionUuid,
+    this.serverId = const Value.absent(),
     required int visitId,
     required int revisionNumber,
     required String beforeJson,
@@ -7773,6 +7924,7 @@ class MeasuredDetailRevisionsCompanion
   static Insertable<MeasuredDetailRevision> custom({
     Expression<int>? id,
     Expression<String>? revisionUuid,
+    Expression<int>? serverId,
     Expression<int>? visitId,
     Expression<int>? revisionNumber,
     Expression<String>? beforeJson,
@@ -7784,6 +7936,7 @@ class MeasuredDetailRevisionsCompanion
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (revisionUuid != null) 'revision_uuid': revisionUuid,
+      if (serverId != null) 'server_id': serverId,
       if (visitId != null) 'visit_id': visitId,
       if (revisionNumber != null) 'revision_number': revisionNumber,
       if (beforeJson != null) 'before_json': beforeJson,
@@ -7797,6 +7950,7 @@ class MeasuredDetailRevisionsCompanion
   MeasuredDetailRevisionsCompanion copyWith(
       {Value<int>? id,
       Value<String>? revisionUuid,
+      Value<int?>? serverId,
       Value<int>? visitId,
       Value<int>? revisionNumber,
       Value<String>? beforeJson,
@@ -7807,6 +7961,7 @@ class MeasuredDetailRevisionsCompanion
     return MeasuredDetailRevisionsCompanion(
       id: id ?? this.id,
       revisionUuid: revisionUuid ?? this.revisionUuid,
+      serverId: serverId ?? this.serverId,
       visitId: visitId ?? this.visitId,
       revisionNumber: revisionNumber ?? this.revisionNumber,
       beforeJson: beforeJson ?? this.beforeJson,
@@ -7825,6 +7980,9 @@ class MeasuredDetailRevisionsCompanion
     }
     if (revisionUuid.present) {
       map['revision_uuid'] = Variable<String>(revisionUuid.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<int>(serverId.value);
     }
     if (visitId.present) {
       map['visit_id'] = Variable<int>(visitId.value);
@@ -7855,6 +8013,7 @@ class MeasuredDetailRevisionsCompanion
     return (StringBuffer('MeasuredDetailRevisionsCompanion(')
           ..write('id: $id, ')
           ..write('revisionUuid: $revisionUuid, ')
+          ..write('serverId: $serverId, ')
           ..write('visitId: $visitId, ')
           ..write('revisionNumber: $revisionNumber, ')
           ..write('beforeJson: $beforeJson, ')
@@ -9089,6 +9248,7 @@ typedef $$VisitsTableCreateCompanionBuilder = VisitsCompanion Function({
   Value<String?> backImagePath,
   Value<String?> notes,
   Value<int?> ownerUserId,
+  Value<int?> serverId,
   Value<String> entryMethod,
   Value<String?> captureState,
   Value<DateTime?> captureStartedAt,
@@ -9110,6 +9270,7 @@ typedef $$VisitsTableUpdateCompanionBuilder = VisitsCompanion Function({
   Value<String?> backImagePath,
   Value<String?> notes,
   Value<int?> ownerUserId,
+  Value<int?> serverId,
   Value<String> entryMethod,
   Value<String?> captureState,
   Value<DateTime?> captureStartedAt,
@@ -9253,6 +9414,9 @@ class $$VisitsTableFilterComposer
 
   ColumnFilters<int> get ownerUserId => $composableBuilder(
       column: $table.ownerUserId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get serverId => $composableBuilder(
+      column: $table.serverId, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get entryMethod => $composableBuilder(
       column: $table.entryMethod, builder: (column) => ColumnFilters(column));
@@ -9454,6 +9618,9 @@ class $$VisitsTableOrderingComposer
   ColumnOrderings<int> get ownerUserId => $composableBuilder(
       column: $table.ownerUserId, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get serverId => $composableBuilder(
+      column: $table.serverId, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get entryMethod => $composableBuilder(
       column: $table.entryMethod, builder: (column) => ColumnOrderings(column));
 
@@ -9545,6 +9712,9 @@ class $$VisitsTableAnnotationComposer
 
   GeneratedColumn<int> get ownerUserId => $composableBuilder(
       column: $table.ownerUserId, builder: (column) => column);
+
+  GeneratedColumn<int> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
 
   GeneratedColumn<String> get entryMethod => $composableBuilder(
       column: $table.entryMethod, builder: (column) => column);
@@ -9740,6 +9910,7 @@ class $$VisitsTableTableManager extends RootTableManager<
             Value<String?> backImagePath = const Value.absent(),
             Value<String?> notes = const Value.absent(),
             Value<int?> ownerUserId = const Value.absent(),
+            Value<int?> serverId = const Value.absent(),
             Value<String> entryMethod = const Value.absent(),
             Value<String?> captureState = const Value.absent(),
             Value<DateTime?> captureStartedAt = const Value.absent(),
@@ -9761,6 +9932,7 @@ class $$VisitsTableTableManager extends RootTableManager<
             backImagePath: backImagePath,
             notes: notes,
             ownerUserId: ownerUserId,
+            serverId: serverId,
             entryMethod: entryMethod,
             captureState: captureState,
             captureStartedAt: captureStartedAt,
@@ -9782,6 +9954,7 @@ class $$VisitsTableTableManager extends RootTableManager<
             Value<String?> backImagePath = const Value.absent(),
             Value<String?> notes = const Value.absent(),
             Value<int?> ownerUserId = const Value.absent(),
+            Value<int?> serverId = const Value.absent(),
             Value<String> entryMethod = const Value.absent(),
             Value<String?> captureState = const Value.absent(),
             Value<DateTime?> captureStartedAt = const Value.absent(),
@@ -9803,6 +9976,7 @@ class $$VisitsTableTableManager extends RootTableManager<
             backImagePath: backImagePath,
             notes: notes,
             ownerUserId: ownerUserId,
+            serverId: serverId,
             entryMethod: entryMethod,
             captureState: captureState,
             captureStartedAt: captureStartedAt,
@@ -11512,6 +11686,7 @@ typedef $$CaptureAssetsTableCreateCompanionBuilder = CaptureAssetsCompanion
   required int visitId,
   required String role,
   Value<String?> localPath,
+  Value<int?> serverId,
   Value<String?> serverObjectId,
   required DateTime capturedAt,
   Value<int?> selectedRank,
@@ -11539,6 +11714,7 @@ typedef $$CaptureAssetsTableUpdateCompanionBuilder = CaptureAssetsCompanion
   Value<int> visitId,
   Value<String> role,
   Value<String?> localPath,
+  Value<int?> serverId,
   Value<String?> serverObjectId,
   Value<DateTime> capturedAt,
   Value<int?> selectedRank,
@@ -11600,6 +11776,9 @@ class $$CaptureAssetsTableFilterComposer
 
   ColumnFilters<String> get localPath => $composableBuilder(
       column: $table.localPath, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get serverId => $composableBuilder(
+      column: $table.serverId, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get serverObjectId => $composableBuilder(
       column: $table.serverObjectId,
@@ -11709,6 +11888,9 @@ class $$CaptureAssetsTableOrderingComposer
 
   ColumnOrderings<String> get localPath => $composableBuilder(
       column: $table.localPath, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get serverId => $composableBuilder(
+      column: $table.serverId, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get serverObjectId => $composableBuilder(
       column: $table.serverObjectId,
@@ -11823,6 +12005,9 @@ class $$CaptureAssetsTableAnnotationComposer
   GeneratedColumn<String> get localPath =>
       $composableBuilder(column: $table.localPath, builder: (column) => column);
 
+  GeneratedColumn<int> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
   GeneratedColumn<String> get serverObjectId => $composableBuilder(
       column: $table.serverObjectId, builder: (column) => column);
 
@@ -11929,6 +12114,7 @@ class $$CaptureAssetsTableTableManager extends RootTableManager<
             Value<int> visitId = const Value.absent(),
             Value<String> role = const Value.absent(),
             Value<String?> localPath = const Value.absent(),
+            Value<int?> serverId = const Value.absent(),
             Value<String?> serverObjectId = const Value.absent(),
             Value<DateTime> capturedAt = const Value.absent(),
             Value<int?> selectedRank = const Value.absent(),
@@ -11955,6 +12141,7 @@ class $$CaptureAssetsTableTableManager extends RootTableManager<
             visitId: visitId,
             role: role,
             localPath: localPath,
+            serverId: serverId,
             serverObjectId: serverObjectId,
             capturedAt: capturedAt,
             selectedRank: selectedRank,
@@ -11981,6 +12168,7 @@ class $$CaptureAssetsTableTableManager extends RootTableManager<
             required int visitId,
             required String role,
             Value<String?> localPath = const Value.absent(),
+            Value<int?> serverId = const Value.absent(),
             Value<String?> serverObjectId = const Value.absent(),
             required DateTime capturedAt,
             Value<int?> selectedRank = const Value.absent(),
@@ -12007,6 +12195,7 @@ class $$CaptureAssetsTableTableManager extends RootTableManager<
             visitId: visitId,
             role: role,
             localPath: localPath,
+            serverId: serverId,
             serverObjectId: serverObjectId,
             capturedAt: capturedAt,
             selectedRank: selectedRank,
@@ -12087,6 +12276,7 @@ typedef $$CameraResultsTableCreateCompanionBuilder = CameraResultsCompanion
     Function({
   Value<int> id,
   required String resultUuid,
+  Value<int?> serverId,
   required int visitId,
   required int version,
   Value<String?> supersedesResultUuid,
@@ -12113,6 +12303,7 @@ typedef $$CameraResultsTableUpdateCompanionBuilder = CameraResultsCompanion
     Function({
   Value<int> id,
   Value<String> resultUuid,
+  Value<int?> serverId,
   Value<int> visitId,
   Value<int> version,
   Value<String?> supersedesResultUuid,
@@ -12170,6 +12361,9 @@ class $$CameraResultsTableFilterComposer
 
   ColumnFilters<String> get resultUuid => $composableBuilder(
       column: $table.resultUuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get serverId => $composableBuilder(
+      column: $table.serverId, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get version => $composableBuilder(
       column: $table.version, builder: (column) => ColumnFilters(column));
@@ -12277,6 +12471,9 @@ class $$CameraResultsTableOrderingComposer
 
   ColumnOrderings<String> get resultUuid => $composableBuilder(
       column: $table.resultUuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get serverId => $composableBuilder(
+      column: $table.serverId, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get version => $composableBuilder(
       column: $table.version, builder: (column) => ColumnOrderings(column));
@@ -12390,6 +12587,9 @@ class $$CameraResultsTableAnnotationComposer
   GeneratedColumn<String> get resultUuid => $composableBuilder(
       column: $table.resultUuid, builder: (column) => column);
 
+  GeneratedColumn<int> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
   GeneratedColumn<int> get version =>
       $composableBuilder(column: $table.version, builder: (column) => column);
 
@@ -12496,6 +12696,7 @@ class $$CameraResultsTableTableManager extends RootTableManager<
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<String> resultUuid = const Value.absent(),
+            Value<int?> serverId = const Value.absent(),
             Value<int> visitId = const Value.absent(),
             Value<int> version = const Value.absent(),
             Value<String?> supersedesResultUuid = const Value.absent(),
@@ -12521,6 +12722,7 @@ class $$CameraResultsTableTableManager extends RootTableManager<
               CameraResultsCompanion(
             id: id,
             resultUuid: resultUuid,
+            serverId: serverId,
             visitId: visitId,
             version: version,
             supersedesResultUuid: supersedesResultUuid,
@@ -12546,6 +12748,7 @@ class $$CameraResultsTableTableManager extends RootTableManager<
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
             required String resultUuid,
+            Value<int?> serverId = const Value.absent(),
             required int visitId,
             required int version,
             Value<String?> supersedesResultUuid = const Value.absent(),
@@ -12571,6 +12774,7 @@ class $$CameraResultsTableTableManager extends RootTableManager<
               CameraResultsCompanion.insert(
             id: id,
             resultUuid: resultUuid,
+            serverId: serverId,
             visitId: visitId,
             version: version,
             supersedesResultUuid: supersedesResultUuid,
@@ -12653,6 +12857,7 @@ typedef $$MeasuredDetailRevisionsTableCreateCompanionBuilder
     = MeasuredDetailRevisionsCompanion Function({
   Value<int> id,
   required String revisionUuid,
+  Value<int?> serverId,
   required int visitId,
   required int revisionNumber,
   required String beforeJson,
@@ -12665,6 +12870,7 @@ typedef $$MeasuredDetailRevisionsTableUpdateCompanionBuilder
     = MeasuredDetailRevisionsCompanion Function({
   Value<int> id,
   Value<String> revisionUuid,
+  Value<int?> serverId,
   Value<int> visitId,
   Value<int> revisionNumber,
   Value<String> beforeJson,
@@ -12708,6 +12914,9 @@ class $$MeasuredDetailRevisionsTableFilterComposer
 
   ColumnFilters<String> get revisionUuid => $composableBuilder(
       column: $table.revisionUuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get serverId => $composableBuilder(
+      column: $table.serverId, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get revisionNumber => $composableBuilder(
       column: $table.revisionNumber,
@@ -12765,6 +12974,9 @@ class $$MeasuredDetailRevisionsTableOrderingComposer
       column: $table.revisionUuid,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get serverId => $composableBuilder(
+      column: $table.serverId, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get revisionNumber => $composableBuilder(
       column: $table.revisionNumber,
       builder: (column) => ColumnOrderings(column));
@@ -12820,6 +13032,9 @@ class $$MeasuredDetailRevisionsTableAnnotationComposer
 
   GeneratedColumn<String> get revisionUuid => $composableBuilder(
       column: $table.revisionUuid, builder: (column) => column);
+
+  GeneratedColumn<int> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
 
   GeneratedColumn<int> get revisionNumber => $composableBuilder(
       column: $table.revisionNumber, builder: (column) => column);
@@ -12889,6 +13104,7 @@ class $$MeasuredDetailRevisionsTableTableManager extends RootTableManager<
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<String> revisionUuid = const Value.absent(),
+            Value<int?> serverId = const Value.absent(),
             Value<int> visitId = const Value.absent(),
             Value<int> revisionNumber = const Value.absent(),
             Value<String> beforeJson = const Value.absent(),
@@ -12900,6 +13116,7 @@ class $$MeasuredDetailRevisionsTableTableManager extends RootTableManager<
               MeasuredDetailRevisionsCompanion(
             id: id,
             revisionUuid: revisionUuid,
+            serverId: serverId,
             visitId: visitId,
             revisionNumber: revisionNumber,
             beforeJson: beforeJson,
@@ -12911,6 +13128,7 @@ class $$MeasuredDetailRevisionsTableTableManager extends RootTableManager<
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
             required String revisionUuid,
+            Value<int?> serverId = const Value.absent(),
             required int visitId,
             required int revisionNumber,
             required String beforeJson,
@@ -12922,6 +13140,7 @@ class $$MeasuredDetailRevisionsTableTableManager extends RootTableManager<
               MeasuredDetailRevisionsCompanion.insert(
             id: id,
             revisionUuid: revisionUuid,
+            serverId: serverId,
             visitId: visitId,
             revisionNumber: revisionNumber,
             beforeJson: beforeJson,
