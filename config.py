@@ -7,6 +7,8 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 UPLOAD_DIR = BASE_DIR / "uploads"
+GUIDED_CAPTURE_MEDIA_DIR = UPLOAD_DIR / "guided"
+GUIDED_CAPTURE_MAX_ASSET_BYTES = 15 * 1024 * 1024
 DB_PATH = BASE_DIR / "growth_monitor.db"
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 

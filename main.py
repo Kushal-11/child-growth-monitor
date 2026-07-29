@@ -17,6 +17,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.routes import router as api_router
 from app.api.sync import router as sync_router
+from app.api.guided_sync import router as guided_sync_router
 from app.api.auth import router as auth_router
 from app.models.database import init_db, run_migrations
 from app.services.age_service import AgeService
@@ -52,6 +53,7 @@ def create_app() -> FastAPI:
     # Register routers
     app.include_router(api_router)
     app.include_router(sync_router)
+    app.include_router(guided_sync_router)
     app.include_router(auth_router)
     app.include_router(web_router)
     app.include_router(admin_router)

@@ -348,6 +348,10 @@ class GuidedVisitService:
         measurement_date: date,
         details: MeasuredDetailsSubmission,
         editor_user_id: int,
+        revision_uuid: UUID | str | None = None,
+        revision_number: int | None = None,
+        revision_created_at: datetime | None = None,
+        allow_without_estimate: bool = False,
     ) -> MeasurementResult:
         visit = self._scoped_visit(db, owner_user_id, visit_uuid)
         if editor_user_id != owner_user_id:
@@ -370,10 +374,20 @@ class GuidedVisitService:
             measurement_date,
         )
         current_state = CaptureState(visit.capture_state)
-        if current_state not in (
+        allowed_states = {
             CaptureState.ESTIMATED_REPORT,
             CaptureState.MEASURED_REPORT,
-        ):
+        }
+        if allow_without_estimate:
+            allowed_states.update(
+                {
+                    CaptureState.DRAFT_CAPTURE,
+                    CaptureState.INCOMPLETE_CAPTURE,
+                    CaptureState.PROCESSING,
+                    CaptureState.PROCESSING_FAILED,
+                }
+            )
+        if current_state not in allowed_states:
             raise ValueError(
                 "Measured details require an estimated or measured visit"
             )
@@ -463,14 +477,22 @@ class GuidedVisitService:
                     MeasuredDetailRevision.visit_id == visit.id
                 )
             )
+            expected_revision = (latest_revision or 0) + 1
+            if (
+                revision_number is not None
+                and revision_number != expected_revision
+            ):
+                raise ValueError(
+                    f"Measured revision number must be {expected_revision}"
+                )
             revision = MeasuredDetailRevision(
-                revision_uuid=str(uuid4()),
+                revision_uuid=str(revision_uuid or uuid4()),
                 visit_id=visit.id,
-                revision_number=(latest_revision or 0) + 1,
+                revision_number=expected_revision,
                 before_json=before,
                 after_json=after,
                 editor_user_id=editor_user_id,
-                created_at=datetime.utcnow(),
+                created_at=revision_created_at or datetime.utcnow(),
                 reason=details.reason,
             )
             db.add(revision)
