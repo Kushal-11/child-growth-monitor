@@ -184,6 +184,15 @@ HEIGHT_VALIDATION_SD = 3.0  # Flag if height is >3 SD from WHO median
 SEGMENT_AGREEMENT_THRESHOLD = 0.15  # Max 15% difference between segment-based estimates
 MIN_CONFIDENCE_THRESHOLD = 0.5  # Minimum pose confidence to use measurement
 
+# Plausibility bounds for authoritative field measurements on under-five
+# guided visits. Values outside these bounds fail the entire atomic save.
+MEASURED_HEIGHT_MIN_CM = 30.0
+MEASURED_HEIGHT_MAX_CM = 150.0
+MEASURED_WEIGHT_MIN_KG = 0.5
+MEASURED_WEIGHT_MAX_KG = 50.0
+MEASURED_MUAC_MIN_CM = 5.0
+MEASURED_MUAC_MAX_CM = 30.0
+
 # Expected height ranges by age (cm) - for sanity checking
 # Based on WHO growth charts (approximately -3 SD to +3 SD)
 HEIGHT_RANGES_BY_AGE = {
