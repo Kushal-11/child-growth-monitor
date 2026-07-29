@@ -29,6 +29,11 @@ from app.schemas.guided_sync import (
 )
 from app.services.age_service import AgeService
 from app.services.guided_capture_contract import CaptureState
+from app.services.guided_media_service import (
+    GuidedMediaConflict,
+    GuidedMediaNotFound,
+    GuidedMediaService,
+)
 from app.services.guided_visit_service import GuidedVisitService
 from app.services.who_data_service import WHODataService
 from config import GUIDED_CAPTURE_MAX_ASSET_BYTES
@@ -49,6 +54,7 @@ class GuidedSyncValidation(ValueError):
 class GuidedSyncService:
     def __init__(self, *, media_root: Path, who_data: WHODataService):
         self._media_root = Path(media_root)
+        self._media = GuidedMediaService(media_root=self._media_root)
         self._visits = GuidedVisitService(who_data)
         self._age = AgeService()
 
@@ -471,43 +477,27 @@ class GuidedSyncService:
         visit_uuid: UUID,
         asset_uuid: UUID,
     ) -> GuidedSyncAcknowledgement:
-        visit = self._scoped_visit(db, owner_user_id, visit_uuid)
-        asset = db.scalar(
-            select(CaptureAsset).where(
-                CaptureAsset.asset_uuid == str(asset_uuid),
-                CaptureAsset.visit_id == visit.id,
+        try:
+            deleted = self._media.delete_asset_media(
+                db,
+                owner_user_id=owner_user_id,
+                visit_uuid=visit_uuid,
+                asset_uuid=asset_uuid,
             )
-        )
-        if asset is None:
-            raise GuidedSyncNotFound("Owner-scoped asset was not found")
-        if asset.local_path is None:
-            return self._ack(
-                "media_deletion",
-                asset_uuid,
-                "already_accepted",
-                server_id=asset.id,
-                server_object_id=asset.server_object_id,
-            )
-        path = Path(asset.local_path)
-        root = self._media_root.resolve()
-        resolved = path.resolve()
-        if not resolved.is_relative_to(root):
-            raise GuidedSyncConflict("Asset path is outside guided media storage")
-        if path.exists():
-            path.unlink()
-        asset.local_path = None
-        if all(
-            candidate.local_path is None
-            for candidate in visit.capture_assets
-        ):
-            visit.media_deleted_at = self._now()
-        db.commit()
+        except GuidedMediaNotFound as exc:
+            raise GuidedSyncNotFound(str(exc)) from exc
+        except GuidedMediaConflict as exc:
+            raise GuidedSyncConflict(str(exc)) from exc
         return self._ack(
             "media_deletion",
             asset_uuid,
-            "accepted",
-            server_id=asset.id,
-            server_object_id=asset.server_object_id,
+            (
+                "accepted"
+                if deleted.status == "deleted"
+                else "already_accepted"
+            ),
+            server_id=deleted.server_id,
+            server_object_id=deleted.server_object_id,
         )
 
     def _scoped_visit(

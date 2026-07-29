@@ -17,11 +17,16 @@ from app.api.guided_sync import (
     get_guided_sync_service,
     router as guided_sync_router,
 )
+from app.api.guided_media import (
+    get_guided_media_service,
+    router as guided_media_router,
+)
 from app.models.child import Child
 from app.models.database import Base, get_db
 from app.models.user import User
 from app.services import auth_service
 from app.services.guided_sync_service import GuidedSyncService
+from app.services.guided_media_service import GuidedMediaService
 from app.services.who_data_service import WHODataService
 
 
@@ -37,6 +42,7 @@ class GuidedSyncContext:
     owner_headers: dict[str, str]
     other_headers: dict[str, str]
     engine: object
+    media_root: Path
 
     def close(self) -> None:
         self.client.close()
@@ -104,8 +110,12 @@ def build_context(media_root: Path) -> GuidedSyncContext:
     app = FastAPI()
     app.include_router(auth_router)
     app.include_router(guided_sync_router)
+    app.include_router(guided_media_router)
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_guided_sync_service] = lambda: service
+    app.dependency_overrides[get_guided_media_service] = lambda: (
+        GuidedMediaService(media_root=media_root)
+    )
     client = TestClient(app)
 
     def headers(username: str) -> dict[str, str]:
@@ -126,6 +136,7 @@ def build_context(media_root: Path) -> GuidedSyncContext:
         owner_headers=headers("sync-owner"),
         other_headers=headers("sync-other"),
         engine=engine,
+        media_root=media_root,
     )
 
 
