@@ -352,6 +352,11 @@ class ChildDetailScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 2),
+          if (visit.entryMethod == 'guided_capture' &&
+              visit.captureState != null) ...[
+            _guidedVisitStatus(context, visit),
+            const SizedBox(height: 6),
+          ],
           if (m != null)
             Wrap(
               spacing: 12,
@@ -388,6 +393,11 @@ class ChildDetailScreen extends ConsumerWidget {
               t('no_measurement_data', ref),
               style: Theme.of(context).textTheme.bodySmall,
             ),
+          if (visit.entryMethod == 'guided_capture' &&
+              visit.localUuid != null) ...[
+            const SizedBox(height: 6),
+            _guidedVisitActions(context, visit),
+          ],
           const Divider(height: 12),
         ],
       ),
@@ -398,5 +408,83 @@ class ChildDetailScreen extends ConsumerWidget {
     const directMethods = {'manual', 'reference_object'};
     if (method == null || directMethods.contains(method)) return '';
     return ' (${t('badge_est', ref)})';
+  }
+
+  Widget _guidedVisitStatus(BuildContext context, ChildVisit visit) {
+    final label = switch (visit.captureState) {
+      'draft_capture' || 'incomplete_capture' => 'Incomplete capture',
+      'processing' => 'Processing estimate',
+      'estimated_report' => 'Estimated report',
+      'processing_failed' => 'Estimate failed — retry',
+      'measured_report' => 'Measured report added',
+      _ => null,
+    };
+    if (label == null) return const SizedBox.shrink();
+    final camera = visit.cameraResultSummary;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelLarge,
+        ),
+        if (camera != null)
+          Text(
+            '${camera.modelVersion} · result v${camera.version}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        if (visit.mediaDeletedAt != null)
+          Text(
+            'Visit media deleted',
+            style: Theme.of(context).textTheme.bodySmall,
+          )
+        else if (visit.requiredAssetAcknowledgement.isNotEmpty)
+          Text(
+            visit.requiredAssetsAcknowledged
+                ? 'Required media acknowledged'
+                : 'Required media pending acknowledgement',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+      ],
+    );
+  }
+
+  Widget _guidedVisitActions(BuildContext context, ChildVisit visit) {
+    final visitUuid = visit.localUuid!;
+    final date = visit.visitDate?.split('T').first;
+    final actions = <Widget>[
+      if (visit.captureState == 'draft_capture' ||
+          visit.captureState == 'incomplete_capture')
+        TextButton(
+          onPressed: () => context.go('/visits/$visitUuid/capture'),
+          child: const Text('Resume capture'),
+        ),
+      if (visit.captureState == 'processing' ||
+          visit.captureState == 'estimated_report' ||
+          visit.captureState == 'measured_report')
+        TextButton(
+          onPressed: () => context.go('/visits/$visitUuid/report'),
+          child: Text(
+            visit.captureState == 'measured_report'
+                ? 'View measured report'
+                : 'View report',
+          ),
+        ),
+      if (visit.captureState == 'processing_failed')
+        TextButton(
+          onPressed: () => context.go('/visits/$visitUuid/report'),
+          child: const Text('Retry estimate'),
+        ),
+      if (visit.captureState == 'estimated_report' &&
+          !visit.hasMeasuredReport &&
+          date != null)
+        TextButton(
+          onPressed: () => context.go(
+            '/visits/$visitUuid/measured-details?visitDate=$date',
+          ),
+          child: const Text('Add Measured Details'),
+        ),
+    ];
+    return Wrap(spacing: 8, runSpacing: 4, children: actions);
   }
 }

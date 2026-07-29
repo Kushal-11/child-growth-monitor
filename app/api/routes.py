@@ -22,6 +22,7 @@ from app.models.user import User
 from app.services.auth_service import get_current_user
 from app.models.database import get_db
 from app.schemas.assessment import AssessmentRequest, AssessmentResponse
+from app.schemas.child_detail import ChildDetailResponse
 from app.services.age_service import AgeService
 from app.services.assessment_service import AssessmentService
 from config import UPLOAD_DIR
@@ -177,7 +178,7 @@ def list_children(
     ]
 
 
-@router.get("/children/{child_id}")
+@router.get("/children/{child_id}", response_model=ChildDetailResponse)
 def get_child(
     child_id: int,
     db: Session = Depends(get_db),
@@ -194,10 +195,72 @@ def get_child(
 
     visits = []
     for v in child.visits:
+        latest_camera_result = (
+            max(v.camera_results, key=lambda result: result.version)
+            if v.camera_results
+            else None
+        )
+        required_asset_states = {}
+        for role in ("front", "side"):
+            role_assets = [
+                asset
+                for asset in v.capture_assets
+                if asset.role == role and asset.quality_verdict == "accepted"
+            ]
+            if any(
+                asset.server_acknowledged_at is not None
+                or asset.sync_state == "synced"
+                for asset in role_assets
+            ):
+                required_asset_states[role] = "acknowledged"
+            elif role_assets:
+                required_asset_states[role] = "pending"
+            else:
+                required_asset_states[role] = "missing"
         visit_data = {
             "visit_id": v.id,
+            "local_uuid": v.local_uuid,
             "visit_date": v.visit_date.isoformat() if v.visit_date else None,
             "age_months": v.age_months,
+            "entry_method": v.entry_method,
+            "capture_state": v.capture_state,
+            "camera_result_summary": (
+                {
+                    "result_uuid": latest_camera_result.result_uuid,
+                    "version": latest_camera_result.version,
+                    "estimated_height_cm": (
+                        latest_camera_result.estimated_height_cm
+                    ),
+                    "estimated_weight_kg": (
+                        latest_camera_result.estimated_weight_kg
+                    ),
+                    "estimated_stunting_status": (
+                        latest_camera_result.estimated_stunting_status
+                    ),
+                    "estimated_wasting_status": (
+                        latest_camera_result.estimated_wasting_status
+                    ),
+                    "experimental_overall_category": (
+                        latest_camera_result.experimental_overall_category
+                    ),
+                    "method": latest_camera_result.method,
+                    "model_version": latest_camera_result.model_version,
+                    "non_clinical": True,
+                }
+                if latest_camera_result is not None
+                else None
+            ),
+            "has_measured_report": (
+                v.capture_state == "measured_report" and v.measurement is not None
+            ),
+            "required_asset_acknowledgement": required_asset_states,
+            "required_assets_acknowledged": all(
+                state == "acknowledged"
+                for state in required_asset_states.values()
+            ),
+            "media_deleted_at": (
+                v.media_deleted_at.isoformat() if v.media_deleted_at else None
+            ),
         }
         if v.measurement:
             m = v.measurement
