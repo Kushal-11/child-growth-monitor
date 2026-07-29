@@ -314,6 +314,52 @@ const Map<String, Map<String, String>> translations = {
     'en': 'Calculated for this child from the uploaded photos.',
     'mr': 'अपलोड केलेल्या फोटोंवरून या मुलासाठी गणना केलेली मूल्ये.',
   },
+  'screening_classifications_title': {
+    'en': 'Screening classifications',
+    'mr': 'प्राथमिक तपासणी वर्गीकरण',
+  },
+  'screening_classifications_subtitle': {
+    'en': 'SAM/MAM, wasting, and stunting calculated from the assessment.',
+    'mr': 'मूल्यांकनावरून गणना केलेले SAM/MAM, वेस्टिंग आणि स्टंटिंग.',
+  },
+  'sam_mam_screening_label': {
+    'en': 'SAM/MAM photo screening',
+    'mr': 'SAM/MAM फोटो तपासणी',
+  },
+  'who_wasting_label': {
+    'en': 'Wasting (WHO WHZ)',
+    'mr': 'वेस्टिंग (WHO WHZ)',
+  },
+  'who_stunting_label': {
+    'en': 'Stunting (WHO HAZ)',
+    'mr': 'स्टंटिंग (WHO HAZ)',
+  },
+  'camera_ml_screening': {
+    'en': 'Camera ML screening',
+    'mr': 'कॅमेरा ML तपासणी',
+  },
+  'camera_screening_unavailable': {
+    'en': 'Camera classification unavailable',
+    'mr': 'कॅमेरा वर्गीकरण उपलब्ध नाही',
+  },
+  'predicted_probability': {
+    'en': 'predicted probability',
+    'mr': 'अंदाजित संभाव्यता',
+  },
+  'who_estimate_screening': {
+    'en': 'WHO screening from estimated inputs',
+    'mr': 'अंदाजित मूल्यांवरून WHO तपासणी',
+  },
+  'who_screening_unavailable': {
+    'en': 'WHO classification unavailable',
+    'mr': 'WHO वर्गीकरण उपलब्ध नाही',
+  },
+  'screening_classifications_disclaimer': {
+    'en': 'Screening only — confirm with direct height, weight, and tape MUAC '
+        'for a clinical Poshan Setu classification.',
+    'mr': 'ही केवळ प्राथमिक तपासणी आहे — वैद्यकीय पोषण सेतू वर्गीकरणासाठी '
+        'प्रत्यक्ष उंची, वजन आणि टेपने MUAC मोजून पुष्टी करा.',
+  },
   'badge_pose_age_estimate': {
     'en': 'Pose + age/sex',
     'mr': 'पोझ + वय/लिंग',

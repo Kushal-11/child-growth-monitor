@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../constants/config.dart' show wastingStatusLabel;
 import '../../l10n/l10n_provider.dart';
 import '../../models/assessment_result.dart';
 import '../../models/who_reference_targets.dart';
@@ -52,6 +53,8 @@ class ResultScreen extends ConsumerWidget {
             if (_hasPhotoEstimates(result)) ...[
               const SizedBox(height: 16),
               _photoEstimateSection(context, ref, result),
+              const SizedBox(height: 12),
+              _screeningClassificationSection(context, ref, result),
             ],
             const SizedBox(height: 16),
             _metricCards(context, ref, result),
@@ -185,16 +188,17 @@ class ResultScreen extends ConsumerWidget {
             if (confidence != null) ...[
               Row(
                 children: [
-                  Text('${t('pose_confidence', ref)}: '),
                   Expanded(
-                    child: LinearProgressIndicator(
-                      value: confidence,
-                      backgroundColor: Colors.grey.shade200,
-                    ),
+                    child: Text('${t('pose_confidence', ref)}:'),
                   ),
                   const SizedBox(width: 8),
                   Text('${(confidence * 100).toStringAsFixed(0)}%'),
                 ],
+              ),
+              const SizedBox(height: 6),
+              LinearProgressIndicator(
+                value: confidence,
+                backgroundColor: Colors.grey.shade200,
               ),
               const SizedBox(height: 4),
             ],
@@ -434,6 +438,142 @@ class ResultScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Widget _screeningClassificationSection(
+    BuildContext context,
+    WidgetRef ref,
+    AssessmentResult result,
+  ) {
+    final mlStatus = _displayWastingStatus(
+      ref,
+      result.mlPrediction?.wastingStatus,
+    );
+    final whzStatus = _displayWastingStatus(ref, result.nutrition.whzStatus);
+    final hazStatus = result.nutrition.hazStatus ?? t('not_assessed', ref);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.teal.withValues(alpha: 0.06),
+        border: Border.all(color: Colors.teal.shade200),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            t('screening_classifications_title', ref),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            t('screening_classifications_subtitle', ref),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          _classificationRow(
+            context,
+            label: t('sam_mam_screening_label', ref),
+            status: mlStatus,
+            evidence: _mlScreeningEvidence(ref, result.mlPrediction),
+          ),
+          const Divider(height: 20),
+          _classificationRow(
+            context,
+            label: t('who_wasting_label', ref),
+            status: whzStatus,
+            evidence: _zScoreEvidence(
+              ref,
+              result.nutrition.whzZscore,
+              'WHZ',
+            ),
+          ),
+          const Divider(height: 20),
+          _classificationRow(
+            context,
+            label: t('who_stunting_label', ref),
+            status: hazStatus,
+            evidence: _zScoreEvidence(
+              ref,
+              result.nutrition.hazZscore,
+              'HAZ',
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            t('screening_classifications_disclaimer', ref),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.teal.shade900,
+                  fontWeight: FontWeight.w500,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _classificationRow(
+    BuildContext context, {
+    required String label,
+    required String status,
+    required String evidence,
+  }) {
+    return Semantics(
+      label: '$label: $status',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            evidence,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 6),
+          StatusBadge(status: status),
+        ],
+      ),
+    );
+  }
+
+  String _displayWastingStatus(WidgetRef ref, String? status) {
+    if (status == null ||
+        status.trim().isEmpty ||
+        status.toLowerCase() == 'who_fallback') {
+      return t('not_assessed', ref);
+    }
+    return wastingStatusLabel(status);
+  }
+
+  String _mlScreeningEvidence(WidgetRef ref, MlPrediction? prediction) {
+    if (prediction == null || prediction.wastingStatus == null) {
+      return t('camera_screening_unavailable', ref);
+    }
+    final probability = switch (prediction.wastingStatus) {
+      'SAM' => prediction.samProbability,
+      'MAM' => prediction.mamProbability,
+      'NORMAL' || 'Normal' => prediction.normalProbability,
+      'RISK_OVERWEIGHT' || 'Risk_Overweight' => prediction.riskProbability,
+      'OVERWEIGHT' || 'Overweight' => prediction.overweightProbability,
+      _ => null,
+    };
+    if (probability == null) return t('camera_ml_screening', ref);
+    return '${t('camera_ml_screening', ref)} · '
+        '${(probability * 100).toStringAsFixed(0)}% '
+        '${t('predicted_probability', ref)}';
+  }
+
+  String _zScoreEvidence(WidgetRef ref, double? zScore, String index) {
+    if (zScore == null) return t('who_screening_unavailable', ref);
+    return '${t('who_estimate_screening', ref)} · '
+        '$index ${zScore.toStringAsFixed(2)}';
   }
 
   String _heightSource(WidgetRef ref, Measurement measurement) {
@@ -750,31 +890,25 @@ class ResultScreen extends ConsumerWidget {
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.titleSmall,
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${value.target.toStringAsFixed(1)} $unit',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              Text(
-                '${t('who_reference_range', ref)} '
-                '${value.lower2Sd.toStringAsFixed(1)}–'
-                '${value.upper2Sd.toStringAsFixed(1)} $unit',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
+          const SizedBox(height: 2),
+          Text(
+            '${value.target.toStringAsFixed(1)} $unit',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          Text(
+            '${t('who_reference_range', ref)} '
+            '${value.lower2Sd.toStringAsFixed(1)}–'
+            '${value.upper2Sd.toStringAsFixed(1)} $unit',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ),
