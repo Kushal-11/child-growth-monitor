@@ -119,6 +119,12 @@ AssessmentResult _estimatedOnly() => AssessmentResult(
         whzStatus: 'NORMAL',
         ageMonths: 46.8,
       ),
+      mlPrediction: MlPrediction(
+        samProbability: 0.82,
+        mamProbability: 0.17,
+        normalProbability: 0.01,
+        wastingStatus: 'SAM',
+      ),
       muac: MuacDetail(
         muacCm: 15,
         muacMethod: 'estimated_from_whz',
@@ -177,6 +183,11 @@ void main() {
 
   testWidgets('estimated results disclose their actual provenance',
       (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     final container = ProviderContainer(overrides: [
       databaseProvider.overrideWithValue(db),
@@ -197,6 +208,17 @@ void main() {
         findsOneWidget);
     expect(find.text('Photo Estimates Ready'), findsOneWidget);
     expect(find.text('App photo estimates'), findsOneWidget);
+    expect(find.text('Screening classifications'), findsOneWidget);
+    expect(find.text('SAM/MAM photo screening'), findsOneWidget);
+    expect(find.text('Severe Acute Malnutrition (SAM)'), findsOneWidget);
+    expect(find.text('Camera ML screening · 82% predicted probability'),
+        findsOneWidget);
+    expect(find.text('Wasting (WHO WHZ)'), findsOneWidget);
+    expect(find.text('WHO screening from estimated inputs · WHZ -0.50'),
+        findsOneWidget);
+    expect(find.text('Stunting (WHO HAZ)'), findsOneWidget);
+    expect(find.text('WHO screening from estimated inputs · HAZ 0.00'),
+        findsOneWidget);
     expect(find.text('Not measured'), findsNothing);
     expect(find.text('No direct measurements entered'), findsOneWidget);
     expect(find.text('WHO reference targets'), findsOneWidget);
