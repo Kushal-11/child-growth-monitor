@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "model_version": "bundled-synthetic-baseline-v1",
+  "training_data_label": "synthetic_who_research_only",
+  "non_clinical": true,
+  "files": {
+    "weight_estimator.tflite": {
+      "size_bytes": 8464,
+      "sha256": "68004476a16aad750b964177aecdeda01af6f1b5bc14472464f8760038e6f98e"
+    },
+    "wasting_classifier.tflite": {
+      "size_bytes": 18928,
+      "sha256": "a2cc7d3d6f109b4533aaaeb2c7194a2ebd0239b8ffa4868ffa5a5e7e4ea99a71"
+    },
+    "feature_scaler.json": {
+      "size_bytes": 1035,
+      "sha256": "943fe59c4661137a3e2494ca5daa0af323c2089f3530526c63d12a36c155114d"
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/guided_capture/services/camera_screening_service.dart';
 import '../services/assessment_service.dart';
 import '../services/image_storage_service.dart';
 import '../services/measurement_service.dart';
@@ -52,5 +53,28 @@ final assessmentServiceProvider =
     who: who,
     ml: ml,
     persistImage: storage.persist,
+  );
+});
+
+final cameraScreeningRunnerProvider =
+    FutureProvider<CameraScreeningRunner>((ref) async {
+  final who = await ref.watch(whoDataServiceProvider.future);
+  final ml = await ref.watch(mlInferenceServiceProvider.future);
+  return CameraScreeningService(
+    pose: ref.watch(poseSourceProvider),
+    measurement: MeasurementService(who),
+    nutrition: NutritionService(who),
+    who: who,
+    ml: MlCameraInferenceAdapter(ml),
+  );
+});
+
+final cameraScreeningWorkflowProvider =
+    FutureProvider<CameraScreeningWorkflow>((ref) async {
+  return CameraScreeningWorkflow(
+    database: ref.watch(databaseProvider),
+    visitDao: ref.watch(guidedVisitDaoProvider),
+    cameraResultDao: ref.watch(cameraResultDaoProvider),
+    runner: await ref.watch(cameraScreeningRunnerProvider.future),
   );
 });

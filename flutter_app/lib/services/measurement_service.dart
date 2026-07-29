@@ -24,6 +24,50 @@ class MeasurementService {
     );
     final method = manualHeightCm != null ? 'manual' : 'who_statistical';
 
+    return _computeResolved(
+      segments: segments,
+      sideSegments: sideSegments,
+      ageMonths: ageMonths,
+      effectiveHeightCm: effectiveHeightCm,
+      poseConfidence: poseConfidence,
+      estimationMethod: method,
+    );
+  }
+
+  /// Camera-only adapter that cannot receive or accidentally promote a manual
+  /// height. Unlike the legacy assessment path, it fails when the authoritative
+  /// WHO height-for-age median is unavailable instead of using a fixed value.
+  BodyMeasurements computeCameraEstimate({
+    required BodySegments segments,
+    SideViewSegments? sideSegments,
+    required double ageMonths,
+    required String sex,
+    required double poseConfidence,
+  }) {
+    final median = _who.getMedianHeightForAge(sex, ageMonths.round());
+    if (median == null || !median.isFinite || median <= 0) {
+      throw StateError(
+        'WHO height-for-age median is unavailable for camera screening',
+      );
+    }
+    return _computeResolved(
+      segments: segments,
+      sideSegments: sideSegments,
+      ageMonths: ageMonths,
+      effectiveHeightCm: median,
+      poseConfidence: poseConfidence,
+      estimationMethod: 'who_height_for_age_median_v1',
+    );
+  }
+
+  BodyMeasurements _computeResolved({
+    required BodySegments segments,
+    required SideViewSegments? sideSegments,
+    required double ageMonths,
+    required double effectiveHeightCm,
+    required double poseConfidence,
+    required String estimationMethod,
+  }) {
     final scale = _scale(segments, effectiveHeightCm);
 
     final shoulderCm = segments.shoulderWidthPx != null
@@ -81,7 +125,7 @@ class MeasurementService {
       bodyBuild: build,
       bodyBuildScore: buildScore,
       confidence: poseConfidence,
-      estimationMethod: method,
+      estimationMethod: estimationMethod,
       sideViewUsed: sideUsed,
     );
   }

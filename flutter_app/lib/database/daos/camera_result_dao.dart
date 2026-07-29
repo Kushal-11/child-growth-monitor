@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import '../database.dart';
@@ -66,6 +68,30 @@ class CameraResultDao {
           const VisitsCompanion(
             captureState: Value('estimated_report'),
           ),
+        );
+        final visitOutbox = await (_db.select(_db.syncOutbox)
+              ..where(
+                (row) =>
+                    row.ownerUserId.equals(ownerUserId) &
+                    row.entityType.equals(SyncOutboxEntityType.visit) &
+                    row.entityUuid.equals(visitUuid),
+              ))
+            .getSingleOrNull();
+        if (visitOutbox == null) {
+          throw StateError('Visit outbox record was not found');
+        }
+        final visitPayload =
+            jsonDecode(visitOutbox.payloadJson) as Map<String, dynamic>;
+        visitPayload['capture_state'] = 'estimated_report';
+        if (visit.captureCompletedAt != null) {
+          visitPayload['capture_completed_at'] =
+              visit.captureCompletedAt!.toIso8601String();
+        }
+        await SyncOutboxDao(_db).refreshPayload(
+          ownerUserId: ownerUserId,
+          entityType: SyncOutboxEntityType.visit,
+          entityUuid: visitUuid,
+          payloadJson: jsonEncode(visitPayload),
         );
       }
       await SyncOutboxDao(_db).enqueue(

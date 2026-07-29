@@ -73,7 +73,10 @@ const Map<CaptureState, Set<CaptureState>> allowedCaptureStateTransitions = {
     CaptureState.estimatedReport,
     CaptureState.processingFailed,
   },
-  CaptureState.estimatedReport: {CaptureState.measuredReport},
+  CaptureState.estimatedReport: {
+    CaptureState.processing,
+    CaptureState.measuredReport,
+  },
   CaptureState.processingFailed: {CaptureState.processing},
   CaptureState.measuredReport: {CaptureState.measuredReport},
 };

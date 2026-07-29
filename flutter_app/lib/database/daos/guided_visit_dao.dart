@@ -144,4 +144,128 @@ class GuidedVisitDao {
           .getSingle();
     });
   }
+
+  Future<Visit> beginCameraProcessing({
+    required int ownerUserId,
+    required String visitUuid,
+  }) {
+    return _db.transaction(() async {
+      final visit = await getByUuid(
+        ownerUserId: ownerUserId,
+        visitUuid: visitUuid,
+      );
+      if (visit == null) {
+        throw StateError('Owner-scoped visit was not found');
+      }
+      if (visit.captureState == 'processing') return visit;
+      if (visit.captureState != 'draft_capture' &&
+          visit.captureState != 'processing_failed' &&
+          visit.captureState != 'estimated_report') {
+        throw StateError(
+          'Camera processing cannot start from ${visit.captureState}',
+        );
+      }
+
+      final acceptedAssets = await (_db.select(_db.captureAssets)
+            ..where(
+              (row) =>
+                  row.visitId.equals(visit.id) &
+                  row.qualityVerdict.equals('accepted'),
+            ))
+          .get();
+      final acceptedRoles = acceptedAssets
+          .where(
+            (asset) => asset.localPath != null && asset.localPath!.isNotEmpty,
+          )
+          .map((asset) => asset.role)
+          .toSet();
+      if (!acceptedRoles.containsAll(const {'front', 'side'})) {
+        throw StateError(
+          'Accepted front and side assets are required for processing',
+        );
+      }
+
+      final completedAt = visit.captureCompletedAt ?? DateTime.now();
+      await (_db.update(_db.visits)..where((row) => row.id.equals(visit.id)))
+          .write(
+        VisitsCompanion(
+          captureState: const Value('processing'),
+          captureCompletedAt: Value(completedAt),
+        ),
+      );
+      await _refreshVisitStatePayload(
+        visit: visit,
+        ownerUserId: ownerUserId,
+        captureState: 'processing',
+        captureCompletedAt: completedAt,
+      );
+      return (_db.select(_db.visits)..where((row) => row.id.equals(visit.id)))
+          .getSingle();
+    });
+  }
+
+  Future<Visit> markCameraProcessingFailed({
+    required int ownerUserId,
+    required String visitUuid,
+  }) {
+    return _db.transaction(() async {
+      final visit = await getByUuid(
+        ownerUserId: ownerUserId,
+        visitUuid: visitUuid,
+      );
+      if (visit == null) {
+        throw StateError('Owner-scoped visit was not found');
+      }
+      if (visit.captureState == 'processing_failed') return visit;
+      if (visit.captureState != 'processing') {
+        throw StateError(
+          'Only a processing visit can be marked as failed',
+        );
+      }
+      await (_db.update(_db.visits)..where((row) => row.id.equals(visit.id)))
+          .write(
+        const VisitsCompanion(
+          captureState: Value('processing_failed'),
+        ),
+      );
+      await _refreshVisitStatePayload(
+        visit: visit,
+        ownerUserId: ownerUserId,
+        captureState: 'processing_failed',
+        captureCompletedAt: visit.captureCompletedAt,
+      );
+      return (_db.select(_db.visits)..where((row) => row.id.equals(visit.id)))
+          .getSingle();
+    });
+  }
+
+  Future<void> _refreshVisitStatePayload({
+    required Visit visit,
+    required int ownerUserId,
+    required String captureState,
+    required DateTime? captureCompletedAt,
+  }) async {
+    final outbox = await (_db.select(_db.syncOutbox)
+          ..where(
+            (row) =>
+                row.ownerUserId.equals(ownerUserId) &
+                row.entityType.equals(SyncOutboxEntityType.visit) &
+                row.entityUuid.equals(visit.localUuid),
+          ))
+        .getSingleOrNull();
+    if (outbox == null) {
+      throw StateError('Visit outbox record was not found');
+    }
+    final payload = jsonDecode(outbox.payloadJson) as Map<String, dynamic>;
+    payload['capture_state'] = captureState;
+    if (captureCompletedAt != null) {
+      payload['capture_completed_at'] = captureCompletedAt.toIso8601String();
+    }
+    await SyncOutboxDao(_db).refreshPayload(
+      ownerUserId: ownerUserId,
+      entityType: SyncOutboxEntityType.visit,
+      entityUuid: visit.localUuid,
+      payloadJson: jsonEncode(payload),
+    );
+  }
 }
