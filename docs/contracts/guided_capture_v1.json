@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "visit_states": [
+    "draft_capture",
+    "incomplete_capture",
+    "processing",
+    "estimated_report",
+    "processing_failed",
+    "measured_report"
+  ],
+  "asset_roles": [
+    "front",
+    "side",
+    "back",
+    "arm_front",
+    "arm_side"
+  ],
+  "required_asset_roles": [
+    "front",
+    "side"
+  ],
+  "measurement_modes": [
+    "standing_height",
+    "recumbent_length"
+  ],
+  "oedema_values": [
+    "yes",
+    "no",
+    "not_checked"
+  ],
+  "camera_method": "camera_screening_v1",
+  "non_clinical_required": true,
+  "allowed_transitions": {
+    "draft_capture": [
+      "incomplete_capture",
+      "processing"
+    ],
+    "incomplete_capture": [
+      "draft_capture"
+    ],
+    "processing": [
+      "estimated_report",
+      "processing_failed"
+    ],
+    "estimated_report": [
+      "measured_report"
+    ],
+    "processing_failed": [
+      "processing"
+    ],
+    "measured_report": [
+      "measured_report"
+    ]
+  }
+}
