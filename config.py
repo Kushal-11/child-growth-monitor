@@ -40,9 +40,12 @@ POSE_MIN_DETECTION_CONFIDENCE = 0.5
 POSE_MIN_PRESENCE_CONFIDENCE = 0.5
 
 # WHO data file mappings
+WHO_REFERENCE_MANIFEST_PATH = DATA_DIR / "who_reference_manifest.json"
 WHO_DATA_FILES = {
-    # Lossless text packaging avoids binary-patch rejection by the PR API.
-    "lhfa_0_5": DATA_DIR / "lhfa_children_0-to-5-years_lms.xlsx.b64",
+    "lhfa_boys_0_2": DATA_DIR / "who_lhfa_boys_0_2.xlsx",
+    "lhfa_boys_2_5": DATA_DIR / "who_lhfa_boys_2_5.xlsx",
+    "lhfa_girls_0_2": DATA_DIR / "who_lhfa_girls_0_2.xlsx",
+    "lhfa_girls_2_5": DATA_DIR / "who_lhfa_girls_2_5.xlsx",
     "wfh_boys_2_5": DATA_DIR / "wfh_boys_2-to-5-years_zscores.xlsx",
     "wfh_girls_2_5": DATA_DIR / "wfh_girls_2-to-5-years_zscores.xlsx",
     "wfl_boys_0_2": DATA_DIR / "wfl_boys_0-to-2-years_zscores.xlsx",

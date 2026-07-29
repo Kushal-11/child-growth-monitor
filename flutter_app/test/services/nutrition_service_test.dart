@@ -10,11 +10,15 @@ void main() {
     TestWidgetsFlutterBinding.ensureInitialized();
     who = WhoDataService();
     await who.loadFromFiles(
-      hazCsvPath: 'test/fixtures/who_haz_0_59m.csv',
+      manifestPath: 'assets/who_data/who_reference_manifest.json',
       wflBoysPath: 'test/fixtures/who_wfl_boys_0_2.xlsx',
       wflGirlsPath: 'test/fixtures/who_wfl_girls_0_2.xlsx',
       wfhBoysPath: 'test/fixtures/who_wfh_boys_2_5.xlsx',
       wfhGirlsPath: 'test/fixtures/who_wfh_girls_2_5.xlsx',
+      lfaBoysPath: 'assets/who_data/who_lhfa_boys_0_2.xlsx',
+      lfaGirlsPath: 'assets/who_data/who_lhfa_girls_0_2.xlsx',
+      hfaBoysPath: 'assets/who_data/who_lhfa_boys_2_5.xlsx',
+      hfaGirlsPath: 'assets/who_data/who_lhfa_girls_2_5.xlsx',
     );
     svc = NutritionService(who);
   });

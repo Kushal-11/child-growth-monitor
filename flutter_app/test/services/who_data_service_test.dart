@@ -9,7 +9,7 @@ void main() {
     TestWidgetsFlutterBinding.ensureInitialized();
     svc = WhoDataService();
     await svc.loadFromFiles(
-      hazCsvPath: 'test/fixtures/who_haz_0_59m.csv',
+      manifestPath: 'assets/who_data/who_reference_manifest.json',
       wflBoysPath: 'test/fixtures/who_wfl_boys_0_2.xlsx',
       wflGirlsPath: 'test/fixtures/who_wfl_girls_0_2.xlsx',
       wfhBoysPath: 'test/fixtures/who_wfh_boys_2_5.xlsx',

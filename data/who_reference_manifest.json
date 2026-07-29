@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "retrieved_at": "2026-07-29",
+  "source_page": "https://www.who.int/tools/child-growth-standards/standards/length-height-for-age",
+  "files": {
+    "who_lhfa_boys_0_2.xlsx": {
+      "indicator": "length_for_age",
+      "sex": "M",
+      "age_months": [0, 24],
+      "size_bytes": 11931,
+      "sha256": "ccfd8e455141c9a39dd728d99b7d7e080a925b06ea4a4d7592229665713dba54",
+      "source_url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/length-height-for-age/lhfa_boys_0-to-2-years_zscores.xlsx?sfvrsn=30e044c_9"
+    },
+    "who_lhfa_boys_2_5.xlsx": {
+      "indicator": "height_for_age",
+      "sex": "M",
+      "age_months": [24, 60],
+      "size_bytes": 12835,
+      "sha256": "a44ed06039e0a9dd6920e4a4d928395c541c9732662e49eacd489d2194ccc80d",
+      "source_url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/length-height-for-age/lhfa_boys_2-to-5-years_zscores.xlsx?sfvrsn=17e5ad91_9"
+    },
+    "who_lhfa_girls_0_2.xlsx": {
+      "indicator": "length_for_age",
+      "sex": "F",
+      "age_months": [0, 24],
+      "size_bytes": 11938,
+      "sha256": "6757f5eb96b51ab5cdb4828105929c78b1fb3d73b0fd8fa65682ad9f60f8c083",
+      "source_url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/length-height-for-age/lhfa_girls_0-to-2-years_zscores.xlsx?sfvrsn=e9e66a95_11"
+    },
+    "who_lhfa_girls_2_5.xlsx": {
+      "indicator": "height_for_age",
+      "sex": "F",
+      "age_months": [24, 60],
+      "size_bytes": 12882,
+      "sha256": "a976c56a6d36885cc32bf77c5539ca066e396ef2adad06011cd71d9eb0f0eb5c",
+      "source_url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/length-height-for-age/lhfa_girls_2-to-5-years_zscores.xlsx?sfvrsn=2ec187b9_11"
+    }
+  }
+}

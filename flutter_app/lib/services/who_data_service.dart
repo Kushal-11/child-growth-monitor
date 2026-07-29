@@ -8,32 +8,17 @@
 ///   - Excel files for length/height-for-age, weight-for-age and
 ///     arm-circumference-for-age reference targets
 ///   - Excel files (L-M-S parameters) for WFH/WFL (0-2y and 2-5y)
-///   - Existing CSV file for the legacy HAZ calculation path
 library;
 
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:csv/csv.dart';
+import 'package:crypto/crypto.dart';
 import 'package:excel/excel.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../models/who_reference_targets.dart';
-
-/// A single HAZ row from the CSV file.
-class _HazRow {
-  final String sex;
-  final String measure;
-  final int ageMonths;
-  final Map<int, double> zBoundaries; // keys: -3..-1, 0, 1..3
-
-  const _HazRow({
-    required this.sex,
-    required this.measure,
-    required this.ageMonths,
-    required this.zBoundaries,
-  });
-}
 
 /// A single WFL/WFH LMS row from an Excel file.
 class _LmsRow {
@@ -51,7 +36,11 @@ class _LmsRow {
 }
 
 class WhoDataService {
-  List<_HazRow> _hazData = [];
+  static const _manifestAsset = 'assets/who_data/who_reference_manifest.json';
+  static const _lfaBoysAsset = 'assets/who_data/who_lhfa_boys_0_2.xlsx';
+  static const _lfaGirlsAsset = 'assets/who_data/who_lhfa_girls_0_2.xlsx';
+  static const _hfaBoysAsset = 'assets/who_data/who_lhfa_boys_2_5.xlsx';
+  static const _hfaGirlsAsset = 'assets/who_data/who_lhfa_girls_2_5.xlsx';
 
   /// WFL LMS rows keyed by sex ('M' or 'F'), sorted by indexValue.
   Map<String, List<_LmsRow>> _wflLms = {};
@@ -81,9 +70,10 @@ class WhoDataService {
 
   /// Load all WHO data from bundled Flutter assets.
   Future<void> loadFromAssets() async {
-    final hazCsv =
-        await rootBundle.loadString('assets/who_data/who_haz_0_59m.csv');
-    _parseHazCsv(hazCsv);
+    final manifest = _parseManifest(
+      await rootBundle.loadString(_manifestAsset),
+      _manifestAsset,
+    );
 
     final wflBoys =
         await rootBundle.load('assets/who_data/who_wfl_boys_0_2.xlsx');
@@ -93,14 +83,10 @@ class WhoDataService {
         await rootBundle.load('assets/who_data/who_wfh_boys_2_5.xlsx');
     final wfhGirls =
         await rootBundle.load('assets/who_data/who_wfh_girls_2_5.xlsx');
-    final lfaBoys =
-        await rootBundle.load('assets/who_data/who_lhfa_boys_0_2.xlsx');
-    final lfaGirls =
-        await rootBundle.load('assets/who_data/who_lhfa_girls_0_2.xlsx');
-    final hfaBoys =
-        await rootBundle.load('assets/who_data/who_lhfa_boys_2_5.xlsx');
-    final hfaGirls =
-        await rootBundle.load('assets/who_data/who_lhfa_girls_2_5.xlsx');
+    final lfaBoys = await rootBundle.load(_lfaBoysAsset);
+    final lfaGirls = await rootBundle.load(_lfaGirlsAsset);
+    final hfaBoys = await rootBundle.load(_hfaBoysAsset);
+    final hfaGirls = await rootBundle.load(_hfaGirlsAsset);
     final wfaBoys =
         await rootBundle.load('assets/who_data/who_wfa_boys_0_5.xlsx');
     final wfaGirls =
@@ -109,6 +95,15 @@ class WhoDataService {
         await rootBundle.load('assets/who_data/who_acfa_boys_3_5.xlsx');
     final acfaGirls =
         await rootBundle.load('assets/who_data/who_acfa_girls_3_5.xlsx');
+
+    final lfaBoysBytes = lfaBoys.buffer.asUint8List();
+    final lfaGirlsBytes = lfaGirls.buffer.asUint8List();
+    final hfaBoysBytes = hfaBoys.buffer.asUint8List();
+    final hfaGirlsBytes = hfaGirls.buffer.asUint8List();
+    _verifyReferenceBytes(_lfaBoysAsset, lfaBoysBytes, manifest);
+    _verifyReferenceBytes(_lfaGirlsAsset, lfaGirlsBytes, manifest);
+    _verifyReferenceBytes(_hfaBoysAsset, hfaBoysBytes, manifest);
+    _verifyReferenceBytes(_hfaGirlsAsset, hfaGirlsBytes, manifest);
 
     _wflLms = {
       'M': _parseExcelLms(wflBoys.buffer.asUint8List()),
@@ -119,12 +114,12 @@ class WhoDataService {
       'F': _parseExcelLms(wfhGirls.buffer.asUint8List()),
     };
     _lfaLms = {
-      'M': _parseExcelLms(lfaBoys.buffer.asUint8List()),
-      'F': _parseExcelLms(lfaGirls.buffer.asUint8List()),
+      'M': _parseExcelLms(lfaBoysBytes),
+      'F': _parseExcelLms(lfaGirlsBytes),
     };
     _hfaLms = {
-      'M': _parseExcelLms(hfaBoys.buffer.asUint8List()),
-      'F': _parseExcelLms(hfaGirls.buffer.asUint8List()),
+      'M': _parseExcelLms(hfaBoysBytes),
+      'F': _parseExcelLms(hfaGirlsBytes),
     };
     _wfaLms = {
       'M': _parseExcelLms(wfaBoys.buffer.asUint8List()),
@@ -145,22 +140,32 @@ class WhoDataService {
   /// Load all WHO data from file paths — used in tests where rootBundle is
   /// unavailable.
   Future<void> loadFromFiles({
-    required String hazCsvPath,
+    required String manifestPath,
     required String wflBoysPath,
     required String wflGirlsPath,
     required String wfhBoysPath,
     required String wfhGirlsPath,
-    String? lfaBoysPath,
-    String? lfaGirlsPath,
-    String? hfaBoysPath,
-    String? hfaGirlsPath,
+    required String lfaBoysPath,
+    required String lfaGirlsPath,
+    required String hfaBoysPath,
+    required String hfaGirlsPath,
     String? wfaBoysPath,
     String? wfaGirlsPath,
     String? acfaBoysPath,
     String? acfaGirlsPath,
   }) async {
-    final hazCsv = await File(hazCsvPath).readAsString();
-    _parseHazCsv(hazCsv);
+    final manifest = _parseManifest(
+      await File(manifestPath).readAsString(),
+      manifestPath,
+    );
+    final lfaBoysBytes = await File(lfaBoysPath).readAsBytes();
+    final lfaGirlsBytes = await File(lfaGirlsPath).readAsBytes();
+    final hfaBoysBytes = await File(hfaBoysPath).readAsBytes();
+    final hfaGirlsBytes = await File(hfaGirlsPath).readAsBytes();
+    _verifyReferenceBytes(_lfaBoysAsset, lfaBoysBytes, manifest);
+    _verifyReferenceBytes(_lfaGirlsAsset, lfaGirlsBytes, manifest);
+    _verifyReferenceBytes(_hfaBoysAsset, hfaBoysBytes, manifest);
+    _verifyReferenceBytes(_hfaGirlsAsset, hfaGirlsBytes, manifest);
 
     _wflLms = {
       'M': _parseExcelLms(await File(wflBoysPath).readAsBytes()),
@@ -170,18 +175,14 @@ class WhoDataService {
       'M': _parseExcelLms(await File(wfhBoysPath).readAsBytes()),
       'F': _parseExcelLms(await File(wfhGirlsPath).readAsBytes()),
     };
-    if (lfaBoysPath != null && lfaGirlsPath != null) {
-      _lfaLms = {
-        'M': _parseExcelLms(await File(lfaBoysPath).readAsBytes()),
-        'F': _parseExcelLms(await File(lfaGirlsPath).readAsBytes()),
-      };
-    }
-    if (hfaBoysPath != null && hfaGirlsPath != null) {
-      _hfaLms = {
-        'M': _parseExcelLms(await File(hfaBoysPath).readAsBytes()),
-        'F': _parseExcelLms(await File(hfaGirlsPath).readAsBytes()),
-      };
-    }
+    _lfaLms = {
+      'M': _parseExcelLms(lfaBoysBytes),
+      'F': _parseExcelLms(lfaGirlsBytes),
+    };
+    _hfaLms = {
+      'M': _parseExcelLms(hfaBoysBytes),
+      'F': _parseExcelLms(hfaGirlsBytes),
+    };
     if (wfaBoysPath != null && wfaGirlsPath != null) {
       _wfaLms = {
         'M': _parseExcelLms(await File(wfaBoysPath).readAsBytes()),
@@ -196,65 +197,6 @@ class WhoDataService {
     }
 
     _loaded = true;
-  }
-
-  // ---------------------------------------------------------------------------
-  // CSV parsing: HAZ
-  // ---------------------------------------------------------------------------
-
-  /// Parse the HAZ CSV string.
-  ///
-  /// Expected columns:
-  /// sex, measure, age_months, z_minus_3, z_minus_2, z_minus_1, z_0,
-  /// z_plus_1, z_plus_2, z_plus_3
-  void _parseHazCsv(String csvString) {
-    final rows = const CsvToListConverter(eol: '\n').convert(csvString);
-    if (rows.isEmpty) return;
-
-    // Skip header row.
-    _hazData = [];
-    for (var i = 1; i < rows.length; i++) {
-      final row = rows[i];
-      if (row.length < 10) continue;
-
-      final sex = row[0].toString().trim();
-      final measure = row[1].toString().trim();
-      final ageMonths = _toInt(row[2]);
-      if (ageMonths == null) continue;
-
-      final zMinus3 = _toDouble(row[3]);
-      final zMinus2 = _toDouble(row[4]);
-      final zMinus1 = _toDouble(row[5]);
-      final z0 = _toDouble(row[6]);
-      final zPlus1 = _toDouble(row[7]);
-      final zPlus2 = _toDouble(row[8]);
-      final zPlus3 = _toDouble(row[9]);
-
-      if (zMinus3 == null ||
-          zMinus2 == null ||
-          zMinus1 == null ||
-          z0 == null ||
-          zPlus1 == null ||
-          zPlus2 == null ||
-          zPlus3 == null) {
-        continue;
-      }
-
-      _hazData.add(_HazRow(
-        sex: sex,
-        measure: measure,
-        ageMonths: ageMonths,
-        zBoundaries: {
-          -3: zMinus3,
-          -2: zMinus2,
-          -1: zMinus1,
-          0: z0,
-          1: zPlus1,
-          2: zPlus2,
-          3: zPlus3,
-        },
-      ));
-    }
   }
 
   // ---------------------------------------------------------------------------
@@ -304,23 +246,30 @@ class WhoDataService {
   /// Returns a map with keys -3..3 (z-score levels) and values in cm,
   /// or null if the combination is not found.
   Map<int, double>? getHazBoundaries(String sex, int ageMonths) {
-    final measure = ageMonths < 24 ? 'length' : 'height';
-    for (final row in _hazData) {
-      if (row.sex == sex &&
-          row.measure == measure &&
-          row.ageMonths == ageMonths) {
-        return Map<int, double>.from(row.zBoundaries);
-      }
-    }
-    return null;
+    final lms = getHazLms(sex, ageMonths);
+    if (lms == null) return null;
+    return {
+      for (var z = -3; z <= 3; z++)
+        z: lmsMeasurement(z.toDouble(), lms.$1, lms.$2, lms.$3),
+    };
+  }
+
+  /// Get official WHO length/height-for-age (L, M, S) parameters.
+  ///
+  /// Recumbent length is used through month 23 and standing height from
+  /// month 24 through month 60.
+  (double, double, double)? getHazLms(String sex, int ageMonths) {
+    if (ageMonths < 0 || ageMonths > 60) return null;
+    final normalizedSex = _normalizeSex(sex);
+    final rows = (ageMonths < 24 ? _lfaLms : _hfaLms)[normalizedSex];
+    return _interpolateLms(rows, ageMonths.toDouble());
   }
 
   /// Get median height (z=0) for a given sex and age.
   ///
   /// Returns the WHO median height in cm, or null if age is out of range.
   double? getMedianHeightForAge(String sex, int ageMonths) {
-    final boundaries = getHazBoundaries(sex, ageMonths);
-    return boundaries?[0];
+    return getHazLms(sex, ageMonths)?.$2;
   }
 
   /// Return official WHO reference values for a child of [sex] and [ageMonths].
@@ -345,9 +294,9 @@ class WhoDataService {
   ///
   /// Computed as (z_0 - z_minus_1). Returns null if age is out of range.
   double? getHeightSdForAge(String sex, int ageMonths) {
-    final boundaries = getHazBoundaries(sex, ageMonths);
-    if (boundaries == null) return null;
-    return boundaries[0]! - boundaries[-1]!;
+    final lms = getHazLms(sex, ageMonths);
+    if (lms == null) return null;
+    return lms.$2 - lmsMeasurement(-1, lms.$1, lms.$2, lms.$3);
   }
 
   /// Get valid height range for a given age (±numSd standard deviations).
@@ -358,18 +307,12 @@ class WhoDataService {
     int ageMonths, {
     double numSd = 3.0,
   }) {
-    final boundaries = getHazBoundaries(sex, ageMonths);
-    if (boundaries == null) return null;
-
-    // For exactly ±3 SD, use the pre-computed boundaries.
-    if (numSd == 3.0) {
-      return (boundaries[-3]!, boundaries[3]!);
-    }
-
-    // For other SD values, interpolate from median and SD.
-    final z0 = boundaries[0]!;
-    final sd = z0 - boundaries[-1]!;
-    return (z0 - numSd * sd, z0 + numSd * sd);
+    final lms = getHazLms(sex, ageMonths);
+    if (lms == null) return null;
+    return (
+      lmsMeasurement(-numSd, lms.$1, lms.$2, lms.$3),
+      lmsMeasurement(numSd, lms.$1, lms.$2, lms.$3),
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -474,6 +417,60 @@ class WhoDataService {
   // Helpers
   // ---------------------------------------------------------------------------
 
+  static Map<String, dynamic> _parseManifest(
+    String manifestJson,
+    String source,
+  ) {
+    try {
+      final decoded = jsonDecode(manifestJson);
+      if (decoded is! Map<String, dynamic> ||
+          decoded['schema_version'] != 1 ||
+          decoded['files'] is! Map<String, dynamic>) {
+        throw const FormatException('unsupported schema');
+      }
+      return decoded;
+    } on FormatException catch (error) {
+      throw StateError(
+        'Authoritative WHO reference manifest is malformed: $source: $error',
+      );
+    }
+  }
+
+  static void _verifyReferenceBytes(
+    String assetPath,
+    List<int> bytes,
+    Map<String, dynamic> manifest,
+  ) {
+    final fileName = assetPath.split('/').last;
+    final files = manifest['files'] as Map<String, dynamic>;
+    final record = files[fileName];
+    if (record is! Map<String, dynamic>) {
+      throw StateError(
+        'WHO reference manifest has no entry for $fileName',
+      );
+    }
+    final expectedSize = record['size_bytes'];
+    final expectedChecksum = record['sha256'];
+    if (expectedSize is! int || expectedChecksum is! String) {
+      throw StateError(
+        'WHO reference manifest entry for $fileName is malformed',
+      );
+    }
+    if (bytes.length != expectedSize) {
+      throw StateError(
+        'WHO reference size mismatch for $fileName: '
+        'expected $expectedSize, got ${bytes.length}',
+      );
+    }
+    final actualChecksum = sha256.convert(bytes).toString();
+    if (actualChecksum != expectedChecksum) {
+      throw StateError(
+        'WHO reference checksum mismatch for $fileName: '
+        'expected $expectedChecksum, got $actualChecksum',
+      );
+    }
+  }
+
   static double? _toDouble(dynamic v) {
     if (v is double) return v;
     if (v is int) return v.toDouble();
@@ -542,14 +539,6 @@ class WhoDataService {
       return 'F';
     }
     return normalized;
-  }
-
-  static int? _toInt(dynamic v) {
-    if (v is int) return v;
-    if (v is double) return v.round();
-    if (v is num) return v.round();
-    if (v is String) return int.tryParse(v.trim());
-    return null;
   }
 
   /// Extract a double value from an Excel [Data] cell.

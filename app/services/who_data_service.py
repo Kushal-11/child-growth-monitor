@@ -1,6 +1,8 @@
 """Validated access to the authoritative WHO Excel LMS reference tables."""
 import base64
 import binascii
+import hashlib
+import json
 from io import BytesIO
 from pathlib import Path
 from typing import Optional, Tuple
@@ -8,7 +10,7 @@ from typing import Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from config import WHO_DATA_FILES
+from config import WHO_DATA_FILES, WHO_REFERENCE_MANIFEST_PATH
 
 
 class WHODataError(RuntimeError):
@@ -28,10 +30,57 @@ class WHODataService:
 
     def load_all(self):
         """Load and validate every authoritative reference at startup."""
-        self._haz_lms = self._load_haz_lms(WHO_DATA_FILES["lhfa_0_5"])
+        self._haz_lms = self._load_haz_lms()
         self._wfl_lms = self._load_size_lms("wfl", ("wfl_boys_0_2", "wfl_girls_0_2"))
         self._wfh_lms = self._load_size_lms("wfh", ("wfh_boys_2_5", "wfh_girls_2_5"))
         self._loaded = True
+
+    @staticmethod
+    def verify_reference_file(path: Path, record: dict) -> None:
+        """Fail closed unless a reference file matches its pinned manifest."""
+        try:
+            payload = path.read_bytes()
+        except OSError as exc:
+            raise WHODataError(
+                f"Authoritative WHO workbook unavailable: {path}: {exc}"
+            ) from exc
+
+        expected_size = record.get("size_bytes")
+        expected_checksum = record.get("sha256")
+        if not isinstance(expected_size, int) or not isinstance(
+            expected_checksum, str
+        ):
+            raise WHODataError(
+                f"WHO reference manifest entry for {path.name} is malformed"
+            )
+        if len(payload) != expected_size:
+            raise WHODataError(
+                f"WHO reference size mismatch for {path.name}: "
+                f"expected {expected_size}, got {len(payload)}"
+            )
+        actual_checksum = hashlib.sha256(payload).hexdigest()
+        if actual_checksum != expected_checksum:
+            raise WHODataError(
+                f"WHO reference checksum mismatch for {path.name}: "
+                f"expected {expected_checksum}, got {actual_checksum}"
+            )
+
+    @staticmethod
+    def _load_reference_manifest() -> dict:
+        try:
+            manifest = json.loads(WHO_REFERENCE_MANIFEST_PATH.read_text())
+        except (OSError, json.JSONDecodeError) as exc:
+            raise WHODataError(
+                "Authoritative WHO reference manifest unavailable or "
+                f"unreadable: {WHO_REFERENCE_MANIFEST_PATH}: {exc}"
+            ) from exc
+        if manifest.get("schema_version") != 1 or not isinstance(
+            manifest.get("files"), dict
+        ):
+            raise WHODataError(
+                f"WHO reference manifest is malformed: {WHO_REFERENCE_MANIFEST_PATH}"
+            )
+        return manifest
 
     @classmethod
     def _read_excel(cls, path: Path) -> pd.DataFrame:
@@ -61,70 +110,75 @@ class WHODataService:
             raise WHODataError(f"WHO workbook {path} contains malformed L, M, or S values")
         return df
 
-    def _load_haz_lms(self, path: Path) -> pd.DataFrame:
-        df = self._read_excel(path).rename(
-            columns={"Sex": "sex", "Measure": "measure", "Month": "age_months"}
+    def _load_haz_lms(self) -> pd.DataFrame:
+        manifest = self._load_reference_manifest()
+        workbook_specs = (
+            ("lhfa_boys_0_2", "M", "length", 0, 23),
+            ("lhfa_boys_2_5", "M", "height", 24, 60),
+            ("lhfa_girls_0_2", "F", "length", 0, 23),
+            ("lhfa_girls_2_5", "F", "height", 24, 60),
         )
-        required = {"sex", "measure", "age_months", *self._LMS_COLUMNS}
-        missing = required.difference(df.columns)
-        if missing:
-            raise WHODataError(f"WHO length/height-for-age workbook {path} is missing required columns: {sorted(missing)}")
-        df = self._numeric_lms(df, path)
-        df["age_months"] = pd.to_numeric(df["age_months"], errors="coerce")
-        if df["age_months"].isna().any() or (df["age_months"] % 1 != 0).any():
-            raise WHODataError(f"WHO length/height-for-age workbook {path} contains malformed ages")
-        df["age_months"] = df["age_months"].astype(int)
-        if (~df["sex"].isin(["F", "M"])).any():
-            raise WHODataError(
-                f"WHO length/height-for-age workbook {path} has invalid sex rows"
+        frames = []
+        for key, sex, measure, minimum_age, maximum_age in workbook_specs:
+            path = WHO_DATA_FILES[key]
+            record = manifest["files"].get(path.name)
+            if not isinstance(record, dict):
+                raise WHODataError(
+                    f"WHO reference manifest has no entry for {path.name}"
+                )
+            self.verify_reference_file(path, record)
+            df = self._read_excel(path)
+            df = df.rename(columns=lambda column: str(column).strip()).rename(
+                columns={"Month": "age_months"}
             )
-
-        # WHO publishes both recumbent length and standing height at the
-        # 24-month transition. The packaged source contains both transition
-        # rows under the ``height`` label; standing height is the lower median
-        # (WHO applies the standard 0.7 cm length-to-height adjustment).
-        # Permit exactly this transition duplicate and reject duplicates
-        # anywhere else.
-        expected_measure = np.where(df["age_months"] < 24, "length", "height")
-        nonclinical_measure = df["measure"].to_numpy() != expected_measure
-        allowed_transition_row = df["age_months"].to_numpy() == 24
-        if (nonclinical_measure & ~allowed_transition_row).any():
-            raise WHODataError(
-                f"WHO length/height-for-age workbook {path} has invalid "
-                "length/height age coverage"
+            required = {"age_months", *self._LMS_COLUMNS}
+            missing = required.difference(df.columns)
+            if missing:
+                raise WHODataError(
+                    f"WHO length/height-for-age workbook {path} is missing "
+                    f"required columns: {sorted(missing)}"
+                )
+            df = self._numeric_lms(df, path)
+            df["age_months"] = pd.to_numeric(
+                df["age_months"], errors="coerce"
             )
-
-        duplicate_rows = df.duplicated(["sex", "age_months"], keep=False)
-        if duplicate_rows.any():
-            duplicates = df.loc[duplicate_rows]
-            group_sizes = duplicates.groupby(["sex", "age_months"]).size()
-            if (
-                (duplicates["age_months"] != 24).any()
-                or (group_sizes != 2).any()
-            ):
+            if df["age_months"].isna().any() or (
+                df["age_months"] % 1 != 0
+            ).any():
+                raise WHODataError(
+                    f"WHO length/height-for-age workbook {path} contains "
+                    "malformed ages"
+                )
+            df["age_months"] = df["age_months"].astype(int)
+            df = df[
+                df["age_months"].between(minimum_age, maximum_age)
+            ].copy()
+            expected_ages = set(range(minimum_age, maximum_age + 1))
+            actual_ages = set(df["age_months"])
+            if actual_ages != expected_ages or df["age_months"].duplicated().any():
                 raise WHODataError(
                     f"WHO length/height-for-age workbook {path} has invalid "
-                    "or duplicate sex/age rows"
+                    f"age coverage: expected {minimum_age}-{maximum_age}"
                 )
-            standing_height_indices = duplicates.groupby(
-                ["sex", "age_months"]
-            )["M"].idxmin()
-            df = pd.concat(
-                [df.loc[~duplicate_rows], df.loc[standing_height_indices]],
-                ignore_index=True,
-            )
+            df["sex"] = sex
+            df["measure"] = measure
+            frames.append(df)
 
-        expected_measure = np.where(df["age_months"] < 24, "length", "height")
-        if not (df["measure"].to_numpy() == expected_measure).all():
+        df = pd.concat(frames, ignore_index=True)
+        if df.duplicated(["sex", "age_months"]).any():
             raise WHODataError(
-                f"WHO length/height-for-age workbook {path} has invalid "
-                "length/height age coverage"
+                "WHO length/height-for-age workbooks have duplicate sex/age rows"
             )
         for sex in ("F", "M"):
             ages = set(df.loc[df["sex"] == sex, "age_months"])
             missing_ages = set(range(61)).difference(ages)
-            if missing_ages:
-                raise WHODataError(f"WHO length/height-for-age workbook {path} lacks {sex} age coverage: {sorted(missing_ages)}")
+            extra_ages = ages.difference(range(61))
+            if missing_ages or extra_ages:
+                raise WHODataError(
+                    "WHO length/height-for-age workbooks lack complete "
+                    f"{sex} age coverage: missing={sorted(missing_ages)}, "
+                    f"extra={sorted(extra_ages)}"
+                )
         return df
 
     def _load_size_lms(self, label: str, keys: Tuple[str, str]) -> pd.DataFrame:

@@ -5,9 +5,12 @@ from pathlib import Path
 # Ensure project root is in path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import hashlib
+import json
+
 import pytest
 import pandas as pd
-from config import WHO_DATA_FILES
+from config import WHO_DATA_FILES, WHO_REFERENCE_MANIFEST_PATH
 from app.services.who_data_service import WHODataService
 from app.services.nutrition_service import NutritionService
 
@@ -124,10 +127,17 @@ def test_clinical_loading_never_reads_csv(monkeypatch):
     assert service.get_median_weight_for_height("F", 85, 30) is not None
 
 
-def test_lhfa_workbook_is_text_packaged_for_pull_requests():
-    path = WHO_DATA_FILES["lhfa_0_5"]
-    assert path.suffix == ".b64"
-    assert path.read_bytes().isascii()
+def test_lhfa_workbooks_match_pinned_official_checksums():
+    manifest = json.loads(WHO_REFERENCE_MANIFEST_PATH.read_text())
+    for key in (
+        "lhfa_boys_0_2",
+        "lhfa_boys_2_5",
+        "lhfa_girls_0_2",
+        "lhfa_girls_2_5",
+    ):
+        path = WHO_DATA_FILES[key]
+        record = manifest["files"][path.name]
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == record["sha256"]
 
 
 class TestMedianHeight:
