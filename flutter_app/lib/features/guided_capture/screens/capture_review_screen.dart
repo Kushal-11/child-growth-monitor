@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../providers/auth_provider.dart';
 import '../providers/guided_capture_provider.dart';
@@ -98,7 +99,9 @@ class _CaptureReviewScreenState extends ConsumerState<CaptureReviewScreen> {
               ),
             const SizedBox(height: 16),
             FilledButton.icon(
-              onPressed: null,
+              onPressed: state.requiredRolesComplete
+                  ? () => context.go('/visits/${widget.visitUuid}/report')
+                  : null,
               icon: const Icon(Icons.analytics_outlined),
               label: const Text('Generate estimated report'),
             ),

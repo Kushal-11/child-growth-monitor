@@ -1,4 +1,18 @@
 const Map<String, Map<String, String>> translations = {
+  'estimated_report_title': {
+    'en': 'Estimated Growth Screening Report',
+    'mr': 'अंदाजित वाढ तपासणी अहवाल',
+  },
+  'estimated_report_notice': {
+    'en': 'Results are estimated from photos and may change after measured '
+        'details are added',
+    'mr': 'निकाल फोटोंवरून अंदाजित आहेत आणि प्रत्यक्ष मोजमाप जोडल्यानंतर '
+        'बदलू शकतात',
+  },
+  'add_measured_details': {
+    'en': 'Add Measured Details',
+    'mr': 'प्रत्यक्ष मोजमाप जोडा',
+  },
   'app_title': {'en': 'SNEH Growth Monitor', 'mr': 'स्नेह वाढ निरीक्षक'},
   'nav_assess': {'en': 'Assess', 'mr': 'मूल्यांकन'},
   'nav_children': {'en': 'Children', 'mr': 'मुले'},

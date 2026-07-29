@@ -214,6 +214,6 @@ void main() {
     final reportButton = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, 'Generate estimated report'),
     );
-    expect(reportButton.onPressed, isNull);
+    expect(reportButton.onPressed, isNotNull);
   });
 }
