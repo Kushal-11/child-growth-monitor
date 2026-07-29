@@ -7,6 +7,7 @@ import 'features/guided_capture/screens/capture_consent_screen.dart';
 import 'features/guided_capture/screens/capture_review_screen.dart';
 import 'features/guided_capture/screens/guided_capture_flow_screen.dart';
 import 'features/reports/screens/visit_report_screen.dart';
+import 'features/measured_details/screens/add_measured_details_screen.dart';
 import 'screens/assessment/assessment_screen.dart';
 import 'screens/assessment/capture_screen.dart';
 import 'screens/assessment/result_screen.dart';
@@ -92,6 +93,12 @@ GoRouter buildRouter(Ref ref) {
       GoRoute(
         path: '/visits/:visitUuid/report',
         builder: (c, s) => VisitReportScreen(
+          visitUuid: s.pathParameters['visitUuid']!,
+        ),
+      ),
+      GoRoute(
+        path: '/visits/:visitUuid/measured-details',
+        builder: (c, s) => AddMeasuredDetailsScreen(
           visitUuid: s.pathParameters['visitUuid']!,
         ),
       ),

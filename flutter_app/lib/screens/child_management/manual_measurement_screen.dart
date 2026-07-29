@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../constants/config.dart';
+import '../../features/measured_details/domain/measured_details.dart';
 import '../../providers/assessment_service_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/database_provider.dart';
@@ -57,13 +58,6 @@ class _ManualMeasurementScreenState
     if (picked != null && mounted) setState(() => _visitDate = picked);
   }
 
-  String? _positiveNumber(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Required';
-    final n = double.tryParse(v);
-    if (n == null || n <= 0) return 'Enter a positive number';
-    return null;
-  }
-
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -78,7 +72,8 @@ class _ManualMeasurementScreenState
               30.4375;
       final heightCm = double.parse(_height.text);
       final weightKg = double.parse(_weight.text);
-      final muacCm = _muac.text.trim().isEmpty ? null : double.parse(_muac.text);
+      final muacCm =
+          _muac.text.trim().isEmpty ? null : double.parse(_muac.text);
 
       // SAFETY: WHO z-scores via the existing on-device pipeline.
       final who = await ref.read(whoDataServiceProvider.future);
@@ -98,20 +93,20 @@ class _ManualMeasurementScreenState
 
       final ownerId = ref.read(authProvider).user?.id;
       await ref.read(manualVisitDaoProvider).createManualVisit(
-                childId: widget.childId,
-                ownerUserId: ownerId,
-                ageMonths: ageMonths,
-                visitDate: _visitDate,
-                heightCm: heightCm,
-                weightKg: weightKg,
-                muacCm: muacCm,
-                hazZscore: haz,
-                whzZscore: whz,
-                hazStatus: hazStatus,
-                whzStatus: whzStatus,
-                muacStatus: muacResult.muacStatus,
-                notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
-              );
+            childId: widget.childId,
+            ownerUserId: ownerId,
+            ageMonths: ageMonths,
+            visitDate: _visitDate,
+            heightCm: heightCm,
+            weightKg: weightKg,
+            muacCm: muacCm,
+            hazZscore: haz,
+            whzZscore: whz,
+            hazStatus: hazStatus,
+            whzStatus: whzStatus,
+            muacStatus: muacResult.muacStatus,
+            notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+          );
       // Opportunistic sync (fire-and-forget).
       ref.read(syncServiceProvider).runOnce();
       // SAFETY: surface (without blocking) when classification could not run
@@ -129,7 +124,8 @@ class _ManualMeasurementScreenState
             backgroundColor: Colors.orange,
           ));
         } else {
-          messenger.showSnackBar(const SnackBar(content: Text('Measurement saved')));
+          messenger
+              .showSnackBar(const SnackBar(content: Text('Measurement saved')));
         }
         context.pop();
       }
@@ -156,8 +152,7 @@ class _ManualMeasurementScreenState
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(
                   _error!,
-                  style:
-                      TextStyle(color: Theme.of(context).colorScheme.error),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
             InputDecorator(
@@ -183,7 +178,12 @@ class _ManualMeasurementScreenState
                 labelText: 'Height (cm)',
                 border: OutlineInputBorder(),
               ),
-              validator: _positiveNumber,
+              validator: (value) => MeasuredDetailsValidators.requiredText(
+                value,
+                label: 'height',
+                minimum: measuredHeightMinCm,
+                maximum: measuredHeightMaxCm,
+              ),
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -195,7 +195,12 @@ class _ManualMeasurementScreenState
                 labelText: 'Weight (kg)',
                 border: OutlineInputBorder(),
               ),
-              validator: _positiveNumber,
+              validator: (value) => MeasuredDetailsValidators.requiredText(
+                value,
+                label: 'weight',
+                minimum: measuredWeightMinKg,
+                maximum: measuredWeightMaxKg,
+              ),
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -207,8 +212,12 @@ class _ManualMeasurementScreenState
                 labelText: 'MUAC (cm, optional)',
                 border: OutlineInputBorder(),
               ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? null : _positiveNumber(v),
+              validator: (value) => MeasuredDetailsValidators.optionalText(
+                value,
+                label: 'MUAC',
+                minimum: measuredMuacMinCm,
+                maximum: measuredMuacMaxCm,
+              ),
             ),
             const SizedBox(height: 12),
             TextFormField(

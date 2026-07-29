@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import '../database.dart';
@@ -68,6 +70,26 @@ class MeasuredDetailRevisionDao {
       await (_db.update(_db.visits)..where((row) => row.id.equals(visit.id)))
           .write(
         const VisitsCompanion(captureState: Value('measured_report')),
+      );
+      final visitOutbox = await (_db.select(_db.syncOutbox)
+            ..where(
+              (row) =>
+                  row.ownerUserId.equals(ownerUserId) &
+                  row.entityType.equals(SyncOutboxEntityType.visit) &
+                  row.entityUuid.equals(visitUuid),
+            ))
+          .getSingleOrNull();
+      if (visitOutbox == null) {
+        throw StateError('Visit outbox record was not found');
+      }
+      final visitPayload =
+          jsonDecode(visitOutbox.payloadJson) as Map<String, dynamic>;
+      visitPayload['capture_state'] = 'measured_report';
+      await SyncOutboxDao(_db).refreshPayload(
+        ownerUserId: ownerUserId,
+        entityType: SyncOutboxEntityType.visit,
+        entityUuid: visitUuid,
+        payloadJson: jsonEncode(visitPayload),
       );
       await SyncOutboxDao(_db).enqueue(
         ownerUserId: ownerUserId,
