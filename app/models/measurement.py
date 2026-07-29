@@ -93,6 +93,18 @@ class MeasurementResult(Base):
     classification_rationale = Column(Text, nullable=True)
     poshan_complete = Column(Boolean, nullable=True)
 
+    # Authoritative measured-detail provenance for guided visits.
+    measurement_mode = Column(String(30), nullable=True)
+    oedema = Column(String(20), nullable=True)
+    measured_at = Column(DateTime, nullable=True)
+    editor_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    measured_notes = Column(Text, nullable=True)
+
+    # WHO acute malnutrition is intentionally distinct from Poshan Setu v1.
+    who_acute_status = Column(String(30), nullable=True)
+    who_acute_triggered_by = Column(Text, nullable=True)
+    who_acute_rationale = Column(Text, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     visit = relationship("Visit", back_populates="measurement")
