@@ -2,7 +2,8 @@
 
 **Date:** 2026-07-29
 
-**Status:** Approved design, pending implementation plan
+**Status:** Approved design; implementation plan available at
+`docs/superpowers/plans/2026-07-29-guided-live-capture-estimated-report.md`
 
 **Scope:** Extend the Flutter assessment workflow so a field worker can create or select a child profile, collect standardized marker-free live photos without entering measurements, receive an estimated classification report, and add same-day measured details to the same visit later.
 
