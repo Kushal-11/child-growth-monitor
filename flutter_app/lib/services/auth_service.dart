@@ -8,7 +8,11 @@ import 'package:http/http.dart' as http;
 import 'local_auth.dart';
 
 class AuthUser {
-  AuthUser({required this.id, required this.username, required this.fullName, required this.role});
+  AuthUser(
+      {required this.id,
+      required this.username,
+      required this.fullName,
+      required this.role});
 
   final int id;
   final String username;
@@ -31,7 +35,8 @@ class AuthLoginResult {
   final String token;
   final AuthUser user;
 
-  factory AuthLoginResult.fromJson(Map<String, dynamic> json) => AuthLoginResult(
+  factory AuthLoginResult.fromJson(Map<String, dynamic> json) =>
+      AuthLoginResult(
         token: json['access_token'] as String,
         user: AuthUser.fromJson(json['user'] as Map<String, dynamic>),
       );
@@ -92,14 +97,16 @@ class AuthService {
       throw AuthException('Network error during login: $e');
     }
     if (resp.statusCode == 200) {
-      final result = AuthLoginResult.fromJson(jsonDecode(resp.body) as Map<String, dynamic>);
+      final result = AuthLoginResult.fromJson(
+          jsonDecode(resp.body) as Map<String, dynamic>);
       await _persist(result);
       return result;
     }
     if (resp.statusCode == 401) {
       throw AuthException('Invalid username or password', statusCode: 401);
     }
-    throw AuthException('Login failed (${resp.statusCode})', statusCode: resp.statusCode);
+    throw AuthException('Login failed (${resp.statusCode})',
+        statusCode: resp.statusCode);
   }
 
   Future<void> _persist(AuthLoginResult result) async {

@@ -39,6 +39,12 @@ class AppDatabase extends _$AppDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onUpgrade: (migrator, from, to) async {
+          Future<bool> hasColumn(String table, String column) async {
+            final rows =
+                await customSelect('PRAGMA table_info("$table")').get();
+            return rows.any((row) => row.data['name'] == column);
+          }
+
           if (from < 2) {
             // No production users yet — destructive recreate is acceptable.
             // Drop dependents first to respect foreign-key constraints; the
@@ -199,16 +205,27 @@ class AppDatabase extends _$AppDatabase {
           // Visits already exist for v2+ databases, while the typed capture
           // tables are first created at v6. Add only the columns that were not
           // included by an earlier createTable call on each upgrade path.
-          if (from >= 2 && from < 7) {
+          if (from >= 2 &&
+              from < 7 &&
+              !await hasColumn('visits', 'server_id')) {
             await migrator.addColumn(visits, visits.serverId);
           }
           if (from >= 6 && from < 7) {
-            await migrator.addColumn(captureAssets, captureAssets.serverId);
-            await migrator.addColumn(cameraResults, cameraResults.serverId);
-            await migrator.addColumn(
-              measuredDetailRevisions,
-              measuredDetailRevisions.serverId,
-            );
+            if (!await hasColumn('capture_assets', 'server_id')) {
+              await migrator.addColumn(captureAssets, captureAssets.serverId);
+            }
+            if (!await hasColumn('camera_results', 'server_id')) {
+              await migrator.addColumn(cameraResults, cameraResults.serverId);
+            }
+            if (!await hasColumn(
+              'measured_detail_revisions',
+              'server_id',
+            )) {
+              await migrator.addColumn(
+                measuredDetailRevisions,
+                measuredDetailRevisions.serverId,
+              );
+            }
           }
         },
         beforeOpen: (_) async {

@@ -52,7 +52,8 @@ class ApiService {
     } on http.ClientException catch (error) {
       throw ApiException('Network error while checking backend health: $error');
     } on ArgumentError catch (error) {
-      throw ApiException('Invalid API URL while checking backend health: $error');
+      throw ApiException(
+          'Invalid API URL while checking backend health: $error');
     }
   }
 
@@ -177,9 +178,11 @@ class ApiService {
     try {
       response = await http.Response.fromStream(streamed).timeout(apiTimeout);
     } on TimeoutException {
-      throw ApiException('Request timed out while reading assessment response.');
+      throw ApiException(
+          'Request timed out while reading assessment response.');
     } on http.ClientException catch (error) {
-      throw ApiException('Network error while reading assessment response: $error');
+      throw ApiException(
+          'Network error while reading assessment response: $error');
     } on ArgumentError catch (error) {
       throw ApiException('Invalid response while reading assessment: $error');
     }

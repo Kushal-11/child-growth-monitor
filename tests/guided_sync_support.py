@@ -13,6 +13,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.api.auth import router as auth_router
+from app.api.routes import router as api_router
 from app.api.guided_sync import (
     get_guided_sync_service,
     router as guided_sync_router,
@@ -109,6 +110,7 @@ def build_context(media_root: Path) -> GuidedSyncContext:
     service = GuidedSyncService(media_root=media_root, who_data=_who())
     app = FastAPI()
     app.include_router(auth_router)
+    app.include_router(api_router)
     app.include_router(guided_sync_router)
     app.include_router(guided_media_router)
     app.dependency_overrides[get_db] = override_get_db

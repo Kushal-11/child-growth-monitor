@@ -54,7 +54,9 @@ class ManualVisitDao {
               muacMethod: const Value('manual'),
             ),
           );
-      await _db.into(_db.syncQueue).insert(SyncQueueCompanion.insert(visitId: visitId));
+      await _db
+          .into(_db.syncQueue)
+          .insert(SyncQueueCompanion.insert(visitId: visitId));
       return visitId;
     });
   }

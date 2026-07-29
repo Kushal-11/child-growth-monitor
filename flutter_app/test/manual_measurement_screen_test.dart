@@ -28,7 +28,8 @@ void main() {
     expect(find.text('Required'), findsNWidgets(2)); // height + weight
   });
 
-  testWidgets('save with missing child surfaces an inline error', (tester) async {
+  testWidgets('save with missing child surfaces an inline error',
+      (tester) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     final container = ProviderContainer(overrides: [
       databaseProvider.overrideWithValue(db),

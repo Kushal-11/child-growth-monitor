@@ -85,8 +85,7 @@ class _ChildrenListScreenState extends ConsumerState<ChildrenListScreen> {
                         );
                       }
                       if (!snapshot.hasData) {
-                        return const Center(
-                            child: CircularProgressIndicator());
+                        return const Center(child: CircularProgressIndicator());
                       }
 
                       final children = snapshot.data!;

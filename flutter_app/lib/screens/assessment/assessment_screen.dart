@@ -112,7 +112,8 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
   void _onAgeMonthsChanged(String value) {
     final months = double.tryParse(value);
     if (months == null || months < 0) return;
-    final dob = DateTime.now().subtract(Duration(days: (months * 30.4375).round()));
+    final dob =
+        DateTime.now().subtract(Duration(days: (months * 30.4375).round()));
     _dobController.text = DateFormat('yyyy-MM-dd').format(dob);
   }
 
@@ -259,8 +260,9 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
                   border: const OutlineInputBorder(),
                 ),
                 maxLength: 100,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? t('required_field', ref) : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? t('required_field', ref)
+                    : null,
               ),
               const SizedBox(height: 12),
               // Sex selection
@@ -440,7 +442,8 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
-                  child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                  child:
+                      Text(_error!, style: const TextStyle(color: Colors.red)),
                 ),
             ],
           ),
@@ -496,17 +499,15 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
     return Row(
       children: [
         OutlinedButton.icon(
-          onPressed: _loading
-              ? null
-              : () => _pickImage(ImageSource.camera, role),
+          onPressed:
+              _loading ? null : () => _pickImage(ImageSource.camera, role),
           icon: const Icon(Icons.camera_alt, size: 18),
           label: Text(t('capture', ref)),
         ),
         const SizedBox(width: 8),
         OutlinedButton.icon(
-          onPressed: _loading
-              ? null
-              : () => _pickImage(ImageSource.gallery, role),
+          onPressed:
+              _loading ? null : () => _pickImage(ImageSource.gallery, role),
           icon: const Icon(Icons.photo_library, size: 18),
           label: Text(t('gallery', ref)),
         ),

@@ -71,7 +71,12 @@ void main() {
       final json = {
         'access_token': 'tok123',
         'token_type': 'bearer',
-        'user': {'id': 1, 'username': 'asha', 'full_name': 'Asha', 'role': 'worker'},
+        'user': {
+          'id': 1,
+          'username': 'asha',
+          'full_name': 'Asha',
+          'role': 'worker'
+        },
       };
       final result = AuthLoginResult.fromJson(json);
       expect(result.token, 'tok123');
@@ -145,12 +150,9 @@ void main() {
         storageTimeout: const Duration(milliseconds: 200),
       );
 
-      final token = await service
-          .readToken()
-          .timeout(const Duration(seconds: 3));
-      final user = await service
-          .readUser()
-          .timeout(const Duration(seconds: 3));
+      final token =
+          await service.readToken().timeout(const Duration(seconds: 3));
+      final user = await service.readUser().timeout(const Duration(seconds: 3));
 
       expect(token, isNull);
       expect(user, isNull);

@@ -16,5 +16,18 @@ void main() {
       expect(FeatureFlags.computeLiveCaptureEnabled(false, true), isTrue);
       expect(FeatureFlags.computeLiveCaptureEnabled(false, false), isFalse);
     });
+
+    test('test/debug runtime is enabled while the normal release stays gated',
+        () {
+      expect(FeatureFlags.liveCaptureEnabled, isTrue);
+      expect(
+        FeatureFlags.computeLiveCaptureEnabled(
+          false,
+          false,
+        ),
+        isFalse,
+        reason: 'A plain release must not expose unvalidated live capture',
+      );
+    });
   });
 }

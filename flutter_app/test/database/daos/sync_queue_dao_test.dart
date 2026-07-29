@@ -20,10 +20,13 @@ void main() {
   tearDown(() => db.close());
 
   Future<int> createVisit() async {
-    final child = await childDao.findOrCreate(name: 'Test', dateOfBirth: '2023-01-01', sex: 'M');
+    final child = await childDao.findOrCreate(
+        name: 'Test', dateOfBirth: '2023-01-01', sex: 'M');
     return visitDao.createWithMeasurement(
-      childId: child.id, ageMonths: 24.0, imagePath: '/test/image.jpg',
-      measurement: const MeasurementsCompanion());
+        childId: child.id,
+        ageMonths: 24.0,
+        imagePath: '/test/image.jpg',
+        measurement: const MeasurementsCompanion());
   }
 
   test('enqueue creates pending entry', () async {

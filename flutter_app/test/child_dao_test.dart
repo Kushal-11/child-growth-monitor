@@ -15,8 +15,13 @@ void main() {
 
   test('createChild stores owner + photo', () async {
     final id = await dao.createChild(
-      name: 'Kid', dateOfBirth: '2024-01-01', sex: 'M',
-      guardianName: 'Mom', location: 'Village', ownerUserId: 7, photoPath: '/p.jpg',
+      name: 'Kid',
+      dateOfBirth: '2024-01-01',
+      sex: 'M',
+      guardianName: 'Mom',
+      location: 'Village',
+      ownerUserId: 7,
+      photoPath: '/p.jpg',
     );
     final child = await dao.getById(id);
     expect(child!.ownerUserId, 7);
@@ -25,8 +30,14 @@ void main() {
   });
 
   test('updateChild changes fields', () async {
-    final id = await dao.createChild(name: 'Kid', dateOfBirth: '2024-01-01', sex: 'M', ownerUserId: 1);
-    await dao.updateChild(id: id, name: 'Renamed', guardianName: 'Dad', location: 'Town', photoPath: '/q.jpg');
+    final id = await dao.createChild(
+        name: 'Kid', dateOfBirth: '2024-01-01', sex: 'M', ownerUserId: 1);
+    await dao.updateChild(
+        id: id,
+        name: 'Renamed',
+        guardianName: 'Dad',
+        location: 'Town',
+        photoPath: '/q.jpg');
     final child = await dao.getById(id);
     expect(child!.name, 'Renamed');
     expect(child.guardianName, 'Dad');
@@ -34,7 +45,8 @@ void main() {
   });
 
   test('archive sets isArchived and watchForOwner excludes archived', () async {
-    final id = await dao.createChild(name: 'Kid', dateOfBirth: '2024-01-01', sex: 'M', ownerUserId: 1);
+    final id = await dao.createChild(
+        name: 'Kid', dateOfBirth: '2024-01-01', sex: 'M', ownerUserId: 1);
     await dao.setArchived(id, true);
     final child = await dao.getById(id);
     expect(child!.isArchived, true);
@@ -43,8 +55,10 @@ void main() {
   });
 
   test('watchForOwner only returns that owner', () async {
-    await dao.createChild(name: 'A', dateOfBirth: '2024-01-01', sex: 'M', ownerUserId: 1);
-    await dao.createChild(name: 'B', dateOfBirth: '2024-01-01', sex: 'F', ownerUserId: 2);
+    await dao.createChild(
+        name: 'A', dateOfBirth: '2024-01-01', sex: 'M', ownerUserId: 1);
+    await dao.createChild(
+        name: 'B', dateOfBirth: '2024-01-01', sex: 'F', ownerUserId: 2);
     final forOne = await dao.watchForOwner(1).first;
     expect(forOne.map((c) => c.name), ['A']);
   });

@@ -14,14 +14,17 @@ void main() {
   tearDown(() => db.close());
 
   test('findOrCreate creates new child', () async {
-    final child = await dao.findOrCreate(name: 'Aarav', dateOfBirth: '2023-06-15', sex: 'M');
+    final child = await dao.findOrCreate(
+        name: 'Aarav', dateOfBirth: '2023-06-15', sex: 'M');
     expect(child.id, greaterThan(0));
     expect(child.name, 'Aarav');
   });
 
   test('findOrCreate returns existing child', () async {
-    final c1 = await dao.findOrCreate(name: 'Aarav', dateOfBirth: '2023-06-15', sex: 'M');
-    final c2 = await dao.findOrCreate(name: 'Aarav', dateOfBirth: '2023-06-15', sex: 'M');
+    final c1 = await dao.findOrCreate(
+        name: 'Aarav', dateOfBirth: '2023-06-15', sex: 'M');
+    final c2 = await dao.findOrCreate(
+        name: 'Aarav', dateOfBirth: '2023-06-15', sex: 'M');
     expect(c1.id, c2.id);
   });
 

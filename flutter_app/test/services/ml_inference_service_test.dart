@@ -7,7 +7,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('predicts wasting class for typical 24-month boy features',
-      skip: 'requires device: libtensorflowlite_c-linux.so not present on host; integration covered in Task 14',
+      skip:
+          'requires device: libtensorflowlite_c-linux.so not present on host; integration covered in Task 14',
       () async {
     final svc = MlInferenceService();
     await svc.load();
@@ -43,11 +44,16 @@ void main() {
   // weightWithinBounds is pure math — no native lib needed, runs on host.
   test('weight bound check rejects values outside 45–180% of WHO median', () {
     final svc = MlInferenceService();
-    expect(svc.weightWithinBounds(predictedKg: 12.0, whoMedianKg: 12.0), isTrue);
-    expect(svc.weightWithinBounds(predictedKg: 4.0, whoMedianKg: 12.0), isFalse);
-    expect(svc.weightWithinBounds(predictedKg: 25.0, whoMedianKg: 12.0), isFalse);
-    expect(svc.weightWithinBounds(predictedKg: 21.6, whoMedianKg: 12.0), isTrue);
-    expect(svc.weightWithinBounds(predictedKg: 5.4, whoMedianKg: 12.0), isTrue); // 45% exact lower bound
+    expect(
+        svc.weightWithinBounds(predictedKg: 12.0, whoMedianKg: 12.0), isTrue);
+    expect(
+        svc.weightWithinBounds(predictedKg: 4.0, whoMedianKg: 12.0), isFalse);
+    expect(
+        svc.weightWithinBounds(predictedKg: 25.0, whoMedianKg: 12.0), isFalse);
+    expect(
+        svc.weightWithinBounds(predictedKg: 21.6, whoMedianKg: 12.0), isTrue);
+    expect(svc.weightWithinBounds(predictedKg: 5.4, whoMedianKg: 12.0),
+        isTrue); // 45% exact lower bound
     expect(svc.weightWithinBounds(predictedKg: 12.0, whoMedianKg: 0), isFalse);
     expect(svc.weightWithinBounds(predictedKg: 12.0, whoMedianKg: -1), isFalse);
     svc.dispose();
@@ -57,10 +63,16 @@ void main() {
     final svc = MlInferenceService();
     expect(
       () => svc.predict(const WastingFeatures(
-        ageMonths: 24, sexBinary: 1, heightCm: 87.1,
-        shoulderWidthCm: 18, hipWidthCm: 15.5, torsoLengthCm: 26.5,
-        upperArmLengthCm: 13.7, shoulderHeightRatio: 0.207,
-        hipHeightRatio: 0.178, bodyBuildScore: 0,
+        ageMonths: 24,
+        sexBinary: 1,
+        heightCm: 87.1,
+        shoulderWidthCm: 18,
+        hipWidthCm: 15.5,
+        torsoLengthCm: 26.5,
+        upperArmLengthCm: 13.7,
+        shoulderHeightRatio: 0.207,
+        hipHeightRatio: 0.178,
+        bodyBuildScore: 0,
       )),
       throwsStateError,
     );

@@ -96,8 +96,7 @@ class LoginScreen extends ConsumerWidget {
                                     prefixIcon: const Icon(
                                       Icons.person_outline_rounded,
                                     ),
-                                    errorText:
-                                        state.showValidationErrors &&
+                                    errorText: state.showValidationErrors &&
                                             state.username.trim().isEmpty
                                         ? t('required_field', ref)
                                         : null,
@@ -137,8 +136,7 @@ class LoginScreen extends ConsumerWidget {
                                             : Icons.visibility_outlined,
                                       ),
                                     ),
-                                    errorText:
-                                        state.showValidationErrors &&
+                                    errorText: state.showValidationErrors &&
                                             state.password.isEmpty
                                         ? t('required_field', ref)
                                         : null,
@@ -309,9 +307,9 @@ class _OfflineBadge extends ConsumerWidget {
             Text(
               t('offline_ready', ref),
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w600,
-              ),
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
           ],
         ),

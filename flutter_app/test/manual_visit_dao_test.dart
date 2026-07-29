@@ -16,7 +16,9 @@ void main() {
   });
   tearDown(() => db.close());
 
-  test('createManualVisit stores visit (entry_method=manual) + measurement + sync queue', () async {
+  test(
+      'createManualVisit stores visit (entry_method=manual) + measurement + sync queue',
+      () async {
     final childId = await childDao.createChild(
         name: 'Kid', dateOfBirth: '2024-01-01', sex: 'M', ownerUserId: 5);
     final visitId = await dao.createManualVisit(
@@ -35,13 +37,17 @@ void main() {
       notes: 'monthly visit',
     );
 
-    final visit = await (db.select(db.visits)..where((v) => v.id.equals(visitId))).getSingle();
+    final visit = await (db.select(db.visits)
+          ..where((v) => v.id.equals(visitId)))
+        .getSingle();
     expect(visit.entryMethod, 'manual');
     expect(visit.ownerUserId, 5);
     expect(visit.imagePath, isNull);
     expect(visit.notes, 'monthly visit');
 
-    final m = await (db.select(db.measurements)..where((x) => x.visitId.equals(visitId))).getSingle();
+    final m = await (db.select(db.measurements)
+          ..where((x) => x.visitId.equals(visitId)))
+        .getSingle();
     expect(m.manualHeightCm, 80.0);
     expect(m.manualWeightKg, 10.5);
     expect(m.muacCm, 13.0);

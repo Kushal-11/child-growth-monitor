@@ -39,7 +39,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final token = await _service.readToken();
       final user = await _service.readUser();
       if (token != null && user != null) {
-        state = AuthState(status: AuthStatus.authenticated, user: user, token: token);
+        state = AuthState(
+            status: AuthStatus.authenticated, user: user, token: token);
       } else {
         state = AuthState.unauthenticated;
       }

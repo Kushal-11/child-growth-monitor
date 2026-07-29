@@ -59,8 +59,7 @@ class SyncService {
   /// Defends against app crashes (SIGKILL, OOM, force-stop) that left
   /// entries mid-flight.
   Future<void> _recoverStuck() async {
-    await (_db.update(_db.syncQueue)
-          ..where((s) => s.status.equals('syncing')))
+    await (_db.update(_db.syncQueue)..where((s) => s.status.equals('syncing')))
         .write(const SyncQueueCompanion(status: Value('pending')));
   }
 
@@ -107,16 +106,22 @@ class SyncService {
         if (m?.whzStatus != null) 'whz_status': m!.whzStatus!,
         if (m?.confidenceScore != null)
           'confidence_score': m!.confidenceScore.toString(),
-        if (m?.effectiveHeightCm != null) 'effective_height_cm': m!.effectiveHeightCm.toString(),
-        if (m?.effectiveWeightKg != null) 'effective_weight_kg': m!.effectiveWeightKg.toString(),
+        if (m?.effectiveHeightCm != null)
+          'effective_height_cm': m!.effectiveHeightCm.toString(),
+        if (m?.effectiveWeightKg != null)
+          'effective_weight_kg': m!.effectiveWeightKg.toString(),
         if (m?.heightMethod != null) 'height_method': m!.heightMethod!,
         if (m?.weightMethod != null) 'weight_method': m!.weightMethod!,
-        if (m?.estimationMethod != null) 'estimation_method': m!.estimationMethod!,
+        if (m?.estimationMethod != null)
+          'estimation_method': m!.estimationMethod!,
         if (m?.bmi != null) 'bmi': m!.bmi.toString(),
         if (m?.bmiStatus != null) 'bmi_status': m!.bmiStatus!,
-        if (m?.heightConfidence != null) 'height_confidence': m!.heightConfidence.toString(),
-        if (m?.weightConfidence != null) 'weight_confidence': m!.weightConfidence.toString(),
-        if (m?.classificationConfidence != null) 'classification_confidence': m!.classificationConfidence.toString(),
+        if (m?.heightConfidence != null)
+          'height_confidence': m!.heightConfidence.toString(),
+        if (m?.weightConfidence != null)
+          'weight_confidence': m!.weightConfidence.toString(),
+        if (m?.classificationConfidence != null)
+          'classification_confidence': m!.classificationConfidence.toString(),
         if (m?.bodyBuild != null) 'body_build': m!.bodyBuild!,
         'side_view_used': (m?.sideViewUsed ?? false).toString(),
         if (m?.chestDepthCm != null)
@@ -141,25 +146,22 @@ class SyncService {
         if (m?.muacCm != null) 'muac_cm': m!.muacCm.toString(),
         if (m?.muacStatus != null) 'muac_status': m!.muacStatus!,
         if (m?.muacMethod != null) 'muac_method': m!.muacMethod!,
-        if (m?.muacAgeInRange != null) 'muac_age_in_range': m!.muacAgeInRange.toString(),
+        if (m?.muacAgeInRange != null)
+          'muac_age_in_range': m!.muacAgeInRange.toString(),
         if (m?.muacConfidence != null)
           'muac_confidence': m!.muacConfidence.toString(),
         if (m?.muacUncertaintyLowerCm != null)
-          'muac_uncertainty_lower_cm':
-              m!.muacUncertaintyLowerCm.toString(),
+          'muac_uncertainty_lower_cm': m!.muacUncertaintyLowerCm.toString(),
         if (m?.muacUncertaintyUpperCm != null)
-          'muac_uncertainty_upper_cm':
-              m!.muacUncertaintyUpperCm.toString(),
+          'muac_uncertainty_upper_cm': m!.muacUncertaintyUpperCm.toString(),
         if (m?.muacModelVersion != null)
           'muac_model_version': m!.muacModelVersion!,
         if (m?.muacCalibrationVersion != null)
           'muac_calibration_version': m!.muacCalibrationVersion!,
         if (m?.muacIsDirectMeasurement != null)
-          'muac_is_direct_measurement':
-              m!.muacIsDirectMeasurement.toString(),
+          'muac_is_direct_measurement': m!.muacIsDirectMeasurement.toString(),
         if (m?.muacRequiresConfirmation != null)
-          'muac_requires_confirmation':
-              m!.muacRequiresConfirmation.toString(),
+          'muac_requires_confirmation': m!.muacRequiresConfirmation.toString(),
         if (m?.muacReferralGuidance != null)
           'muac_referral_guidance': m!.muacReferralGuidance!,
         if (m?.combinedStatus != null) 'combined_status': m!.combinedStatus!,
@@ -167,11 +169,9 @@ class SyncService {
           'combined_triggered_by': m!.combinedTriggeredBy!,
         if (m?.combinedRationale != null)
           'combined_rationale': m!.combinedRationale!,
-        if (m?.combinedMethod != null)
-          'combined_method': m!.combinedMethod!,
+        if (m?.combinedMethod != null) 'combined_method': m!.combinedMethod!,
         if (m?.combinedConfidenceScore != null)
-          'combined_confidence_score':
-              m!.combinedConfidenceScore.toString(),
+          'combined_confidence_score': m!.combinedConfidenceScore.toString(),
         if (m?.combinedProtocolVersion != null)
           'combined_protocol_version': m!.combinedProtocolVersion!,
         if (child.guardianName != null) 'guardian_name': child.guardianName!,
@@ -180,8 +180,7 @@ class SyncService {
 
       final imagePath = pair.visit.imagePath;
       if (imagePath != null && await File(imagePath).exists()) {
-        req.files.add(
-            await http.MultipartFile.fromPath('image', imagePath));
+        req.files.add(await http.MultipartFile.fromPath('image', imagePath));
       }
       if (pair.visit.sideImagePath != null &&
           await File(pair.visit.sideImagePath!).exists()) {
@@ -194,7 +193,8 @@ class SyncService {
             'image_back', pair.visit.backImagePath!));
       }
       if (child.photoPath != null && await File(child.photoPath!).exists()) {
-        req.files.add(await http.MultipartFile.fromPath('photo', child.photoPath!));
+        req.files
+            .add(await http.MultipartFile.fromPath('photo', child.photoPath!));
       }
 
       final streamed =

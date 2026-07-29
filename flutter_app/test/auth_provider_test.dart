@@ -78,7 +78,8 @@ class _ThrowingAuthService implements AuthService {
   @override
   String get baseUrl => 'http://test';
   @override
-  Future<AuthLoginResult> login(String u, String p) async => throw AuthException('x');
+  Future<AuthLoginResult> login(String u, String p) async =>
+      throw AuthException('x');
   @override
   Future<String?> readToken() async => throw Exception('keystore boom');
   @override

@@ -20,7 +20,7 @@ void main() {
     final arr = f.toArray();
     expect(arr.length, 14);
     expect(arr[0], 24.0); // age_months
-    expect(arr[1], 1.0);  // sex_binary
+    expect(arr[1], 1.0); // sex_binary
     expect(arr[2], 85.0); // height_cm
     expect(arr[10], 10.0); // chest_depth_cm (provided)
     expect(arr[12], closeTo(10.0 / 85.0, 0.001)); // chest_depth_ratio

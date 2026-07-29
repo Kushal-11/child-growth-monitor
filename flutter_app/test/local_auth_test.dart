@@ -31,7 +31,8 @@ void main() {
       expect(LocalAuth.tryLogin('cgmtester@test.com', 'CGMTESTER'), isNull);
     });
 
-    test('disabled (release build) returns null even for the correct '
+    test(
+        'disabled (release build) returns null even for the correct '
         'credential', () {
       // In release builds the gate defaults to off (kDebugMode == false); the
       // backdoor must not authenticate anyone.

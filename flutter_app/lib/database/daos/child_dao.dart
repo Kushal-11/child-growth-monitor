@@ -22,16 +22,17 @@ class ChildDao {
     if (existing != null) return existing;
 
     final id = await _db.into(_db.children).insert(
-      ChildrenCompanion.insert(
-        name: name,
-        dateOfBirth: dateOfBirth,
-        sex: sex,
-        guardianName: Value(guardianName),
-        location: Value(location),
-        ownerUserId: Value(ownerUserId),
-      ),
-    );
-    return (_db.select(_db.children)..where((c) => c.id.equals(id))).getSingle();
+          ChildrenCompanion.insert(
+            name: name,
+            dateOfBirth: dateOfBirth,
+            sex: sex,
+            guardianName: Value(guardianName),
+            location: Value(location),
+            ownerUserId: Value(ownerUserId),
+          ),
+        );
+    return (_db.select(_db.children)..where((c) => c.id.equals(id)))
+        .getSingle();
   }
 
   Future<int> createChild({
@@ -85,7 +86,8 @@ class ChildDao {
 
   Stream<List<ChildrenData>> watchForOwner(int ownerUserId, {String? search}) {
     final query = _db.select(_db.children)
-      ..where((c) => c.ownerUserId.equals(ownerUserId) & c.isArchived.equals(false))
+      ..where(
+          (c) => c.ownerUserId.equals(ownerUserId) & c.isArchived.equals(false))
       ..orderBy([(c) => OrderingTerm.desc(c.updatedAt)]);
     if (search != null && search.isNotEmpty) {
       query.where((c) => c.name.like('%$search%'));
@@ -103,8 +105,10 @@ class ChildDao {
   }
 
   Future<ChildrenData?> getById(int id) =>
-      (_db.select(_db.children)..where((c) => c.id.equals(id))).getSingleOrNull();
+      (_db.select(_db.children)..where((c) => c.id.equals(id)))
+          .getSingleOrNull();
 
   Stream<ChildrenData?> watchById(int id) =>
-      (_db.select(_db.children)..where((c) => c.id.equals(id))).watchSingleOrNull();
+      (_db.select(_db.children)..where((c) => c.id.equals(id)))
+          .watchSingleOrNull();
 }

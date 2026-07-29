@@ -146,8 +146,9 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
                 children: [
                   CircleAvatar(
                     radius: 48,
-                    backgroundImage:
-                        _photoPath != null ? FileImage(File(_photoPath!)) : null,
+                    backgroundImage: _photoPath != null
+                        ? FileImage(File(_photoPath!))
+                        : null,
                     child: _photoPath == null
                         ? const Icon(Icons.person, size: 48)
                         : null,
@@ -200,7 +201,8 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
                 DropdownMenuItem(value: 'M', child: Text('Male')),
                 DropdownMenuItem(value: 'F', child: Text('Female')),
               ],
-              onChanged: _isEdit ? null : (v) => setState(() => _sex = v ?? 'M'),
+              onChanged:
+                  _isEdit ? null : (v) => setState(() => _sex = v ?? 'M'),
             ),
             const SizedBox(height: 12),
             TextFormField(
