@@ -8,10 +8,25 @@ import 'tables/children_table.dart';
 import 'tables/visits_table.dart';
 import 'tables/measurements_table.dart';
 import 'tables/sync_queue_table.dart';
+import 'tables/capture_assets_table.dart';
+import 'tables/camera_results_table.dart';
+import 'tables/measured_detail_revisions_table.dart';
+import 'tables/sync_outbox_table.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(tables: [Children, Visits, Measurements, SyncQueue])
+@DriftDatabase(
+  tables: [
+    Children,
+    Visits,
+    Measurements,
+    SyncQueue,
+    CaptureAssets,
+    CameraResults,
+    MeasuredDetailRevisions,
+    SyncOutbox,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -19,7 +34,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -106,6 +121,84 @@ class AppDatabase extends _$AppDatabase {
                 measurements, measurements.classificationRationale);
             await migrator.addColumn(measurements, measurements.poshanComplete);
           }
+          if (from >= 2 && from < 6) {
+            await migrator.addColumn(visits, visits.captureState);
+            await migrator.addColumn(visits, visits.captureStartedAt);
+            await migrator.addColumn(visits, visits.captureCompletedAt);
+            await migrator.addColumn(visits, visits.deviceMetadataJson);
+            await migrator.addColumn(visits, visits.consentVersion);
+            await migrator.addColumn(visits, visits.consentTimestamp);
+            await migrator.addColumn(
+              visits,
+              visits.consentOperatorIdentifier,
+            );
+            await migrator.addColumn(visits, visits.mediaDeletedAt);
+
+            await migrator.addColumn(
+              measurements,
+              measurements.measurementMode,
+            );
+            await migrator.addColumn(measurements, measurements.oedema);
+            await migrator.addColumn(measurements, measurements.measuredAt);
+            await migrator.addColumn(measurements, measurements.editorUserId);
+            await migrator.addColumn(measurements, measurements.measuredNotes);
+            await migrator.addColumn(
+              measurements,
+              measurements.whoAcuteStatus,
+            );
+            await migrator.addColumn(
+              measurements,
+              measurements.whoAcuteTriggeredBy,
+            );
+            await migrator.addColumn(
+              measurements,
+              measurements.whoAcuteRationale,
+            );
+
+            await customStatement(
+              "UPDATE visits SET capture_state = CASE "
+              "WHEN entry_method = 'manual' THEN 'measured_report' "
+              "WHEN EXISTS (SELECT 1 FROM measurements m "
+              "WHERE m.visit_id = visits.id) THEN 'estimated_report' "
+              "ELSE 'incomplete_capture' END "
+              "WHERE capture_state IS NULL",
+            );
+          }
+          if (from < 6) {
+            await migrator.createTable(captureAssets);
+            await migrator.createTable(cameraResults);
+            await migrator.createTable(measuredDetailRevisions);
+            await migrator.createTable(syncOutbox);
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS ix_visits_owner_local_uuid '
+              'ON visits (owner_user_id, local_uuid)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS ix_capture_assets_visit_role '
+              'ON capture_assets (visit_id, role)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS ix_camera_results_visit_version '
+              'ON camera_results (visit_id, version)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS '
+              'ix_measured_revisions_visit_revision '
+              'ON measured_detail_revisions (visit_id, revision_number)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS '
+              'ix_sync_outbox_owner_status_created '
+              'ON sync_outbox (owner_user_id, status, created_at)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS ix_sync_outbox_visit_type '
+              'ON sync_outbox (visit_uuid, entity_type)',
+            );
+          }
+        },
+        beforeOpen: (_) async {
+          await customStatement('PRAGMA foreign_keys = ON');
         },
       );
 }

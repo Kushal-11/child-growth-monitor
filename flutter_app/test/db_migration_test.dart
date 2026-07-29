@@ -6,7 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:child_growth_monitor_app/database/database.dart';
 
 void main() {
-  test('schema v5 fresh DB has evidence columns and inserts work', () async {
+  test('schema v6 fresh DB has evidence columns and inserts work', () async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     final id = await db.into(db.children).insert(
           ChildrenCompanion.insert(
@@ -134,11 +134,11 @@ void main() {
     await upgraded.close();
   }
 
-  test('v2 -> v5 upgrade adds visit and evidence columns', () async {
+  test('v2 -> v6 upgrade adds visit and evidence columns', () async {
     await runUpgradeFrom(2);
   });
 
-  test('v1 -> v5 upgrade runs without duplicate columns', () async {
+  test('v1 -> v6 upgrade runs without duplicate columns', () async {
     // Regression: a v1 DB hits the from < 2 destructive recreate (which builds
     // visits at the current schema, already including the new columns) AND the
     // from < 3 block. Without the from == 2 guard the visits addColumns would
@@ -146,7 +146,7 @@ void main() {
     await runUpgradeFrom(1);
   });
 
-  test('v4 -> v5 upgrade adds only Poshan Setu columns', () async {
+  test('v4 -> v6 upgrade adds Poshan and guided-capture schema', () async {
     final dir = await Directory.systemTemp.createTemp('cgm_mig_v4_test');
     addTearDown(() async {
       if (await dir.exists()) await dir.delete(recursive: true);
@@ -170,6 +170,40 @@ void main() {
       await legacy.customStatement(
         'ALTER TABLE measurements DROP COLUMN $column',
       );
+    }
+    for (final column in [
+      'capture_state',
+      'capture_started_at',
+      'capture_completed_at',
+      'device_metadata_json',
+      'consent_version',
+      'consent_timestamp',
+      'consent_operator_identifier',
+      'media_deleted_at',
+    ]) {
+      await legacy.customStatement('ALTER TABLE visits DROP COLUMN $column');
+    }
+    for (final column in [
+      'measurement_mode',
+      'oedema',
+      'measured_at',
+      'editor_user_id',
+      'measured_notes',
+      'who_acute_status',
+      'who_acute_triggered_by',
+      'who_acute_rationale',
+    ]) {
+      await legacy.customStatement(
+        'ALTER TABLE measurements DROP COLUMN $column',
+      );
+    }
+    for (final table in [
+      'sync_outbox',
+      'measured_detail_revisions',
+      'camera_results',
+      'capture_assets',
+    ]) {
+      await legacy.customStatement('DROP TABLE $table');
     }
     await legacy.customStatement('PRAGMA user_version = 4');
     await legacy.close();

@@ -58,4 +58,12 @@ class Measurements extends Table {
   TextColumn get classificationMethod => text().nullable()();
   TextColumn get classificationRationale => text().nullable()();
   BoolColumn get poshanComplete => boolean().nullable()();
+  TextColumn get measurementMode => text().nullable()();
+  TextColumn get oedema => text().nullable()();
+  DateTimeColumn get measuredAt => dateTime().nullable()();
+  IntColumn get editorUserId => integer().nullable()();
+  TextColumn get measuredNotes => text().nullable()();
+  TextColumn get whoAcuteStatus => text().nullable()();
+  TextColumn get whoAcuteTriggeredBy => text().nullable()();
+  TextColumn get whoAcuteRationale => text().nullable()();
 }

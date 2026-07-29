@@ -638,6 +638,54 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('assessment'));
+  static const VerificationMeta _captureStateMeta =
+      const VerificationMeta('captureState');
+  @override
+  late final GeneratedColumn<String> captureState = GeneratedColumn<String>(
+      'capture_state', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _captureStartedAtMeta =
+      const VerificationMeta('captureStartedAt');
+  @override
+  late final GeneratedColumn<DateTime> captureStartedAt =
+      GeneratedColumn<DateTime>('capture_started_at', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _captureCompletedAtMeta =
+      const VerificationMeta('captureCompletedAt');
+  @override
+  late final GeneratedColumn<DateTime> captureCompletedAt =
+      GeneratedColumn<DateTime>('capture_completed_at', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _deviceMetadataJsonMeta =
+      const VerificationMeta('deviceMetadataJson');
+  @override
+  late final GeneratedColumn<String> deviceMetadataJson =
+      GeneratedColumn<String>('device_metadata_json', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _consentVersionMeta =
+      const VerificationMeta('consentVersion');
+  @override
+  late final GeneratedColumn<String> consentVersion = GeneratedColumn<String>(
+      'consent_version', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _consentTimestampMeta =
+      const VerificationMeta('consentTimestamp');
+  @override
+  late final GeneratedColumn<DateTime> consentTimestamp =
+      GeneratedColumn<DateTime>('consent_timestamp', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _consentOperatorIdentifierMeta =
+      const VerificationMeta('consentOperatorIdentifier');
+  @override
+  late final GeneratedColumn<String> consentOperatorIdentifier =
+      GeneratedColumn<String>('consent_operator_identifier', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _mediaDeletedAtMeta =
+      const VerificationMeta('mediaDeletedAt');
+  @override
+  late final GeneratedColumn<DateTime> mediaDeletedAt =
+      GeneratedColumn<DateTime>('media_deleted_at', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -650,7 +698,15 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
         backImagePath,
         notes,
         ownerUserId,
-        entryMethod
+        entryMethod,
+        captureState,
+        captureStartedAt,
+        captureCompletedAt,
+        deviceMetadataJson,
+        consentVersion,
+        consentTimestamp,
+        consentOperatorIdentifier,
+        mediaDeletedAt
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -719,6 +775,55 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
           entryMethod.isAcceptableOrUnknown(
               data['entry_method']!, _entryMethodMeta));
     }
+    if (data.containsKey('capture_state')) {
+      context.handle(
+          _captureStateMeta,
+          captureState.isAcceptableOrUnknown(
+              data['capture_state']!, _captureStateMeta));
+    }
+    if (data.containsKey('capture_started_at')) {
+      context.handle(
+          _captureStartedAtMeta,
+          captureStartedAt.isAcceptableOrUnknown(
+              data['capture_started_at']!, _captureStartedAtMeta));
+    }
+    if (data.containsKey('capture_completed_at')) {
+      context.handle(
+          _captureCompletedAtMeta,
+          captureCompletedAt.isAcceptableOrUnknown(
+              data['capture_completed_at']!, _captureCompletedAtMeta));
+    }
+    if (data.containsKey('device_metadata_json')) {
+      context.handle(
+          _deviceMetadataJsonMeta,
+          deviceMetadataJson.isAcceptableOrUnknown(
+              data['device_metadata_json']!, _deviceMetadataJsonMeta));
+    }
+    if (data.containsKey('consent_version')) {
+      context.handle(
+          _consentVersionMeta,
+          consentVersion.isAcceptableOrUnknown(
+              data['consent_version']!, _consentVersionMeta));
+    }
+    if (data.containsKey('consent_timestamp')) {
+      context.handle(
+          _consentTimestampMeta,
+          consentTimestamp.isAcceptableOrUnknown(
+              data['consent_timestamp']!, _consentTimestampMeta));
+    }
+    if (data.containsKey('consent_operator_identifier')) {
+      context.handle(
+          _consentOperatorIdentifierMeta,
+          consentOperatorIdentifier.isAcceptableOrUnknown(
+              data['consent_operator_identifier']!,
+              _consentOperatorIdentifierMeta));
+    }
+    if (data.containsKey('media_deleted_at')) {
+      context.handle(
+          _mediaDeletedAtMeta,
+          mediaDeletedAt.isAcceptableOrUnknown(
+              data['media_deleted_at']!, _mediaDeletedAtMeta));
+    }
     return context;
   }
 
@@ -750,6 +855,24 @@ class $VisitsTable extends Visits with TableInfo<$VisitsTable, Visit> {
           .read(DriftSqlType.int, data['${effectivePrefix}owner_user_id']),
       entryMethod: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}entry_method'])!,
+      captureState: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}capture_state']),
+      captureStartedAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}capture_started_at']),
+      captureCompletedAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}capture_completed_at']),
+      deviceMetadataJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}device_metadata_json']),
+      consentVersion: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}consent_version']),
+      consentTimestamp: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}consent_timestamp']),
+      consentOperatorIdentifier: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}consent_operator_identifier']),
+      mediaDeletedAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}media_deleted_at']),
     );
   }
 
@@ -771,6 +894,14 @@ class Visit extends DataClass implements Insertable<Visit> {
   final String? notes;
   final int? ownerUserId;
   final String entryMethod;
+  final String? captureState;
+  final DateTime? captureStartedAt;
+  final DateTime? captureCompletedAt;
+  final String? deviceMetadataJson;
+  final String? consentVersion;
+  final DateTime? consentTimestamp;
+  final String? consentOperatorIdentifier;
+  final DateTime? mediaDeletedAt;
   const Visit(
       {required this.id,
       required this.childId,
@@ -782,7 +913,15 @@ class Visit extends DataClass implements Insertable<Visit> {
       this.backImagePath,
       this.notes,
       this.ownerUserId,
-      required this.entryMethod});
+      required this.entryMethod,
+      this.captureState,
+      this.captureStartedAt,
+      this.captureCompletedAt,
+      this.deviceMetadataJson,
+      this.consentVersion,
+      this.consentTimestamp,
+      this.consentOperatorIdentifier,
+      this.mediaDeletedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -807,6 +946,31 @@ class Visit extends DataClass implements Insertable<Visit> {
       map['owner_user_id'] = Variable<int>(ownerUserId);
     }
     map['entry_method'] = Variable<String>(entryMethod);
+    if (!nullToAbsent || captureState != null) {
+      map['capture_state'] = Variable<String>(captureState);
+    }
+    if (!nullToAbsent || captureStartedAt != null) {
+      map['capture_started_at'] = Variable<DateTime>(captureStartedAt);
+    }
+    if (!nullToAbsent || captureCompletedAt != null) {
+      map['capture_completed_at'] = Variable<DateTime>(captureCompletedAt);
+    }
+    if (!nullToAbsent || deviceMetadataJson != null) {
+      map['device_metadata_json'] = Variable<String>(deviceMetadataJson);
+    }
+    if (!nullToAbsent || consentVersion != null) {
+      map['consent_version'] = Variable<String>(consentVersion);
+    }
+    if (!nullToAbsent || consentTimestamp != null) {
+      map['consent_timestamp'] = Variable<DateTime>(consentTimestamp);
+    }
+    if (!nullToAbsent || consentOperatorIdentifier != null) {
+      map['consent_operator_identifier'] =
+          Variable<String>(consentOperatorIdentifier);
+    }
+    if (!nullToAbsent || mediaDeletedAt != null) {
+      map['media_deleted_at'] = Variable<DateTime>(mediaDeletedAt);
+    }
     return map;
   }
 
@@ -832,6 +996,31 @@ class Visit extends DataClass implements Insertable<Visit> {
           ? const Value.absent()
           : Value(ownerUserId),
       entryMethod: Value(entryMethod),
+      captureState: captureState == null && nullToAbsent
+          ? const Value.absent()
+          : Value(captureState),
+      captureStartedAt: captureStartedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(captureStartedAt),
+      captureCompletedAt: captureCompletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(captureCompletedAt),
+      deviceMetadataJson: deviceMetadataJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deviceMetadataJson),
+      consentVersion: consentVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(consentVersion),
+      consentTimestamp: consentTimestamp == null && nullToAbsent
+          ? const Value.absent()
+          : Value(consentTimestamp),
+      consentOperatorIdentifier:
+          consentOperatorIdentifier == null && nullToAbsent
+              ? const Value.absent()
+              : Value(consentOperatorIdentifier),
+      mediaDeletedAt: mediaDeletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mediaDeletedAt),
     );
   }
 
@@ -850,6 +1039,19 @@ class Visit extends DataClass implements Insertable<Visit> {
       notes: serializer.fromJson<String?>(json['notes']),
       ownerUserId: serializer.fromJson<int?>(json['ownerUserId']),
       entryMethod: serializer.fromJson<String>(json['entryMethod']),
+      captureState: serializer.fromJson<String?>(json['captureState']),
+      captureStartedAt:
+          serializer.fromJson<DateTime?>(json['captureStartedAt']),
+      captureCompletedAt:
+          serializer.fromJson<DateTime?>(json['captureCompletedAt']),
+      deviceMetadataJson:
+          serializer.fromJson<String?>(json['deviceMetadataJson']),
+      consentVersion: serializer.fromJson<String?>(json['consentVersion']),
+      consentTimestamp:
+          serializer.fromJson<DateTime?>(json['consentTimestamp']),
+      consentOperatorIdentifier:
+          serializer.fromJson<String?>(json['consentOperatorIdentifier']),
+      mediaDeletedAt: serializer.fromJson<DateTime?>(json['mediaDeletedAt']),
     );
   }
   @override
@@ -867,6 +1069,15 @@ class Visit extends DataClass implements Insertable<Visit> {
       'notes': serializer.toJson<String?>(notes),
       'ownerUserId': serializer.toJson<int?>(ownerUserId),
       'entryMethod': serializer.toJson<String>(entryMethod),
+      'captureState': serializer.toJson<String?>(captureState),
+      'captureStartedAt': serializer.toJson<DateTime?>(captureStartedAt),
+      'captureCompletedAt': serializer.toJson<DateTime?>(captureCompletedAt),
+      'deviceMetadataJson': serializer.toJson<String?>(deviceMetadataJson),
+      'consentVersion': serializer.toJson<String?>(consentVersion),
+      'consentTimestamp': serializer.toJson<DateTime?>(consentTimestamp),
+      'consentOperatorIdentifier':
+          serializer.toJson<String?>(consentOperatorIdentifier),
+      'mediaDeletedAt': serializer.toJson<DateTime?>(mediaDeletedAt),
     };
   }
 
@@ -881,7 +1092,15 @@ class Visit extends DataClass implements Insertable<Visit> {
           Value<String?> backImagePath = const Value.absent(),
           Value<String?> notes = const Value.absent(),
           Value<int?> ownerUserId = const Value.absent(),
-          String? entryMethod}) =>
+          String? entryMethod,
+          Value<String?> captureState = const Value.absent(),
+          Value<DateTime?> captureStartedAt = const Value.absent(),
+          Value<DateTime?> captureCompletedAt = const Value.absent(),
+          Value<String?> deviceMetadataJson = const Value.absent(),
+          Value<String?> consentVersion = const Value.absent(),
+          Value<DateTime?> consentTimestamp = const Value.absent(),
+          Value<String?> consentOperatorIdentifier = const Value.absent(),
+          Value<DateTime?> mediaDeletedAt = const Value.absent()}) =>
       Visit(
         id: id ?? this.id,
         childId: childId ?? this.childId,
@@ -896,6 +1115,27 @@ class Visit extends DataClass implements Insertable<Visit> {
         notes: notes.present ? notes.value : this.notes,
         ownerUserId: ownerUserId.present ? ownerUserId.value : this.ownerUserId,
         entryMethod: entryMethod ?? this.entryMethod,
+        captureState:
+            captureState.present ? captureState.value : this.captureState,
+        captureStartedAt: captureStartedAt.present
+            ? captureStartedAt.value
+            : this.captureStartedAt,
+        captureCompletedAt: captureCompletedAt.present
+            ? captureCompletedAt.value
+            : this.captureCompletedAt,
+        deviceMetadataJson: deviceMetadataJson.present
+            ? deviceMetadataJson.value
+            : this.deviceMetadataJson,
+        consentVersion:
+            consentVersion.present ? consentVersion.value : this.consentVersion,
+        consentTimestamp: consentTimestamp.present
+            ? consentTimestamp.value
+            : this.consentTimestamp,
+        consentOperatorIdentifier: consentOperatorIdentifier.present
+            ? consentOperatorIdentifier.value
+            : this.consentOperatorIdentifier,
+        mediaDeletedAt:
+            mediaDeletedAt.present ? mediaDeletedAt.value : this.mediaDeletedAt,
       );
   Visit copyWithCompanion(VisitsCompanion data) {
     return Visit(
@@ -916,6 +1156,30 @@ class Visit extends DataClass implements Insertable<Visit> {
           data.ownerUserId.present ? data.ownerUserId.value : this.ownerUserId,
       entryMethod:
           data.entryMethod.present ? data.entryMethod.value : this.entryMethod,
+      captureState: data.captureState.present
+          ? data.captureState.value
+          : this.captureState,
+      captureStartedAt: data.captureStartedAt.present
+          ? data.captureStartedAt.value
+          : this.captureStartedAt,
+      captureCompletedAt: data.captureCompletedAt.present
+          ? data.captureCompletedAt.value
+          : this.captureCompletedAt,
+      deviceMetadataJson: data.deviceMetadataJson.present
+          ? data.deviceMetadataJson.value
+          : this.deviceMetadataJson,
+      consentVersion: data.consentVersion.present
+          ? data.consentVersion.value
+          : this.consentVersion,
+      consentTimestamp: data.consentTimestamp.present
+          ? data.consentTimestamp.value
+          : this.consentTimestamp,
+      consentOperatorIdentifier: data.consentOperatorIdentifier.present
+          ? data.consentOperatorIdentifier.value
+          : this.consentOperatorIdentifier,
+      mediaDeletedAt: data.mediaDeletedAt.present
+          ? data.mediaDeletedAt.value
+          : this.mediaDeletedAt,
     );
   }
 
@@ -932,14 +1196,40 @@ class Visit extends DataClass implements Insertable<Visit> {
           ..write('backImagePath: $backImagePath, ')
           ..write('notes: $notes, ')
           ..write('ownerUserId: $ownerUserId, ')
-          ..write('entryMethod: $entryMethod')
+          ..write('entryMethod: $entryMethod, ')
+          ..write('captureState: $captureState, ')
+          ..write('captureStartedAt: $captureStartedAt, ')
+          ..write('captureCompletedAt: $captureCompletedAt, ')
+          ..write('deviceMetadataJson: $deviceMetadataJson, ')
+          ..write('consentVersion: $consentVersion, ')
+          ..write('consentTimestamp: $consentTimestamp, ')
+          ..write('consentOperatorIdentifier: $consentOperatorIdentifier, ')
+          ..write('mediaDeletedAt: $mediaDeletedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, childId, localUuid, visitDate, ageMonths,
-      imagePath, sideImagePath, backImagePath, notes, ownerUserId, entryMethod);
+  int get hashCode => Object.hash(
+      id,
+      childId,
+      localUuid,
+      visitDate,
+      ageMonths,
+      imagePath,
+      sideImagePath,
+      backImagePath,
+      notes,
+      ownerUserId,
+      entryMethod,
+      captureState,
+      captureStartedAt,
+      captureCompletedAt,
+      deviceMetadataJson,
+      consentVersion,
+      consentTimestamp,
+      consentOperatorIdentifier,
+      mediaDeletedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -954,7 +1244,15 @@ class Visit extends DataClass implements Insertable<Visit> {
           other.backImagePath == this.backImagePath &&
           other.notes == this.notes &&
           other.ownerUserId == this.ownerUserId &&
-          other.entryMethod == this.entryMethod);
+          other.entryMethod == this.entryMethod &&
+          other.captureState == this.captureState &&
+          other.captureStartedAt == this.captureStartedAt &&
+          other.captureCompletedAt == this.captureCompletedAt &&
+          other.deviceMetadataJson == this.deviceMetadataJson &&
+          other.consentVersion == this.consentVersion &&
+          other.consentTimestamp == this.consentTimestamp &&
+          other.consentOperatorIdentifier == this.consentOperatorIdentifier &&
+          other.mediaDeletedAt == this.mediaDeletedAt);
 }
 
 class VisitsCompanion extends UpdateCompanion<Visit> {
@@ -969,6 +1267,14 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
   final Value<String?> notes;
   final Value<int?> ownerUserId;
   final Value<String> entryMethod;
+  final Value<String?> captureState;
+  final Value<DateTime?> captureStartedAt;
+  final Value<DateTime?> captureCompletedAt;
+  final Value<String?> deviceMetadataJson;
+  final Value<String?> consentVersion;
+  final Value<DateTime?> consentTimestamp;
+  final Value<String?> consentOperatorIdentifier;
+  final Value<DateTime?> mediaDeletedAt;
   const VisitsCompanion({
     this.id = const Value.absent(),
     this.childId = const Value.absent(),
@@ -981,6 +1287,14 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
     this.notes = const Value.absent(),
     this.ownerUserId = const Value.absent(),
     this.entryMethod = const Value.absent(),
+    this.captureState = const Value.absent(),
+    this.captureStartedAt = const Value.absent(),
+    this.captureCompletedAt = const Value.absent(),
+    this.deviceMetadataJson = const Value.absent(),
+    this.consentVersion = const Value.absent(),
+    this.consentTimestamp = const Value.absent(),
+    this.consentOperatorIdentifier = const Value.absent(),
+    this.mediaDeletedAt = const Value.absent(),
   });
   VisitsCompanion.insert({
     this.id = const Value.absent(),
@@ -994,6 +1308,14 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
     this.notes = const Value.absent(),
     this.ownerUserId = const Value.absent(),
     this.entryMethod = const Value.absent(),
+    this.captureState = const Value.absent(),
+    this.captureStartedAt = const Value.absent(),
+    this.captureCompletedAt = const Value.absent(),
+    this.deviceMetadataJson = const Value.absent(),
+    this.consentVersion = const Value.absent(),
+    this.consentTimestamp = const Value.absent(),
+    this.consentOperatorIdentifier = const Value.absent(),
+    this.mediaDeletedAt = const Value.absent(),
   })  : childId = Value(childId),
         localUuid = Value(localUuid),
         ageMonths = Value(ageMonths);
@@ -1009,6 +1331,14 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
     Expression<String>? notes,
     Expression<int>? ownerUserId,
     Expression<String>? entryMethod,
+    Expression<String>? captureState,
+    Expression<DateTime>? captureStartedAt,
+    Expression<DateTime>? captureCompletedAt,
+    Expression<String>? deviceMetadataJson,
+    Expression<String>? consentVersion,
+    Expression<DateTime>? consentTimestamp,
+    Expression<String>? consentOperatorIdentifier,
+    Expression<DateTime>? mediaDeletedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1022,6 +1352,17 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
       if (notes != null) 'notes': notes,
       if (ownerUserId != null) 'owner_user_id': ownerUserId,
       if (entryMethod != null) 'entry_method': entryMethod,
+      if (captureState != null) 'capture_state': captureState,
+      if (captureStartedAt != null) 'capture_started_at': captureStartedAt,
+      if (captureCompletedAt != null)
+        'capture_completed_at': captureCompletedAt,
+      if (deviceMetadataJson != null)
+        'device_metadata_json': deviceMetadataJson,
+      if (consentVersion != null) 'consent_version': consentVersion,
+      if (consentTimestamp != null) 'consent_timestamp': consentTimestamp,
+      if (consentOperatorIdentifier != null)
+        'consent_operator_identifier': consentOperatorIdentifier,
+      if (mediaDeletedAt != null) 'media_deleted_at': mediaDeletedAt,
     });
   }
 
@@ -1036,7 +1377,15 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
       Value<String?>? backImagePath,
       Value<String?>? notes,
       Value<int?>? ownerUserId,
-      Value<String>? entryMethod}) {
+      Value<String>? entryMethod,
+      Value<String?>? captureState,
+      Value<DateTime?>? captureStartedAt,
+      Value<DateTime?>? captureCompletedAt,
+      Value<String?>? deviceMetadataJson,
+      Value<String?>? consentVersion,
+      Value<DateTime?>? consentTimestamp,
+      Value<String?>? consentOperatorIdentifier,
+      Value<DateTime?>? mediaDeletedAt}) {
     return VisitsCompanion(
       id: id ?? this.id,
       childId: childId ?? this.childId,
@@ -1049,6 +1398,15 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
       notes: notes ?? this.notes,
       ownerUserId: ownerUserId ?? this.ownerUserId,
       entryMethod: entryMethod ?? this.entryMethod,
+      captureState: captureState ?? this.captureState,
+      captureStartedAt: captureStartedAt ?? this.captureStartedAt,
+      captureCompletedAt: captureCompletedAt ?? this.captureCompletedAt,
+      deviceMetadataJson: deviceMetadataJson ?? this.deviceMetadataJson,
+      consentVersion: consentVersion ?? this.consentVersion,
+      consentTimestamp: consentTimestamp ?? this.consentTimestamp,
+      consentOperatorIdentifier:
+          consentOperatorIdentifier ?? this.consentOperatorIdentifier,
+      mediaDeletedAt: mediaDeletedAt ?? this.mediaDeletedAt,
     );
   }
 
@@ -1088,6 +1446,32 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
     if (entryMethod.present) {
       map['entry_method'] = Variable<String>(entryMethod.value);
     }
+    if (captureState.present) {
+      map['capture_state'] = Variable<String>(captureState.value);
+    }
+    if (captureStartedAt.present) {
+      map['capture_started_at'] = Variable<DateTime>(captureStartedAt.value);
+    }
+    if (captureCompletedAt.present) {
+      map['capture_completed_at'] =
+          Variable<DateTime>(captureCompletedAt.value);
+    }
+    if (deviceMetadataJson.present) {
+      map['device_metadata_json'] = Variable<String>(deviceMetadataJson.value);
+    }
+    if (consentVersion.present) {
+      map['consent_version'] = Variable<String>(consentVersion.value);
+    }
+    if (consentTimestamp.present) {
+      map['consent_timestamp'] = Variable<DateTime>(consentTimestamp.value);
+    }
+    if (consentOperatorIdentifier.present) {
+      map['consent_operator_identifier'] =
+          Variable<String>(consentOperatorIdentifier.value);
+    }
+    if (mediaDeletedAt.present) {
+      map['media_deleted_at'] = Variable<DateTime>(mediaDeletedAt.value);
+    }
     return map;
   }
 
@@ -1104,7 +1488,15 @@ class VisitsCompanion extends UpdateCompanion<Visit> {
           ..write('backImagePath: $backImagePath, ')
           ..write('notes: $notes, ')
           ..write('ownerUserId: $ownerUserId, ')
-          ..write('entryMethod: $entryMethod')
+          ..write('entryMethod: $entryMethod, ')
+          ..write('captureState: $captureState, ')
+          ..write('captureStartedAt: $captureStartedAt, ')
+          ..write('captureCompletedAt: $captureCompletedAt, ')
+          ..write('deviceMetadataJson: $deviceMetadataJson, ')
+          ..write('consentVersion: $consentVersion, ')
+          ..write('consentTimestamp: $consentTimestamp, ')
+          ..write('consentOperatorIdentifier: $consentOperatorIdentifier, ')
+          ..write('mediaDeletedAt: $mediaDeletedAt')
           ..write(')'))
         .toString();
   }
@@ -1473,6 +1865,53 @@ class $MeasurementsTable extends Measurements
       requiredDuringInsert: false,
       defaultConstraints: GeneratedColumn.constraintIsAlways(
           'CHECK ("poshan_complete" IN (0, 1))'));
+  static const VerificationMeta _measurementModeMeta =
+      const VerificationMeta('measurementMode');
+  @override
+  late final GeneratedColumn<String> measurementMode = GeneratedColumn<String>(
+      'measurement_mode', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _oedemaMeta = const VerificationMeta('oedema');
+  @override
+  late final GeneratedColumn<String> oedema = GeneratedColumn<String>(
+      'oedema', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _measuredAtMeta =
+      const VerificationMeta('measuredAt');
+  @override
+  late final GeneratedColumn<DateTime> measuredAt = GeneratedColumn<DateTime>(
+      'measured_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _editorUserIdMeta =
+      const VerificationMeta('editorUserId');
+  @override
+  late final GeneratedColumn<int> editorUserId = GeneratedColumn<int>(
+      'editor_user_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _measuredNotesMeta =
+      const VerificationMeta('measuredNotes');
+  @override
+  late final GeneratedColumn<String> measuredNotes = GeneratedColumn<String>(
+      'measured_notes', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _whoAcuteStatusMeta =
+      const VerificationMeta('whoAcuteStatus');
+  @override
+  late final GeneratedColumn<String> whoAcuteStatus = GeneratedColumn<String>(
+      'who_acute_status', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _whoAcuteTriggeredByMeta =
+      const VerificationMeta('whoAcuteTriggeredBy');
+  @override
+  late final GeneratedColumn<String> whoAcuteTriggeredBy =
+      GeneratedColumn<String>('who_acute_triggered_by', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _whoAcuteRationaleMeta =
+      const VerificationMeta('whoAcuteRationale');
+  @override
+  late final GeneratedColumn<String> whoAcuteRationale =
+      GeneratedColumn<String>('who_acute_rationale', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -1530,7 +1969,15 @@ class $MeasurementsTable extends Measurements
         poshanTriggeredBy,
         classificationMethod,
         classificationRationale,
-        poshanComplete
+        poshanComplete,
+        measurementMode,
+        oedema,
+        measuredAt,
+        editorUserId,
+        measuredNotes,
+        whoAcuteStatus,
+        whoAcuteTriggeredBy,
+        whoAcuteRationale
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1865,6 +2312,52 @@ class $MeasurementsTable extends Measurements
           poshanComplete.isAcceptableOrUnknown(
               data['poshan_complete']!, _poshanCompleteMeta));
     }
+    if (data.containsKey('measurement_mode')) {
+      context.handle(
+          _measurementModeMeta,
+          measurementMode.isAcceptableOrUnknown(
+              data['measurement_mode']!, _measurementModeMeta));
+    }
+    if (data.containsKey('oedema')) {
+      context.handle(_oedemaMeta,
+          oedema.isAcceptableOrUnknown(data['oedema']!, _oedemaMeta));
+    }
+    if (data.containsKey('measured_at')) {
+      context.handle(
+          _measuredAtMeta,
+          measuredAt.isAcceptableOrUnknown(
+              data['measured_at']!, _measuredAtMeta));
+    }
+    if (data.containsKey('editor_user_id')) {
+      context.handle(
+          _editorUserIdMeta,
+          editorUserId.isAcceptableOrUnknown(
+              data['editor_user_id']!, _editorUserIdMeta));
+    }
+    if (data.containsKey('measured_notes')) {
+      context.handle(
+          _measuredNotesMeta,
+          measuredNotes.isAcceptableOrUnknown(
+              data['measured_notes']!, _measuredNotesMeta));
+    }
+    if (data.containsKey('who_acute_status')) {
+      context.handle(
+          _whoAcuteStatusMeta,
+          whoAcuteStatus.isAcceptableOrUnknown(
+              data['who_acute_status']!, _whoAcuteStatusMeta));
+    }
+    if (data.containsKey('who_acute_triggered_by')) {
+      context.handle(
+          _whoAcuteTriggeredByMeta,
+          whoAcuteTriggeredBy.isAcceptableOrUnknown(
+              data['who_acute_triggered_by']!, _whoAcuteTriggeredByMeta));
+    }
+    if (data.containsKey('who_acute_rationale')) {
+      context.handle(
+          _whoAcuteRationaleMeta,
+          whoAcuteRationale.isAcceptableOrUnknown(
+              data['who_acute_rationale']!, _whoAcuteRationaleMeta));
+    }
     return context;
   }
 
@@ -1999,6 +2492,23 @@ class $MeasurementsTable extends Measurements
           data['${effectivePrefix}classification_rationale']),
       poshanComplete: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}poshan_complete']),
+      measurementMode: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}measurement_mode']),
+      oedema: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}oedema']),
+      measuredAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}measured_at']),
+      editorUserId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}editor_user_id']),
+      measuredNotes: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}measured_notes']),
+      whoAcuteStatus: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}who_acute_status']),
+      whoAcuteTriggeredBy: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}who_acute_triggered_by']),
+      whoAcuteRationale: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}who_acute_rationale']),
     );
   }
 
@@ -2065,6 +2575,14 @@ class Measurement extends DataClass implements Insertable<Measurement> {
   final String? classificationMethod;
   final String? classificationRationale;
   final bool? poshanComplete;
+  final String? measurementMode;
+  final String? oedema;
+  final DateTime? measuredAt;
+  final int? editorUserId;
+  final String? measuredNotes;
+  final String? whoAcuteStatus;
+  final String? whoAcuteTriggeredBy;
+  final String? whoAcuteRationale;
   const Measurement(
       {required this.id,
       required this.visitId,
@@ -2121,7 +2639,15 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       this.poshanTriggeredBy,
       this.classificationMethod,
       this.classificationRationale,
-      this.poshanComplete});
+      this.poshanComplete,
+      this.measurementMode,
+      this.oedema,
+      this.measuredAt,
+      this.editorUserId,
+      this.measuredNotes,
+      this.whoAcuteStatus,
+      this.whoAcuteTriggeredBy,
+      this.whoAcuteRationale});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -2297,6 +2823,30 @@ class Measurement extends DataClass implements Insertable<Measurement> {
     if (!nullToAbsent || poshanComplete != null) {
       map['poshan_complete'] = Variable<bool>(poshanComplete);
     }
+    if (!nullToAbsent || measurementMode != null) {
+      map['measurement_mode'] = Variable<String>(measurementMode);
+    }
+    if (!nullToAbsent || oedema != null) {
+      map['oedema'] = Variable<String>(oedema);
+    }
+    if (!nullToAbsent || measuredAt != null) {
+      map['measured_at'] = Variable<DateTime>(measuredAt);
+    }
+    if (!nullToAbsent || editorUserId != null) {
+      map['editor_user_id'] = Variable<int>(editorUserId);
+    }
+    if (!nullToAbsent || measuredNotes != null) {
+      map['measured_notes'] = Variable<String>(measuredNotes);
+    }
+    if (!nullToAbsent || whoAcuteStatus != null) {
+      map['who_acute_status'] = Variable<String>(whoAcuteStatus);
+    }
+    if (!nullToAbsent || whoAcuteTriggeredBy != null) {
+      map['who_acute_triggered_by'] = Variable<String>(whoAcuteTriggeredBy);
+    }
+    if (!nullToAbsent || whoAcuteRationale != null) {
+      map['who_acute_rationale'] = Variable<String>(whoAcuteRationale);
+    }
     return map;
   }
 
@@ -2462,6 +3012,29 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       poshanComplete: poshanComplete == null && nullToAbsent
           ? const Value.absent()
           : Value(poshanComplete),
+      measurementMode: measurementMode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(measurementMode),
+      oedema:
+          oedema == null && nullToAbsent ? const Value.absent() : Value(oedema),
+      measuredAt: measuredAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(measuredAt),
+      editorUserId: editorUserId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(editorUserId),
+      measuredNotes: measuredNotes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(measuredNotes),
+      whoAcuteStatus: whoAcuteStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(whoAcuteStatus),
+      whoAcuteTriggeredBy: whoAcuteTriggeredBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(whoAcuteTriggeredBy),
+      whoAcuteRationale: whoAcuteRationale == null && nullToAbsent
+          ? const Value.absent()
+          : Value(whoAcuteRationale),
     );
   }
 
@@ -2547,6 +3120,16 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       classificationRationale:
           serializer.fromJson<String?>(json['classificationRationale']),
       poshanComplete: serializer.fromJson<bool?>(json['poshanComplete']),
+      measurementMode: serializer.fromJson<String?>(json['measurementMode']),
+      oedema: serializer.fromJson<String?>(json['oedema']),
+      measuredAt: serializer.fromJson<DateTime?>(json['measuredAt']),
+      editorUserId: serializer.fromJson<int?>(json['editorUserId']),
+      measuredNotes: serializer.fromJson<String?>(json['measuredNotes']),
+      whoAcuteStatus: serializer.fromJson<String?>(json['whoAcuteStatus']),
+      whoAcuteTriggeredBy:
+          serializer.fromJson<String?>(json['whoAcuteTriggeredBy']),
+      whoAcuteRationale:
+          serializer.fromJson<String?>(json['whoAcuteRationale']),
     );
   }
   @override
@@ -2620,6 +3203,14 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       'classificationRationale':
           serializer.toJson<String?>(classificationRationale),
       'poshanComplete': serializer.toJson<bool?>(poshanComplete),
+      'measurementMode': serializer.toJson<String?>(measurementMode),
+      'oedema': serializer.toJson<String?>(oedema),
+      'measuredAt': serializer.toJson<DateTime?>(measuredAt),
+      'editorUserId': serializer.toJson<int?>(editorUserId),
+      'measuredNotes': serializer.toJson<String?>(measuredNotes),
+      'whoAcuteStatus': serializer.toJson<String?>(whoAcuteStatus),
+      'whoAcuteTriggeredBy': serializer.toJson<String?>(whoAcuteTriggeredBy),
+      'whoAcuteRationale': serializer.toJson<String?>(whoAcuteRationale),
     };
   }
 
@@ -2679,7 +3270,15 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           Value<String?> poshanTriggeredBy = const Value.absent(),
           Value<String?> classificationMethod = const Value.absent(),
           Value<String?> classificationRationale = const Value.absent(),
-          Value<bool?> poshanComplete = const Value.absent()}) =>
+          Value<bool?> poshanComplete = const Value.absent(),
+          Value<String?> measurementMode = const Value.absent(),
+          Value<String?> oedema = const Value.absent(),
+          Value<DateTime?> measuredAt = const Value.absent(),
+          Value<int?> editorUserId = const Value.absent(),
+          Value<String?> measuredNotes = const Value.absent(),
+          Value<String?> whoAcuteStatus = const Value.absent(),
+          Value<String?> whoAcuteTriggeredBy = const Value.absent(),
+          Value<String?> whoAcuteRationale = const Value.absent()}) =>
       Measurement(
         id: id ?? this.id,
         visitId: visitId ?? this.visitId,
@@ -2806,6 +3405,23 @@ class Measurement extends DataClass implements Insertable<Measurement> {
             : this.classificationRationale,
         poshanComplete:
             poshanComplete.present ? poshanComplete.value : this.poshanComplete,
+        measurementMode: measurementMode.present
+            ? measurementMode.value
+            : this.measurementMode,
+        oedema: oedema.present ? oedema.value : this.oedema,
+        measuredAt: measuredAt.present ? measuredAt.value : this.measuredAt,
+        editorUserId:
+            editorUserId.present ? editorUserId.value : this.editorUserId,
+        measuredNotes:
+            measuredNotes.present ? measuredNotes.value : this.measuredNotes,
+        whoAcuteStatus:
+            whoAcuteStatus.present ? whoAcuteStatus.value : this.whoAcuteStatus,
+        whoAcuteTriggeredBy: whoAcuteTriggeredBy.present
+            ? whoAcuteTriggeredBy.value
+            : this.whoAcuteTriggeredBy,
+        whoAcuteRationale: whoAcuteRationale.present
+            ? whoAcuteRationale.value
+            : this.whoAcuteRationale,
       );
   Measurement copyWithCompanion(MeasurementsCompanion data) {
     return Measurement(
@@ -2954,6 +3570,27 @@ class Measurement extends DataClass implements Insertable<Measurement> {
       poshanComplete: data.poshanComplete.present
           ? data.poshanComplete.value
           : this.poshanComplete,
+      measurementMode: data.measurementMode.present
+          ? data.measurementMode.value
+          : this.measurementMode,
+      oedema: data.oedema.present ? data.oedema.value : this.oedema,
+      measuredAt:
+          data.measuredAt.present ? data.measuredAt.value : this.measuredAt,
+      editorUserId: data.editorUserId.present
+          ? data.editorUserId.value
+          : this.editorUserId,
+      measuredNotes: data.measuredNotes.present
+          ? data.measuredNotes.value
+          : this.measuredNotes,
+      whoAcuteStatus: data.whoAcuteStatus.present
+          ? data.whoAcuteStatus.value
+          : this.whoAcuteStatus,
+      whoAcuteTriggeredBy: data.whoAcuteTriggeredBy.present
+          ? data.whoAcuteTriggeredBy.value
+          : this.whoAcuteTriggeredBy,
+      whoAcuteRationale: data.whoAcuteRationale.present
+          ? data.whoAcuteRationale.value
+          : this.whoAcuteRationale,
     );
   }
 
@@ -3015,7 +3652,15 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           ..write('poshanTriggeredBy: $poshanTriggeredBy, ')
           ..write('classificationMethod: $classificationMethod, ')
           ..write('classificationRationale: $classificationRationale, ')
-          ..write('poshanComplete: $poshanComplete')
+          ..write('poshanComplete: $poshanComplete, ')
+          ..write('measurementMode: $measurementMode, ')
+          ..write('oedema: $oedema, ')
+          ..write('measuredAt: $measuredAt, ')
+          ..write('editorUserId: $editorUserId, ')
+          ..write('measuredNotes: $measuredNotes, ')
+          ..write('whoAcuteStatus: $whoAcuteStatus, ')
+          ..write('whoAcuteTriggeredBy: $whoAcuteTriggeredBy, ')
+          ..write('whoAcuteRationale: $whoAcuteRationale')
           ..write(')'))
         .toString();
   }
@@ -3077,7 +3722,15 @@ class Measurement extends DataClass implements Insertable<Measurement> {
         poshanTriggeredBy,
         classificationMethod,
         classificationRationale,
-        poshanComplete
+        poshanComplete,
+        measurementMode,
+        oedema,
+        measuredAt,
+        editorUserId,
+        measuredNotes,
+        whoAcuteStatus,
+        whoAcuteTriggeredBy,
+        whoAcuteRationale
       ]);
   @override
   bool operator ==(Object other) =>
@@ -3138,7 +3791,15 @@ class Measurement extends DataClass implements Insertable<Measurement> {
           other.poshanTriggeredBy == this.poshanTriggeredBy &&
           other.classificationMethod == this.classificationMethod &&
           other.classificationRationale == this.classificationRationale &&
-          other.poshanComplete == this.poshanComplete);
+          other.poshanComplete == this.poshanComplete &&
+          other.measurementMode == this.measurementMode &&
+          other.oedema == this.oedema &&
+          other.measuredAt == this.measuredAt &&
+          other.editorUserId == this.editorUserId &&
+          other.measuredNotes == this.measuredNotes &&
+          other.whoAcuteStatus == this.whoAcuteStatus &&
+          other.whoAcuteTriggeredBy == this.whoAcuteTriggeredBy &&
+          other.whoAcuteRationale == this.whoAcuteRationale);
 }
 
 class MeasurementsCompanion extends UpdateCompanion<Measurement> {
@@ -3198,6 +3859,14 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
   final Value<String?> classificationMethod;
   final Value<String?> classificationRationale;
   final Value<bool?> poshanComplete;
+  final Value<String?> measurementMode;
+  final Value<String?> oedema;
+  final Value<DateTime?> measuredAt;
+  final Value<int?> editorUserId;
+  final Value<String?> measuredNotes;
+  final Value<String?> whoAcuteStatus;
+  final Value<String?> whoAcuteTriggeredBy;
+  final Value<String?> whoAcuteRationale;
   const MeasurementsCompanion({
     this.id = const Value.absent(),
     this.visitId = const Value.absent(),
@@ -3255,6 +3924,14 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     this.classificationMethod = const Value.absent(),
     this.classificationRationale = const Value.absent(),
     this.poshanComplete = const Value.absent(),
+    this.measurementMode = const Value.absent(),
+    this.oedema = const Value.absent(),
+    this.measuredAt = const Value.absent(),
+    this.editorUserId = const Value.absent(),
+    this.measuredNotes = const Value.absent(),
+    this.whoAcuteStatus = const Value.absent(),
+    this.whoAcuteTriggeredBy = const Value.absent(),
+    this.whoAcuteRationale = const Value.absent(),
   });
   MeasurementsCompanion.insert({
     this.id = const Value.absent(),
@@ -3313,6 +3990,14 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     this.classificationMethod = const Value.absent(),
     this.classificationRationale = const Value.absent(),
     this.poshanComplete = const Value.absent(),
+    this.measurementMode = const Value.absent(),
+    this.oedema = const Value.absent(),
+    this.measuredAt = const Value.absent(),
+    this.editorUserId = const Value.absent(),
+    this.measuredNotes = const Value.absent(),
+    this.whoAcuteStatus = const Value.absent(),
+    this.whoAcuteTriggeredBy = const Value.absent(),
+    this.whoAcuteRationale = const Value.absent(),
   }) : visitId = Value(visitId);
   static Insertable<Measurement> custom({
     Expression<int>? id,
@@ -3371,6 +4056,14 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     Expression<String>? classificationMethod,
     Expression<String>? classificationRationale,
     Expression<bool>? poshanComplete,
+    Expression<String>? measurementMode,
+    Expression<String>? oedema,
+    Expression<DateTime>? measuredAt,
+    Expression<int>? editorUserId,
+    Expression<String>? measuredNotes,
+    Expression<String>? whoAcuteStatus,
+    Expression<String>? whoAcuteTriggeredBy,
+    Expression<String>? whoAcuteRationale,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3444,6 +4137,15 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
       if (classificationRationale != null)
         'classification_rationale': classificationRationale,
       if (poshanComplete != null) 'poshan_complete': poshanComplete,
+      if (measurementMode != null) 'measurement_mode': measurementMode,
+      if (oedema != null) 'oedema': oedema,
+      if (measuredAt != null) 'measured_at': measuredAt,
+      if (editorUserId != null) 'editor_user_id': editorUserId,
+      if (measuredNotes != null) 'measured_notes': measuredNotes,
+      if (whoAcuteStatus != null) 'who_acute_status': whoAcuteStatus,
+      if (whoAcuteTriggeredBy != null)
+        'who_acute_triggered_by': whoAcuteTriggeredBy,
+      if (whoAcuteRationale != null) 'who_acute_rationale': whoAcuteRationale,
     });
   }
 
@@ -3503,7 +4205,15 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
       Value<String?>? poshanTriggeredBy,
       Value<String?>? classificationMethod,
       Value<String?>? classificationRationale,
-      Value<bool?>? poshanComplete}) {
+      Value<bool?>? poshanComplete,
+      Value<String?>? measurementMode,
+      Value<String?>? oedema,
+      Value<DateTime?>? measuredAt,
+      Value<int?>? editorUserId,
+      Value<String?>? measuredNotes,
+      Value<String?>? whoAcuteStatus,
+      Value<String?>? whoAcuteTriggeredBy,
+      Value<String?>? whoAcuteRationale}) {
     return MeasurementsCompanion(
       id: id ?? this.id,
       visitId: visitId ?? this.visitId,
@@ -3572,6 +4282,14 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
       classificationRationale:
           classificationRationale ?? this.classificationRationale,
       poshanComplete: poshanComplete ?? this.poshanComplete,
+      measurementMode: measurementMode ?? this.measurementMode,
+      oedema: oedema ?? this.oedema,
+      measuredAt: measuredAt ?? this.measuredAt,
+      editorUserId: editorUserId ?? this.editorUserId,
+      measuredNotes: measuredNotes ?? this.measuredNotes,
+      whoAcuteStatus: whoAcuteStatus ?? this.whoAcuteStatus,
+      whoAcuteTriggeredBy: whoAcuteTriggeredBy ?? this.whoAcuteTriggeredBy,
+      whoAcuteRationale: whoAcuteRationale ?? this.whoAcuteRationale,
     );
   }
 
@@ -3761,6 +4479,31 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
     if (poshanComplete.present) {
       map['poshan_complete'] = Variable<bool>(poshanComplete.value);
     }
+    if (measurementMode.present) {
+      map['measurement_mode'] = Variable<String>(measurementMode.value);
+    }
+    if (oedema.present) {
+      map['oedema'] = Variable<String>(oedema.value);
+    }
+    if (measuredAt.present) {
+      map['measured_at'] = Variable<DateTime>(measuredAt.value);
+    }
+    if (editorUserId.present) {
+      map['editor_user_id'] = Variable<int>(editorUserId.value);
+    }
+    if (measuredNotes.present) {
+      map['measured_notes'] = Variable<String>(measuredNotes.value);
+    }
+    if (whoAcuteStatus.present) {
+      map['who_acute_status'] = Variable<String>(whoAcuteStatus.value);
+    }
+    if (whoAcuteTriggeredBy.present) {
+      map['who_acute_triggered_by'] =
+          Variable<String>(whoAcuteTriggeredBy.value);
+    }
+    if (whoAcuteRationale.present) {
+      map['who_acute_rationale'] = Variable<String>(whoAcuteRationale.value);
+    }
     return map;
   }
 
@@ -3822,7 +4565,15 @@ class MeasurementsCompanion extends UpdateCompanion<Measurement> {
           ..write('poshanTriggeredBy: $poshanTriggeredBy, ')
           ..write('classificationMethod: $classificationMethod, ')
           ..write('classificationRationale: $classificationRationale, ')
-          ..write('poshanComplete: $poshanComplete')
+          ..write('poshanComplete: $poshanComplete, ')
+          ..write('measurementMode: $measurementMode, ')
+          ..write('oedema: $oedema, ')
+          ..write('measuredAt: $measuredAt, ')
+          ..write('editorUserId: $editorUserId, ')
+          ..write('measuredNotes: $measuredNotes, ')
+          ..write('whoAcuteStatus: $whoAcuteStatus, ')
+          ..write('whoAcuteTriggeredBy: $whoAcuteTriggeredBy, ')
+          ..write('whoAcuteRationale: $whoAcuteRationale')
           ..write(')'))
         .toString();
   }
@@ -4267,6 +5018,3656 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
   }
 }
 
+class $CaptureAssetsTable extends CaptureAssets
+    with TableInfo<$CaptureAssetsTable, CaptureAsset> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CaptureAssetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _assetUuidMeta =
+      const VerificationMeta('assetUuid');
+  @override
+  late final GeneratedColumn<String> assetUuid = GeneratedColumn<String>(
+      'asset_uuid', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _visitIdMeta =
+      const VerificationMeta('visitId');
+  @override
+  late final GeneratedColumn<int> visitId = GeneratedColumn<int>(
+      'visit_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES visits (id) ON DELETE CASCADE'));
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+      'role', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _localPathMeta =
+      const VerificationMeta('localPath');
+  @override
+  late final GeneratedColumn<String> localPath = GeneratedColumn<String>(
+      'local_path', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _serverObjectIdMeta =
+      const VerificationMeta('serverObjectId');
+  @override
+  late final GeneratedColumn<String> serverObjectId = GeneratedColumn<String>(
+      'server_object_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _capturedAtMeta =
+      const VerificationMeta('capturedAt');
+  @override
+  late final GeneratedColumn<DateTime> capturedAt = GeneratedColumn<DateTime>(
+      'captured_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _selectedRankMeta =
+      const VerificationMeta('selectedRank');
+  @override
+  late final GeneratedColumn<int> selectedRank = GeneratedColumn<int>(
+      'selected_rank', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _poseScoreMeta =
+      const VerificationMeta('poseScore');
+  @override
+  late final GeneratedColumn<double> poseScore = GeneratedColumn<double>(
+      'pose_score', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _coverageScoreMeta =
+      const VerificationMeta('coverageScore');
+  @override
+  late final GeneratedColumn<double> coverageScore = GeneratedColumn<double>(
+      'coverage_score', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _orientationScoreMeta =
+      const VerificationMeta('orientationScore');
+  @override
+  late final GeneratedColumn<double> orientationScore = GeneratedColumn<double>(
+      'orientation_score', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _sharpnessScoreMeta =
+      const VerificationMeta('sharpnessScore');
+  @override
+  late final GeneratedColumn<double> sharpnessScore = GeneratedColumn<double>(
+      'sharpness_score', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _lightingScoreMeta =
+      const VerificationMeta('lightingScore');
+  @override
+  late final GeneratedColumn<double> lightingScore = GeneratedColumn<double>(
+      'lighting_score', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _overallScoreMeta =
+      const VerificationMeta('overallScore');
+  @override
+  late final GeneratedColumn<double> overallScore = GeneratedColumn<double>(
+      'overall_score', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _qualityVerdictMeta =
+      const VerificationMeta('qualityVerdict');
+  @override
+  late final GeneratedColumn<String> qualityVerdict = GeneratedColumn<String>(
+      'quality_verdict', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _rejectionReasonMeta =
+      const VerificationMeta('rejectionReason');
+  @override
+  late final GeneratedColumn<String> rejectionReason = GeneratedColumn<String>(
+      'rejection_reason', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _qualityThresholdVersionMeta =
+      const VerificationMeta('qualityThresholdVersion');
+  @override
+  late final GeneratedColumn<String> qualityThresholdVersion =
+      GeneratedColumn<String>('quality_threshold_version', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _imageWidthMeta =
+      const VerificationMeta('imageWidth');
+  @override
+  late final GeneratedColumn<int> imageWidth = GeneratedColumn<int>(
+      'image_width', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _imageHeightMeta =
+      const VerificationMeta('imageHeight');
+  @override
+  late final GeneratedColumn<int> imageHeight = GeneratedColumn<int>(
+      'image_height', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _exifOrientationMeta =
+      const VerificationMeta('exifOrientation');
+  @override
+  late final GeneratedColumn<int> exifOrientation = GeneratedColumn<int>(
+      'exif_orientation', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _displayOrientationMeta =
+      const VerificationMeta('displayOrientation');
+  @override
+  late final GeneratedColumn<int> displayOrientation = GeneratedColumn<int>(
+      'display_orientation', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _deviceCameraMetadataJsonMeta =
+      const VerificationMeta('deviceCameraMetadataJson');
+  @override
+  late final GeneratedColumn<String> deviceCameraMetadataJson =
+      GeneratedColumn<String>('device_camera_metadata_json', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _syncStateMeta =
+      const VerificationMeta('syncState');
+  @override
+  late final GeneratedColumn<String> syncState = GeneratedColumn<String>(
+      'sync_state', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('pending'));
+  static const VerificationMeta _serverAcknowledgedAtMeta =
+      const VerificationMeta('serverAcknowledgedAt');
+  @override
+  late final GeneratedColumn<DateTime> serverAcknowledgedAt =
+      GeneratedColumn<DateTime>('server_acknowledged_at', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        assetUuid,
+        visitId,
+        role,
+        localPath,
+        serverObjectId,
+        capturedAt,
+        selectedRank,
+        poseScore,
+        coverageScore,
+        orientationScore,
+        sharpnessScore,
+        lightingScore,
+        overallScore,
+        qualityVerdict,
+        rejectionReason,
+        qualityThresholdVersion,
+        imageWidth,
+        imageHeight,
+        exifOrientation,
+        displayOrientation,
+        deviceCameraMetadataJson,
+        syncState,
+        serverAcknowledgedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'capture_assets';
+  @override
+  VerificationContext validateIntegrity(Insertable<CaptureAsset> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('asset_uuid')) {
+      context.handle(_assetUuidMeta,
+          assetUuid.isAcceptableOrUnknown(data['asset_uuid']!, _assetUuidMeta));
+    } else if (isInserting) {
+      context.missing(_assetUuidMeta);
+    }
+    if (data.containsKey('visit_id')) {
+      context.handle(_visitIdMeta,
+          visitId.isAcceptableOrUnknown(data['visit_id']!, _visitIdMeta));
+    } else if (isInserting) {
+      context.missing(_visitIdMeta);
+    }
+    if (data.containsKey('role')) {
+      context.handle(
+          _roleMeta, role.isAcceptableOrUnknown(data['role']!, _roleMeta));
+    } else if (isInserting) {
+      context.missing(_roleMeta);
+    }
+    if (data.containsKey('local_path')) {
+      context.handle(_localPathMeta,
+          localPath.isAcceptableOrUnknown(data['local_path']!, _localPathMeta));
+    }
+    if (data.containsKey('server_object_id')) {
+      context.handle(
+          _serverObjectIdMeta,
+          serverObjectId.isAcceptableOrUnknown(
+              data['server_object_id']!, _serverObjectIdMeta));
+    }
+    if (data.containsKey('captured_at')) {
+      context.handle(
+          _capturedAtMeta,
+          capturedAt.isAcceptableOrUnknown(
+              data['captured_at']!, _capturedAtMeta));
+    } else if (isInserting) {
+      context.missing(_capturedAtMeta);
+    }
+    if (data.containsKey('selected_rank')) {
+      context.handle(
+          _selectedRankMeta,
+          selectedRank.isAcceptableOrUnknown(
+              data['selected_rank']!, _selectedRankMeta));
+    }
+    if (data.containsKey('pose_score')) {
+      context.handle(_poseScoreMeta,
+          poseScore.isAcceptableOrUnknown(data['pose_score']!, _poseScoreMeta));
+    }
+    if (data.containsKey('coverage_score')) {
+      context.handle(
+          _coverageScoreMeta,
+          coverageScore.isAcceptableOrUnknown(
+              data['coverage_score']!, _coverageScoreMeta));
+    }
+    if (data.containsKey('orientation_score')) {
+      context.handle(
+          _orientationScoreMeta,
+          orientationScore.isAcceptableOrUnknown(
+              data['orientation_score']!, _orientationScoreMeta));
+    }
+    if (data.containsKey('sharpness_score')) {
+      context.handle(
+          _sharpnessScoreMeta,
+          sharpnessScore.isAcceptableOrUnknown(
+              data['sharpness_score']!, _sharpnessScoreMeta));
+    }
+    if (data.containsKey('lighting_score')) {
+      context.handle(
+          _lightingScoreMeta,
+          lightingScore.isAcceptableOrUnknown(
+              data['lighting_score']!, _lightingScoreMeta));
+    }
+    if (data.containsKey('overall_score')) {
+      context.handle(
+          _overallScoreMeta,
+          overallScore.isAcceptableOrUnknown(
+              data['overall_score']!, _overallScoreMeta));
+    }
+    if (data.containsKey('quality_verdict')) {
+      context.handle(
+          _qualityVerdictMeta,
+          qualityVerdict.isAcceptableOrUnknown(
+              data['quality_verdict']!, _qualityVerdictMeta));
+    }
+    if (data.containsKey('rejection_reason')) {
+      context.handle(
+          _rejectionReasonMeta,
+          rejectionReason.isAcceptableOrUnknown(
+              data['rejection_reason']!, _rejectionReasonMeta));
+    }
+    if (data.containsKey('quality_threshold_version')) {
+      context.handle(
+          _qualityThresholdVersionMeta,
+          qualityThresholdVersion.isAcceptableOrUnknown(
+              data['quality_threshold_version']!,
+              _qualityThresholdVersionMeta));
+    }
+    if (data.containsKey('image_width')) {
+      context.handle(
+          _imageWidthMeta,
+          imageWidth.isAcceptableOrUnknown(
+              data['image_width']!, _imageWidthMeta));
+    }
+    if (data.containsKey('image_height')) {
+      context.handle(
+          _imageHeightMeta,
+          imageHeight.isAcceptableOrUnknown(
+              data['image_height']!, _imageHeightMeta));
+    }
+    if (data.containsKey('exif_orientation')) {
+      context.handle(
+          _exifOrientationMeta,
+          exifOrientation.isAcceptableOrUnknown(
+              data['exif_orientation']!, _exifOrientationMeta));
+    }
+    if (data.containsKey('display_orientation')) {
+      context.handle(
+          _displayOrientationMeta,
+          displayOrientation.isAcceptableOrUnknown(
+              data['display_orientation']!, _displayOrientationMeta));
+    }
+    if (data.containsKey('device_camera_metadata_json')) {
+      context.handle(
+          _deviceCameraMetadataJsonMeta,
+          deviceCameraMetadataJson.isAcceptableOrUnknown(
+              data['device_camera_metadata_json']!,
+              _deviceCameraMetadataJsonMeta));
+    }
+    if (data.containsKey('sync_state')) {
+      context.handle(_syncStateMeta,
+          syncState.isAcceptableOrUnknown(data['sync_state']!, _syncStateMeta));
+    }
+    if (data.containsKey('server_acknowledged_at')) {
+      context.handle(
+          _serverAcknowledgedAtMeta,
+          serverAcknowledgedAt.isAcceptableOrUnknown(
+              data['server_acknowledged_at']!, _serverAcknowledgedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CaptureAsset map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CaptureAsset(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      assetUuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}asset_uuid'])!,
+      visitId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}visit_id'])!,
+      role: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}role'])!,
+      localPath: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}local_path']),
+      serverObjectId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}server_object_id']),
+      capturedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}captured_at'])!,
+      selectedRank: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}selected_rank']),
+      poseScore: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}pose_score']),
+      coverageScore: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}coverage_score']),
+      orientationScore: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}orientation_score']),
+      sharpnessScore: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}sharpness_score']),
+      lightingScore: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}lighting_score']),
+      overallScore: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}overall_score']),
+      qualityVerdict: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}quality_verdict']),
+      rejectionReason: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}rejection_reason']),
+      qualityThresholdVersion: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}quality_threshold_version']),
+      imageWidth: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}image_width']),
+      imageHeight: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}image_height']),
+      exifOrientation: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}exif_orientation']),
+      displayOrientation: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}display_orientation']),
+      deviceCameraMetadataJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}device_camera_metadata_json']),
+      syncState: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sync_state'])!,
+      serverAcknowledgedAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}server_acknowledged_at']),
+    );
+  }
+
+  @override
+  $CaptureAssetsTable createAlias(String alias) {
+    return $CaptureAssetsTable(attachedDatabase, alias);
+  }
+}
+
+class CaptureAsset extends DataClass implements Insertable<CaptureAsset> {
+  final int id;
+  final String assetUuid;
+  final int visitId;
+  final String role;
+  final String? localPath;
+  final String? serverObjectId;
+  final DateTime capturedAt;
+  final int? selectedRank;
+  final double? poseScore;
+  final double? coverageScore;
+  final double? orientationScore;
+  final double? sharpnessScore;
+  final double? lightingScore;
+  final double? overallScore;
+  final String? qualityVerdict;
+  final String? rejectionReason;
+  final String? qualityThresholdVersion;
+  final int? imageWidth;
+  final int? imageHeight;
+  final int? exifOrientation;
+  final int? displayOrientation;
+  final String? deviceCameraMetadataJson;
+  final String syncState;
+  final DateTime? serverAcknowledgedAt;
+  const CaptureAsset(
+      {required this.id,
+      required this.assetUuid,
+      required this.visitId,
+      required this.role,
+      this.localPath,
+      this.serverObjectId,
+      required this.capturedAt,
+      this.selectedRank,
+      this.poseScore,
+      this.coverageScore,
+      this.orientationScore,
+      this.sharpnessScore,
+      this.lightingScore,
+      this.overallScore,
+      this.qualityVerdict,
+      this.rejectionReason,
+      this.qualityThresholdVersion,
+      this.imageWidth,
+      this.imageHeight,
+      this.exifOrientation,
+      this.displayOrientation,
+      this.deviceCameraMetadataJson,
+      required this.syncState,
+      this.serverAcknowledgedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['asset_uuid'] = Variable<String>(assetUuid);
+    map['visit_id'] = Variable<int>(visitId);
+    map['role'] = Variable<String>(role);
+    if (!nullToAbsent || localPath != null) {
+      map['local_path'] = Variable<String>(localPath);
+    }
+    if (!nullToAbsent || serverObjectId != null) {
+      map['server_object_id'] = Variable<String>(serverObjectId);
+    }
+    map['captured_at'] = Variable<DateTime>(capturedAt);
+    if (!nullToAbsent || selectedRank != null) {
+      map['selected_rank'] = Variable<int>(selectedRank);
+    }
+    if (!nullToAbsent || poseScore != null) {
+      map['pose_score'] = Variable<double>(poseScore);
+    }
+    if (!nullToAbsent || coverageScore != null) {
+      map['coverage_score'] = Variable<double>(coverageScore);
+    }
+    if (!nullToAbsent || orientationScore != null) {
+      map['orientation_score'] = Variable<double>(orientationScore);
+    }
+    if (!nullToAbsent || sharpnessScore != null) {
+      map['sharpness_score'] = Variable<double>(sharpnessScore);
+    }
+    if (!nullToAbsent || lightingScore != null) {
+      map['lighting_score'] = Variable<double>(lightingScore);
+    }
+    if (!nullToAbsent || overallScore != null) {
+      map['overall_score'] = Variable<double>(overallScore);
+    }
+    if (!nullToAbsent || qualityVerdict != null) {
+      map['quality_verdict'] = Variable<String>(qualityVerdict);
+    }
+    if (!nullToAbsent || rejectionReason != null) {
+      map['rejection_reason'] = Variable<String>(rejectionReason);
+    }
+    if (!nullToAbsent || qualityThresholdVersion != null) {
+      map['quality_threshold_version'] =
+          Variable<String>(qualityThresholdVersion);
+    }
+    if (!nullToAbsent || imageWidth != null) {
+      map['image_width'] = Variable<int>(imageWidth);
+    }
+    if (!nullToAbsent || imageHeight != null) {
+      map['image_height'] = Variable<int>(imageHeight);
+    }
+    if (!nullToAbsent || exifOrientation != null) {
+      map['exif_orientation'] = Variable<int>(exifOrientation);
+    }
+    if (!nullToAbsent || displayOrientation != null) {
+      map['display_orientation'] = Variable<int>(displayOrientation);
+    }
+    if (!nullToAbsent || deviceCameraMetadataJson != null) {
+      map['device_camera_metadata_json'] =
+          Variable<String>(deviceCameraMetadataJson);
+    }
+    map['sync_state'] = Variable<String>(syncState);
+    if (!nullToAbsent || serverAcknowledgedAt != null) {
+      map['server_acknowledged_at'] = Variable<DateTime>(serverAcknowledgedAt);
+    }
+    return map;
+  }
+
+  CaptureAssetsCompanion toCompanion(bool nullToAbsent) {
+    return CaptureAssetsCompanion(
+      id: Value(id),
+      assetUuid: Value(assetUuid),
+      visitId: Value(visitId),
+      role: Value(role),
+      localPath: localPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(localPath),
+      serverObjectId: serverObjectId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverObjectId),
+      capturedAt: Value(capturedAt),
+      selectedRank: selectedRank == null && nullToAbsent
+          ? const Value.absent()
+          : Value(selectedRank),
+      poseScore: poseScore == null && nullToAbsent
+          ? const Value.absent()
+          : Value(poseScore),
+      coverageScore: coverageScore == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverageScore),
+      orientationScore: orientationScore == null && nullToAbsent
+          ? const Value.absent()
+          : Value(orientationScore),
+      sharpnessScore: sharpnessScore == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sharpnessScore),
+      lightingScore: lightingScore == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lightingScore),
+      overallScore: overallScore == null && nullToAbsent
+          ? const Value.absent()
+          : Value(overallScore),
+      qualityVerdict: qualityVerdict == null && nullToAbsent
+          ? const Value.absent()
+          : Value(qualityVerdict),
+      rejectionReason: rejectionReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rejectionReason),
+      qualityThresholdVersion: qualityThresholdVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(qualityThresholdVersion),
+      imageWidth: imageWidth == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imageWidth),
+      imageHeight: imageHeight == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imageHeight),
+      exifOrientation: exifOrientation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(exifOrientation),
+      displayOrientation: displayOrientation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(displayOrientation),
+      deviceCameraMetadataJson: deviceCameraMetadataJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deviceCameraMetadataJson),
+      syncState: Value(syncState),
+      serverAcknowledgedAt: serverAcknowledgedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverAcknowledgedAt),
+    );
+  }
+
+  factory CaptureAsset.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CaptureAsset(
+      id: serializer.fromJson<int>(json['id']),
+      assetUuid: serializer.fromJson<String>(json['assetUuid']),
+      visitId: serializer.fromJson<int>(json['visitId']),
+      role: serializer.fromJson<String>(json['role']),
+      localPath: serializer.fromJson<String?>(json['localPath']),
+      serverObjectId: serializer.fromJson<String?>(json['serverObjectId']),
+      capturedAt: serializer.fromJson<DateTime>(json['capturedAt']),
+      selectedRank: serializer.fromJson<int?>(json['selectedRank']),
+      poseScore: serializer.fromJson<double?>(json['poseScore']),
+      coverageScore: serializer.fromJson<double?>(json['coverageScore']),
+      orientationScore: serializer.fromJson<double?>(json['orientationScore']),
+      sharpnessScore: serializer.fromJson<double?>(json['sharpnessScore']),
+      lightingScore: serializer.fromJson<double?>(json['lightingScore']),
+      overallScore: serializer.fromJson<double?>(json['overallScore']),
+      qualityVerdict: serializer.fromJson<String?>(json['qualityVerdict']),
+      rejectionReason: serializer.fromJson<String?>(json['rejectionReason']),
+      qualityThresholdVersion:
+          serializer.fromJson<String?>(json['qualityThresholdVersion']),
+      imageWidth: serializer.fromJson<int?>(json['imageWidth']),
+      imageHeight: serializer.fromJson<int?>(json['imageHeight']),
+      exifOrientation: serializer.fromJson<int?>(json['exifOrientation']),
+      displayOrientation: serializer.fromJson<int?>(json['displayOrientation']),
+      deviceCameraMetadataJson:
+          serializer.fromJson<String?>(json['deviceCameraMetadataJson']),
+      syncState: serializer.fromJson<String>(json['syncState']),
+      serverAcknowledgedAt:
+          serializer.fromJson<DateTime?>(json['serverAcknowledgedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'assetUuid': serializer.toJson<String>(assetUuid),
+      'visitId': serializer.toJson<int>(visitId),
+      'role': serializer.toJson<String>(role),
+      'localPath': serializer.toJson<String?>(localPath),
+      'serverObjectId': serializer.toJson<String?>(serverObjectId),
+      'capturedAt': serializer.toJson<DateTime>(capturedAt),
+      'selectedRank': serializer.toJson<int?>(selectedRank),
+      'poseScore': serializer.toJson<double?>(poseScore),
+      'coverageScore': serializer.toJson<double?>(coverageScore),
+      'orientationScore': serializer.toJson<double?>(orientationScore),
+      'sharpnessScore': serializer.toJson<double?>(sharpnessScore),
+      'lightingScore': serializer.toJson<double?>(lightingScore),
+      'overallScore': serializer.toJson<double?>(overallScore),
+      'qualityVerdict': serializer.toJson<String?>(qualityVerdict),
+      'rejectionReason': serializer.toJson<String?>(rejectionReason),
+      'qualityThresholdVersion':
+          serializer.toJson<String?>(qualityThresholdVersion),
+      'imageWidth': serializer.toJson<int?>(imageWidth),
+      'imageHeight': serializer.toJson<int?>(imageHeight),
+      'exifOrientation': serializer.toJson<int?>(exifOrientation),
+      'displayOrientation': serializer.toJson<int?>(displayOrientation),
+      'deviceCameraMetadataJson':
+          serializer.toJson<String?>(deviceCameraMetadataJson),
+      'syncState': serializer.toJson<String>(syncState),
+      'serverAcknowledgedAt':
+          serializer.toJson<DateTime?>(serverAcknowledgedAt),
+    };
+  }
+
+  CaptureAsset copyWith(
+          {int? id,
+          String? assetUuid,
+          int? visitId,
+          String? role,
+          Value<String?> localPath = const Value.absent(),
+          Value<String?> serverObjectId = const Value.absent(),
+          DateTime? capturedAt,
+          Value<int?> selectedRank = const Value.absent(),
+          Value<double?> poseScore = const Value.absent(),
+          Value<double?> coverageScore = const Value.absent(),
+          Value<double?> orientationScore = const Value.absent(),
+          Value<double?> sharpnessScore = const Value.absent(),
+          Value<double?> lightingScore = const Value.absent(),
+          Value<double?> overallScore = const Value.absent(),
+          Value<String?> qualityVerdict = const Value.absent(),
+          Value<String?> rejectionReason = const Value.absent(),
+          Value<String?> qualityThresholdVersion = const Value.absent(),
+          Value<int?> imageWidth = const Value.absent(),
+          Value<int?> imageHeight = const Value.absent(),
+          Value<int?> exifOrientation = const Value.absent(),
+          Value<int?> displayOrientation = const Value.absent(),
+          Value<String?> deviceCameraMetadataJson = const Value.absent(),
+          String? syncState,
+          Value<DateTime?> serverAcknowledgedAt = const Value.absent()}) =>
+      CaptureAsset(
+        id: id ?? this.id,
+        assetUuid: assetUuid ?? this.assetUuid,
+        visitId: visitId ?? this.visitId,
+        role: role ?? this.role,
+        localPath: localPath.present ? localPath.value : this.localPath,
+        serverObjectId:
+            serverObjectId.present ? serverObjectId.value : this.serverObjectId,
+        capturedAt: capturedAt ?? this.capturedAt,
+        selectedRank:
+            selectedRank.present ? selectedRank.value : this.selectedRank,
+        poseScore: poseScore.present ? poseScore.value : this.poseScore,
+        coverageScore:
+            coverageScore.present ? coverageScore.value : this.coverageScore,
+        orientationScore: orientationScore.present
+            ? orientationScore.value
+            : this.orientationScore,
+        sharpnessScore:
+            sharpnessScore.present ? sharpnessScore.value : this.sharpnessScore,
+        lightingScore:
+            lightingScore.present ? lightingScore.value : this.lightingScore,
+        overallScore:
+            overallScore.present ? overallScore.value : this.overallScore,
+        qualityVerdict:
+            qualityVerdict.present ? qualityVerdict.value : this.qualityVerdict,
+        rejectionReason: rejectionReason.present
+            ? rejectionReason.value
+            : this.rejectionReason,
+        qualityThresholdVersion: qualityThresholdVersion.present
+            ? qualityThresholdVersion.value
+            : this.qualityThresholdVersion,
+        imageWidth: imageWidth.present ? imageWidth.value : this.imageWidth,
+        imageHeight: imageHeight.present ? imageHeight.value : this.imageHeight,
+        exifOrientation: exifOrientation.present
+            ? exifOrientation.value
+            : this.exifOrientation,
+        displayOrientation: displayOrientation.present
+            ? displayOrientation.value
+            : this.displayOrientation,
+        deviceCameraMetadataJson: deviceCameraMetadataJson.present
+            ? deviceCameraMetadataJson.value
+            : this.deviceCameraMetadataJson,
+        syncState: syncState ?? this.syncState,
+        serverAcknowledgedAt: serverAcknowledgedAt.present
+            ? serverAcknowledgedAt.value
+            : this.serverAcknowledgedAt,
+      );
+  CaptureAsset copyWithCompanion(CaptureAssetsCompanion data) {
+    return CaptureAsset(
+      id: data.id.present ? data.id.value : this.id,
+      assetUuid: data.assetUuid.present ? data.assetUuid.value : this.assetUuid,
+      visitId: data.visitId.present ? data.visitId.value : this.visitId,
+      role: data.role.present ? data.role.value : this.role,
+      localPath: data.localPath.present ? data.localPath.value : this.localPath,
+      serverObjectId: data.serverObjectId.present
+          ? data.serverObjectId.value
+          : this.serverObjectId,
+      capturedAt:
+          data.capturedAt.present ? data.capturedAt.value : this.capturedAt,
+      selectedRank: data.selectedRank.present
+          ? data.selectedRank.value
+          : this.selectedRank,
+      poseScore: data.poseScore.present ? data.poseScore.value : this.poseScore,
+      coverageScore: data.coverageScore.present
+          ? data.coverageScore.value
+          : this.coverageScore,
+      orientationScore: data.orientationScore.present
+          ? data.orientationScore.value
+          : this.orientationScore,
+      sharpnessScore: data.sharpnessScore.present
+          ? data.sharpnessScore.value
+          : this.sharpnessScore,
+      lightingScore: data.lightingScore.present
+          ? data.lightingScore.value
+          : this.lightingScore,
+      overallScore: data.overallScore.present
+          ? data.overallScore.value
+          : this.overallScore,
+      qualityVerdict: data.qualityVerdict.present
+          ? data.qualityVerdict.value
+          : this.qualityVerdict,
+      rejectionReason: data.rejectionReason.present
+          ? data.rejectionReason.value
+          : this.rejectionReason,
+      qualityThresholdVersion: data.qualityThresholdVersion.present
+          ? data.qualityThresholdVersion.value
+          : this.qualityThresholdVersion,
+      imageWidth:
+          data.imageWidth.present ? data.imageWidth.value : this.imageWidth,
+      imageHeight:
+          data.imageHeight.present ? data.imageHeight.value : this.imageHeight,
+      exifOrientation: data.exifOrientation.present
+          ? data.exifOrientation.value
+          : this.exifOrientation,
+      displayOrientation: data.displayOrientation.present
+          ? data.displayOrientation.value
+          : this.displayOrientation,
+      deviceCameraMetadataJson: data.deviceCameraMetadataJson.present
+          ? data.deviceCameraMetadataJson.value
+          : this.deviceCameraMetadataJson,
+      syncState: data.syncState.present ? data.syncState.value : this.syncState,
+      serverAcknowledgedAt: data.serverAcknowledgedAt.present
+          ? data.serverAcknowledgedAt.value
+          : this.serverAcknowledgedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CaptureAsset(')
+          ..write('id: $id, ')
+          ..write('assetUuid: $assetUuid, ')
+          ..write('visitId: $visitId, ')
+          ..write('role: $role, ')
+          ..write('localPath: $localPath, ')
+          ..write('serverObjectId: $serverObjectId, ')
+          ..write('capturedAt: $capturedAt, ')
+          ..write('selectedRank: $selectedRank, ')
+          ..write('poseScore: $poseScore, ')
+          ..write('coverageScore: $coverageScore, ')
+          ..write('orientationScore: $orientationScore, ')
+          ..write('sharpnessScore: $sharpnessScore, ')
+          ..write('lightingScore: $lightingScore, ')
+          ..write('overallScore: $overallScore, ')
+          ..write('qualityVerdict: $qualityVerdict, ')
+          ..write('rejectionReason: $rejectionReason, ')
+          ..write('qualityThresholdVersion: $qualityThresholdVersion, ')
+          ..write('imageWidth: $imageWidth, ')
+          ..write('imageHeight: $imageHeight, ')
+          ..write('exifOrientation: $exifOrientation, ')
+          ..write('displayOrientation: $displayOrientation, ')
+          ..write('deviceCameraMetadataJson: $deviceCameraMetadataJson, ')
+          ..write('syncState: $syncState, ')
+          ..write('serverAcknowledgedAt: $serverAcknowledgedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+        id,
+        assetUuid,
+        visitId,
+        role,
+        localPath,
+        serverObjectId,
+        capturedAt,
+        selectedRank,
+        poseScore,
+        coverageScore,
+        orientationScore,
+        sharpnessScore,
+        lightingScore,
+        overallScore,
+        qualityVerdict,
+        rejectionReason,
+        qualityThresholdVersion,
+        imageWidth,
+        imageHeight,
+        exifOrientation,
+        displayOrientation,
+        deviceCameraMetadataJson,
+        syncState,
+        serverAcknowledgedAt
+      ]);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CaptureAsset &&
+          other.id == this.id &&
+          other.assetUuid == this.assetUuid &&
+          other.visitId == this.visitId &&
+          other.role == this.role &&
+          other.localPath == this.localPath &&
+          other.serverObjectId == this.serverObjectId &&
+          other.capturedAt == this.capturedAt &&
+          other.selectedRank == this.selectedRank &&
+          other.poseScore == this.poseScore &&
+          other.coverageScore == this.coverageScore &&
+          other.orientationScore == this.orientationScore &&
+          other.sharpnessScore == this.sharpnessScore &&
+          other.lightingScore == this.lightingScore &&
+          other.overallScore == this.overallScore &&
+          other.qualityVerdict == this.qualityVerdict &&
+          other.rejectionReason == this.rejectionReason &&
+          other.qualityThresholdVersion == this.qualityThresholdVersion &&
+          other.imageWidth == this.imageWidth &&
+          other.imageHeight == this.imageHeight &&
+          other.exifOrientation == this.exifOrientation &&
+          other.displayOrientation == this.displayOrientation &&
+          other.deviceCameraMetadataJson == this.deviceCameraMetadataJson &&
+          other.syncState == this.syncState &&
+          other.serverAcknowledgedAt == this.serverAcknowledgedAt);
+}
+
+class CaptureAssetsCompanion extends UpdateCompanion<CaptureAsset> {
+  final Value<int> id;
+  final Value<String> assetUuid;
+  final Value<int> visitId;
+  final Value<String> role;
+  final Value<String?> localPath;
+  final Value<String?> serverObjectId;
+  final Value<DateTime> capturedAt;
+  final Value<int?> selectedRank;
+  final Value<double?> poseScore;
+  final Value<double?> coverageScore;
+  final Value<double?> orientationScore;
+  final Value<double?> sharpnessScore;
+  final Value<double?> lightingScore;
+  final Value<double?> overallScore;
+  final Value<String?> qualityVerdict;
+  final Value<String?> rejectionReason;
+  final Value<String?> qualityThresholdVersion;
+  final Value<int?> imageWidth;
+  final Value<int?> imageHeight;
+  final Value<int?> exifOrientation;
+  final Value<int?> displayOrientation;
+  final Value<String?> deviceCameraMetadataJson;
+  final Value<String> syncState;
+  final Value<DateTime?> serverAcknowledgedAt;
+  const CaptureAssetsCompanion({
+    this.id = const Value.absent(),
+    this.assetUuid = const Value.absent(),
+    this.visitId = const Value.absent(),
+    this.role = const Value.absent(),
+    this.localPath = const Value.absent(),
+    this.serverObjectId = const Value.absent(),
+    this.capturedAt = const Value.absent(),
+    this.selectedRank = const Value.absent(),
+    this.poseScore = const Value.absent(),
+    this.coverageScore = const Value.absent(),
+    this.orientationScore = const Value.absent(),
+    this.sharpnessScore = const Value.absent(),
+    this.lightingScore = const Value.absent(),
+    this.overallScore = const Value.absent(),
+    this.qualityVerdict = const Value.absent(),
+    this.rejectionReason = const Value.absent(),
+    this.qualityThresholdVersion = const Value.absent(),
+    this.imageWidth = const Value.absent(),
+    this.imageHeight = const Value.absent(),
+    this.exifOrientation = const Value.absent(),
+    this.displayOrientation = const Value.absent(),
+    this.deviceCameraMetadataJson = const Value.absent(),
+    this.syncState = const Value.absent(),
+    this.serverAcknowledgedAt = const Value.absent(),
+  });
+  CaptureAssetsCompanion.insert({
+    this.id = const Value.absent(),
+    required String assetUuid,
+    required int visitId,
+    required String role,
+    this.localPath = const Value.absent(),
+    this.serverObjectId = const Value.absent(),
+    required DateTime capturedAt,
+    this.selectedRank = const Value.absent(),
+    this.poseScore = const Value.absent(),
+    this.coverageScore = const Value.absent(),
+    this.orientationScore = const Value.absent(),
+    this.sharpnessScore = const Value.absent(),
+    this.lightingScore = const Value.absent(),
+    this.overallScore = const Value.absent(),
+    this.qualityVerdict = const Value.absent(),
+    this.rejectionReason = const Value.absent(),
+    this.qualityThresholdVersion = const Value.absent(),
+    this.imageWidth = const Value.absent(),
+    this.imageHeight = const Value.absent(),
+    this.exifOrientation = const Value.absent(),
+    this.displayOrientation = const Value.absent(),
+    this.deviceCameraMetadataJson = const Value.absent(),
+    this.syncState = const Value.absent(),
+    this.serverAcknowledgedAt = const Value.absent(),
+  })  : assetUuid = Value(assetUuid),
+        visitId = Value(visitId),
+        role = Value(role),
+        capturedAt = Value(capturedAt);
+  static Insertable<CaptureAsset> custom({
+    Expression<int>? id,
+    Expression<String>? assetUuid,
+    Expression<int>? visitId,
+    Expression<String>? role,
+    Expression<String>? localPath,
+    Expression<String>? serverObjectId,
+    Expression<DateTime>? capturedAt,
+    Expression<int>? selectedRank,
+    Expression<double>? poseScore,
+    Expression<double>? coverageScore,
+    Expression<double>? orientationScore,
+    Expression<double>? sharpnessScore,
+    Expression<double>? lightingScore,
+    Expression<double>? overallScore,
+    Expression<String>? qualityVerdict,
+    Expression<String>? rejectionReason,
+    Expression<String>? qualityThresholdVersion,
+    Expression<int>? imageWidth,
+    Expression<int>? imageHeight,
+    Expression<int>? exifOrientation,
+    Expression<int>? displayOrientation,
+    Expression<String>? deviceCameraMetadataJson,
+    Expression<String>? syncState,
+    Expression<DateTime>? serverAcknowledgedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (assetUuid != null) 'asset_uuid': assetUuid,
+      if (visitId != null) 'visit_id': visitId,
+      if (role != null) 'role': role,
+      if (localPath != null) 'local_path': localPath,
+      if (serverObjectId != null) 'server_object_id': serverObjectId,
+      if (capturedAt != null) 'captured_at': capturedAt,
+      if (selectedRank != null) 'selected_rank': selectedRank,
+      if (poseScore != null) 'pose_score': poseScore,
+      if (coverageScore != null) 'coverage_score': coverageScore,
+      if (orientationScore != null) 'orientation_score': orientationScore,
+      if (sharpnessScore != null) 'sharpness_score': sharpnessScore,
+      if (lightingScore != null) 'lighting_score': lightingScore,
+      if (overallScore != null) 'overall_score': overallScore,
+      if (qualityVerdict != null) 'quality_verdict': qualityVerdict,
+      if (rejectionReason != null) 'rejection_reason': rejectionReason,
+      if (qualityThresholdVersion != null)
+        'quality_threshold_version': qualityThresholdVersion,
+      if (imageWidth != null) 'image_width': imageWidth,
+      if (imageHeight != null) 'image_height': imageHeight,
+      if (exifOrientation != null) 'exif_orientation': exifOrientation,
+      if (displayOrientation != null) 'display_orientation': displayOrientation,
+      if (deviceCameraMetadataJson != null)
+        'device_camera_metadata_json': deviceCameraMetadataJson,
+      if (syncState != null) 'sync_state': syncState,
+      if (serverAcknowledgedAt != null)
+        'server_acknowledged_at': serverAcknowledgedAt,
+    });
+  }
+
+  CaptureAssetsCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? assetUuid,
+      Value<int>? visitId,
+      Value<String>? role,
+      Value<String?>? localPath,
+      Value<String?>? serverObjectId,
+      Value<DateTime>? capturedAt,
+      Value<int?>? selectedRank,
+      Value<double?>? poseScore,
+      Value<double?>? coverageScore,
+      Value<double?>? orientationScore,
+      Value<double?>? sharpnessScore,
+      Value<double?>? lightingScore,
+      Value<double?>? overallScore,
+      Value<String?>? qualityVerdict,
+      Value<String?>? rejectionReason,
+      Value<String?>? qualityThresholdVersion,
+      Value<int?>? imageWidth,
+      Value<int?>? imageHeight,
+      Value<int?>? exifOrientation,
+      Value<int?>? displayOrientation,
+      Value<String?>? deviceCameraMetadataJson,
+      Value<String>? syncState,
+      Value<DateTime?>? serverAcknowledgedAt}) {
+    return CaptureAssetsCompanion(
+      id: id ?? this.id,
+      assetUuid: assetUuid ?? this.assetUuid,
+      visitId: visitId ?? this.visitId,
+      role: role ?? this.role,
+      localPath: localPath ?? this.localPath,
+      serverObjectId: serverObjectId ?? this.serverObjectId,
+      capturedAt: capturedAt ?? this.capturedAt,
+      selectedRank: selectedRank ?? this.selectedRank,
+      poseScore: poseScore ?? this.poseScore,
+      coverageScore: coverageScore ?? this.coverageScore,
+      orientationScore: orientationScore ?? this.orientationScore,
+      sharpnessScore: sharpnessScore ?? this.sharpnessScore,
+      lightingScore: lightingScore ?? this.lightingScore,
+      overallScore: overallScore ?? this.overallScore,
+      qualityVerdict: qualityVerdict ?? this.qualityVerdict,
+      rejectionReason: rejectionReason ?? this.rejectionReason,
+      qualityThresholdVersion:
+          qualityThresholdVersion ?? this.qualityThresholdVersion,
+      imageWidth: imageWidth ?? this.imageWidth,
+      imageHeight: imageHeight ?? this.imageHeight,
+      exifOrientation: exifOrientation ?? this.exifOrientation,
+      displayOrientation: displayOrientation ?? this.displayOrientation,
+      deviceCameraMetadataJson:
+          deviceCameraMetadataJson ?? this.deviceCameraMetadataJson,
+      syncState: syncState ?? this.syncState,
+      serverAcknowledgedAt: serverAcknowledgedAt ?? this.serverAcknowledgedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (assetUuid.present) {
+      map['asset_uuid'] = Variable<String>(assetUuid.value);
+    }
+    if (visitId.present) {
+      map['visit_id'] = Variable<int>(visitId.value);
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (localPath.present) {
+      map['local_path'] = Variable<String>(localPath.value);
+    }
+    if (serverObjectId.present) {
+      map['server_object_id'] = Variable<String>(serverObjectId.value);
+    }
+    if (capturedAt.present) {
+      map['captured_at'] = Variable<DateTime>(capturedAt.value);
+    }
+    if (selectedRank.present) {
+      map['selected_rank'] = Variable<int>(selectedRank.value);
+    }
+    if (poseScore.present) {
+      map['pose_score'] = Variable<double>(poseScore.value);
+    }
+    if (coverageScore.present) {
+      map['coverage_score'] = Variable<double>(coverageScore.value);
+    }
+    if (orientationScore.present) {
+      map['orientation_score'] = Variable<double>(orientationScore.value);
+    }
+    if (sharpnessScore.present) {
+      map['sharpness_score'] = Variable<double>(sharpnessScore.value);
+    }
+    if (lightingScore.present) {
+      map['lighting_score'] = Variable<double>(lightingScore.value);
+    }
+    if (overallScore.present) {
+      map['overall_score'] = Variable<double>(overallScore.value);
+    }
+    if (qualityVerdict.present) {
+      map['quality_verdict'] = Variable<String>(qualityVerdict.value);
+    }
+    if (rejectionReason.present) {
+      map['rejection_reason'] = Variable<String>(rejectionReason.value);
+    }
+    if (qualityThresholdVersion.present) {
+      map['quality_threshold_version'] =
+          Variable<String>(qualityThresholdVersion.value);
+    }
+    if (imageWidth.present) {
+      map['image_width'] = Variable<int>(imageWidth.value);
+    }
+    if (imageHeight.present) {
+      map['image_height'] = Variable<int>(imageHeight.value);
+    }
+    if (exifOrientation.present) {
+      map['exif_orientation'] = Variable<int>(exifOrientation.value);
+    }
+    if (displayOrientation.present) {
+      map['display_orientation'] = Variable<int>(displayOrientation.value);
+    }
+    if (deviceCameraMetadataJson.present) {
+      map['device_camera_metadata_json'] =
+          Variable<String>(deviceCameraMetadataJson.value);
+    }
+    if (syncState.present) {
+      map['sync_state'] = Variable<String>(syncState.value);
+    }
+    if (serverAcknowledgedAt.present) {
+      map['server_acknowledged_at'] =
+          Variable<DateTime>(serverAcknowledgedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CaptureAssetsCompanion(')
+          ..write('id: $id, ')
+          ..write('assetUuid: $assetUuid, ')
+          ..write('visitId: $visitId, ')
+          ..write('role: $role, ')
+          ..write('localPath: $localPath, ')
+          ..write('serverObjectId: $serverObjectId, ')
+          ..write('capturedAt: $capturedAt, ')
+          ..write('selectedRank: $selectedRank, ')
+          ..write('poseScore: $poseScore, ')
+          ..write('coverageScore: $coverageScore, ')
+          ..write('orientationScore: $orientationScore, ')
+          ..write('sharpnessScore: $sharpnessScore, ')
+          ..write('lightingScore: $lightingScore, ')
+          ..write('overallScore: $overallScore, ')
+          ..write('qualityVerdict: $qualityVerdict, ')
+          ..write('rejectionReason: $rejectionReason, ')
+          ..write('qualityThresholdVersion: $qualityThresholdVersion, ')
+          ..write('imageWidth: $imageWidth, ')
+          ..write('imageHeight: $imageHeight, ')
+          ..write('exifOrientation: $exifOrientation, ')
+          ..write('displayOrientation: $displayOrientation, ')
+          ..write('deviceCameraMetadataJson: $deviceCameraMetadataJson, ')
+          ..write('syncState: $syncState, ')
+          ..write('serverAcknowledgedAt: $serverAcknowledgedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CameraResultsTable extends CameraResults
+    with TableInfo<$CameraResultsTable, CameraResult> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CameraResultsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _resultUuidMeta =
+      const VerificationMeta('resultUuid');
+  @override
+  late final GeneratedColumn<String> resultUuid = GeneratedColumn<String>(
+      'result_uuid', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _visitIdMeta =
+      const VerificationMeta('visitId');
+  @override
+  late final GeneratedColumn<int> visitId = GeneratedColumn<int>(
+      'visit_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES visits (id) ON DELETE CASCADE'));
+  static const VerificationMeta _versionMeta =
+      const VerificationMeta('version');
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+      'version', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _supersedesResultUuidMeta =
+      const VerificationMeta('supersedesResultUuid');
+  @override
+  late final GeneratedColumn<String> supersedesResultUuid =
+      GeneratedColumn<String>('supersedes_result_uuid', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _estimatedHeightCmMeta =
+      const VerificationMeta('estimatedHeightCm');
+  @override
+  late final GeneratedColumn<double> estimatedHeightCm =
+      GeneratedColumn<double>('estimated_height_cm', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _estimatedWeightKgMeta =
+      const VerificationMeta('estimatedWeightKg');
+  @override
+  late final GeneratedColumn<double> estimatedWeightKg =
+      GeneratedColumn<double>('estimated_weight_kg', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _heightSourceMeta =
+      const VerificationMeta('heightSource');
+  @override
+  late final GeneratedColumn<String> heightSource = GeneratedColumn<String>(
+      'height_source', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _weightSourceMeta =
+      const VerificationMeta('weightSource');
+  @override
+  late final GeneratedColumn<String> weightSource = GeneratedColumn<String>(
+      'weight_source', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _estimatedHazMeta =
+      const VerificationMeta('estimatedHaz');
+  @override
+  late final GeneratedColumn<double> estimatedHaz = GeneratedColumn<double>(
+      'estimated_haz', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _estimatedWhzMeta =
+      const VerificationMeta('estimatedWhz');
+  @override
+  late final GeneratedColumn<double> estimatedWhz = GeneratedColumn<double>(
+      'estimated_whz', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _estimatedStuntingStatusMeta =
+      const VerificationMeta('estimatedStuntingStatus');
+  @override
+  late final GeneratedColumn<String> estimatedStuntingStatus =
+      GeneratedColumn<String>('estimated_stunting_status', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _estimatedWastingStatusMeta =
+      const VerificationMeta('estimatedWastingStatus');
+  @override
+  late final GeneratedColumn<String> estimatedWastingStatus =
+      GeneratedColumn<String>('estimated_wasting_status', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _experimentalOverallCategoryMeta =
+      const VerificationMeta('experimentalOverallCategory');
+  @override
+  late final GeneratedColumn<String> experimentalOverallCategory =
+      GeneratedColumn<String>(
+          'experimental_overall_category', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _componentProbabilitiesJsonMeta =
+      const VerificationMeta('componentProbabilitiesJson');
+  @override
+  late final GeneratedColumn<String> componentProbabilitiesJson =
+      GeneratedColumn<String>('component_probabilities_json', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _bodyProportionFeaturesJsonMeta =
+      const VerificationMeta('bodyProportionFeaturesJson');
+  @override
+  late final GeneratedColumn<String> bodyProportionFeaturesJson =
+      GeneratedColumn<String>(
+          'body_proportion_features_json', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _captureQualitySummaryJsonMeta =
+      const VerificationMeta('captureQualitySummaryJson');
+  @override
+  late final GeneratedColumn<String> captureQualitySummaryJson =
+      GeneratedColumn<String>('capture_quality_summary_json', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _methodMeta = const VerificationMeta('method');
+  @override
+  late final GeneratedColumn<String> method = GeneratedColumn<String>(
+      'method', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _modelVersionMeta =
+      const VerificationMeta('modelVersion');
+  @override
+  late final GeneratedColumn<String> modelVersion = GeneratedColumn<String>(
+      'model_version', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _manifestChecksumMeta =
+      const VerificationMeta('manifestChecksum');
+  @override
+  late final GeneratedColumn<String> manifestChecksum = GeneratedColumn<String>(
+      'manifest_checksum', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _trainingDataLabelMeta =
+      const VerificationMeta('trainingDataLabel');
+  @override
+  late final GeneratedColumn<String> trainingDataLabel =
+      GeneratedColumn<String>('training_data_label', aliasedName, false,
+          type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _nonClinicalMeta =
+      const VerificationMeta('nonClinical');
+  @override
+  late final GeneratedColumn<bool> nonClinical = GeneratedColumn<bool>(
+      'non_clinical', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("non_clinical" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        resultUuid,
+        visitId,
+        version,
+        supersedesResultUuid,
+        estimatedHeightCm,
+        estimatedWeightKg,
+        heightSource,
+        weightSource,
+        estimatedHaz,
+        estimatedWhz,
+        estimatedStuntingStatus,
+        estimatedWastingStatus,
+        experimentalOverallCategory,
+        componentProbabilitiesJson,
+        bodyProportionFeaturesJson,
+        captureQualitySummaryJson,
+        method,
+        modelVersion,
+        manifestChecksum,
+        trainingDataLabel,
+        nonClinical,
+        createdAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'camera_results';
+  @override
+  VerificationContext validateIntegrity(Insertable<CameraResult> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('result_uuid')) {
+      context.handle(
+          _resultUuidMeta,
+          resultUuid.isAcceptableOrUnknown(
+              data['result_uuid']!, _resultUuidMeta));
+    } else if (isInserting) {
+      context.missing(_resultUuidMeta);
+    }
+    if (data.containsKey('visit_id')) {
+      context.handle(_visitIdMeta,
+          visitId.isAcceptableOrUnknown(data['visit_id']!, _visitIdMeta));
+    } else if (isInserting) {
+      context.missing(_visitIdMeta);
+    }
+    if (data.containsKey('version')) {
+      context.handle(_versionMeta,
+          version.isAcceptableOrUnknown(data['version']!, _versionMeta));
+    } else if (isInserting) {
+      context.missing(_versionMeta);
+    }
+    if (data.containsKey('supersedes_result_uuid')) {
+      context.handle(
+          _supersedesResultUuidMeta,
+          supersedesResultUuid.isAcceptableOrUnknown(
+              data['supersedes_result_uuid']!, _supersedesResultUuidMeta));
+    }
+    if (data.containsKey('estimated_height_cm')) {
+      context.handle(
+          _estimatedHeightCmMeta,
+          estimatedHeightCm.isAcceptableOrUnknown(
+              data['estimated_height_cm']!, _estimatedHeightCmMeta));
+    }
+    if (data.containsKey('estimated_weight_kg')) {
+      context.handle(
+          _estimatedWeightKgMeta,
+          estimatedWeightKg.isAcceptableOrUnknown(
+              data['estimated_weight_kg']!, _estimatedWeightKgMeta));
+    }
+    if (data.containsKey('height_source')) {
+      context.handle(
+          _heightSourceMeta,
+          heightSource.isAcceptableOrUnknown(
+              data['height_source']!, _heightSourceMeta));
+    }
+    if (data.containsKey('weight_source')) {
+      context.handle(
+          _weightSourceMeta,
+          weightSource.isAcceptableOrUnknown(
+              data['weight_source']!, _weightSourceMeta));
+    }
+    if (data.containsKey('estimated_haz')) {
+      context.handle(
+          _estimatedHazMeta,
+          estimatedHaz.isAcceptableOrUnknown(
+              data['estimated_haz']!, _estimatedHazMeta));
+    }
+    if (data.containsKey('estimated_whz')) {
+      context.handle(
+          _estimatedWhzMeta,
+          estimatedWhz.isAcceptableOrUnknown(
+              data['estimated_whz']!, _estimatedWhzMeta));
+    }
+    if (data.containsKey('estimated_stunting_status')) {
+      context.handle(
+          _estimatedStuntingStatusMeta,
+          estimatedStuntingStatus.isAcceptableOrUnknown(
+              data['estimated_stunting_status']!,
+              _estimatedStuntingStatusMeta));
+    }
+    if (data.containsKey('estimated_wasting_status')) {
+      context.handle(
+          _estimatedWastingStatusMeta,
+          estimatedWastingStatus.isAcceptableOrUnknown(
+              data['estimated_wasting_status']!, _estimatedWastingStatusMeta));
+    }
+    if (data.containsKey('experimental_overall_category')) {
+      context.handle(
+          _experimentalOverallCategoryMeta,
+          experimentalOverallCategory.isAcceptableOrUnknown(
+              data['experimental_overall_category']!,
+              _experimentalOverallCategoryMeta));
+    }
+    if (data.containsKey('component_probabilities_json')) {
+      context.handle(
+          _componentProbabilitiesJsonMeta,
+          componentProbabilitiesJson.isAcceptableOrUnknown(
+              data['component_probabilities_json']!,
+              _componentProbabilitiesJsonMeta));
+    }
+    if (data.containsKey('body_proportion_features_json')) {
+      context.handle(
+          _bodyProportionFeaturesJsonMeta,
+          bodyProportionFeaturesJson.isAcceptableOrUnknown(
+              data['body_proportion_features_json']!,
+              _bodyProportionFeaturesJsonMeta));
+    }
+    if (data.containsKey('capture_quality_summary_json')) {
+      context.handle(
+          _captureQualitySummaryJsonMeta,
+          captureQualitySummaryJson.isAcceptableOrUnknown(
+              data['capture_quality_summary_json']!,
+              _captureQualitySummaryJsonMeta));
+    }
+    if (data.containsKey('method')) {
+      context.handle(_methodMeta,
+          method.isAcceptableOrUnknown(data['method']!, _methodMeta));
+    } else if (isInserting) {
+      context.missing(_methodMeta);
+    }
+    if (data.containsKey('model_version')) {
+      context.handle(
+          _modelVersionMeta,
+          modelVersion.isAcceptableOrUnknown(
+              data['model_version']!, _modelVersionMeta));
+    } else if (isInserting) {
+      context.missing(_modelVersionMeta);
+    }
+    if (data.containsKey('manifest_checksum')) {
+      context.handle(
+          _manifestChecksumMeta,
+          manifestChecksum.isAcceptableOrUnknown(
+              data['manifest_checksum']!, _manifestChecksumMeta));
+    } else if (isInserting) {
+      context.missing(_manifestChecksumMeta);
+    }
+    if (data.containsKey('training_data_label')) {
+      context.handle(
+          _trainingDataLabelMeta,
+          trainingDataLabel.isAcceptableOrUnknown(
+              data['training_data_label']!, _trainingDataLabelMeta));
+    } else if (isInserting) {
+      context.missing(_trainingDataLabelMeta);
+    }
+    if (data.containsKey('non_clinical')) {
+      context.handle(
+          _nonClinicalMeta,
+          nonClinical.isAcceptableOrUnknown(
+              data['non_clinical']!, _nonClinicalMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+        {visitId, version},
+      ];
+  @override
+  CameraResult map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CameraResult(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      resultUuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}result_uuid'])!,
+      visitId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}visit_id'])!,
+      version: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}version'])!,
+      supersedesResultUuid: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}supersedes_result_uuid']),
+      estimatedHeightCm: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}estimated_height_cm']),
+      estimatedWeightKg: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}estimated_weight_kg']),
+      heightSource: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}height_source']),
+      weightSource: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}weight_source']),
+      estimatedHaz: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}estimated_haz']),
+      estimatedWhz: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}estimated_whz']),
+      estimatedStuntingStatus: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}estimated_stunting_status']),
+      estimatedWastingStatus: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}estimated_wasting_status']),
+      experimentalOverallCategory: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}experimental_overall_category']),
+      componentProbabilitiesJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}component_probabilities_json']),
+      bodyProportionFeaturesJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}body_proportion_features_json']),
+      captureQualitySummaryJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}capture_quality_summary_json']),
+      method: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}method'])!,
+      modelVersion: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}model_version'])!,
+      manifestChecksum: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}manifest_checksum'])!,
+      trainingDataLabel: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}training_data_label'])!,
+      nonClinical: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}non_clinical'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $CameraResultsTable createAlias(String alias) {
+    return $CameraResultsTable(attachedDatabase, alias);
+  }
+}
+
+class CameraResult extends DataClass implements Insertable<CameraResult> {
+  final int id;
+  final String resultUuid;
+  final int visitId;
+  final int version;
+  final String? supersedesResultUuid;
+  final double? estimatedHeightCm;
+  final double? estimatedWeightKg;
+  final String? heightSource;
+  final String? weightSource;
+  final double? estimatedHaz;
+  final double? estimatedWhz;
+  final String? estimatedStuntingStatus;
+  final String? estimatedWastingStatus;
+  final String? experimentalOverallCategory;
+  final String? componentProbabilitiesJson;
+  final String? bodyProportionFeaturesJson;
+  final String? captureQualitySummaryJson;
+  final String method;
+  final String modelVersion;
+  final String manifestChecksum;
+  final String trainingDataLabel;
+  final bool nonClinical;
+  final DateTime createdAt;
+  const CameraResult(
+      {required this.id,
+      required this.resultUuid,
+      required this.visitId,
+      required this.version,
+      this.supersedesResultUuid,
+      this.estimatedHeightCm,
+      this.estimatedWeightKg,
+      this.heightSource,
+      this.weightSource,
+      this.estimatedHaz,
+      this.estimatedWhz,
+      this.estimatedStuntingStatus,
+      this.estimatedWastingStatus,
+      this.experimentalOverallCategory,
+      this.componentProbabilitiesJson,
+      this.bodyProportionFeaturesJson,
+      this.captureQualitySummaryJson,
+      required this.method,
+      required this.modelVersion,
+      required this.manifestChecksum,
+      required this.trainingDataLabel,
+      required this.nonClinical,
+      required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['result_uuid'] = Variable<String>(resultUuid);
+    map['visit_id'] = Variable<int>(visitId);
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || supersedesResultUuid != null) {
+      map['supersedes_result_uuid'] = Variable<String>(supersedesResultUuid);
+    }
+    if (!nullToAbsent || estimatedHeightCm != null) {
+      map['estimated_height_cm'] = Variable<double>(estimatedHeightCm);
+    }
+    if (!nullToAbsent || estimatedWeightKg != null) {
+      map['estimated_weight_kg'] = Variable<double>(estimatedWeightKg);
+    }
+    if (!nullToAbsent || heightSource != null) {
+      map['height_source'] = Variable<String>(heightSource);
+    }
+    if (!nullToAbsent || weightSource != null) {
+      map['weight_source'] = Variable<String>(weightSource);
+    }
+    if (!nullToAbsent || estimatedHaz != null) {
+      map['estimated_haz'] = Variable<double>(estimatedHaz);
+    }
+    if (!nullToAbsent || estimatedWhz != null) {
+      map['estimated_whz'] = Variable<double>(estimatedWhz);
+    }
+    if (!nullToAbsent || estimatedStuntingStatus != null) {
+      map['estimated_stunting_status'] =
+          Variable<String>(estimatedStuntingStatus);
+    }
+    if (!nullToAbsent || estimatedWastingStatus != null) {
+      map['estimated_wasting_status'] =
+          Variable<String>(estimatedWastingStatus);
+    }
+    if (!nullToAbsent || experimentalOverallCategory != null) {
+      map['experimental_overall_category'] =
+          Variable<String>(experimentalOverallCategory);
+    }
+    if (!nullToAbsent || componentProbabilitiesJson != null) {
+      map['component_probabilities_json'] =
+          Variable<String>(componentProbabilitiesJson);
+    }
+    if (!nullToAbsent || bodyProportionFeaturesJson != null) {
+      map['body_proportion_features_json'] =
+          Variable<String>(bodyProportionFeaturesJson);
+    }
+    if (!nullToAbsent || captureQualitySummaryJson != null) {
+      map['capture_quality_summary_json'] =
+          Variable<String>(captureQualitySummaryJson);
+    }
+    map['method'] = Variable<String>(method);
+    map['model_version'] = Variable<String>(modelVersion);
+    map['manifest_checksum'] = Variable<String>(manifestChecksum);
+    map['training_data_label'] = Variable<String>(trainingDataLabel);
+    map['non_clinical'] = Variable<bool>(nonClinical);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  CameraResultsCompanion toCompanion(bool nullToAbsent) {
+    return CameraResultsCompanion(
+      id: Value(id),
+      resultUuid: Value(resultUuid),
+      visitId: Value(visitId),
+      version: Value(version),
+      supersedesResultUuid: supersedesResultUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(supersedesResultUuid),
+      estimatedHeightCm: estimatedHeightCm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(estimatedHeightCm),
+      estimatedWeightKg: estimatedWeightKg == null && nullToAbsent
+          ? const Value.absent()
+          : Value(estimatedWeightKg),
+      heightSource: heightSource == null && nullToAbsent
+          ? const Value.absent()
+          : Value(heightSource),
+      weightSource: weightSource == null && nullToAbsent
+          ? const Value.absent()
+          : Value(weightSource),
+      estimatedHaz: estimatedHaz == null && nullToAbsent
+          ? const Value.absent()
+          : Value(estimatedHaz),
+      estimatedWhz: estimatedWhz == null && nullToAbsent
+          ? const Value.absent()
+          : Value(estimatedWhz),
+      estimatedStuntingStatus: estimatedStuntingStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(estimatedStuntingStatus),
+      estimatedWastingStatus: estimatedWastingStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(estimatedWastingStatus),
+      experimentalOverallCategory:
+          experimentalOverallCategory == null && nullToAbsent
+              ? const Value.absent()
+              : Value(experimentalOverallCategory),
+      componentProbabilitiesJson:
+          componentProbabilitiesJson == null && nullToAbsent
+              ? const Value.absent()
+              : Value(componentProbabilitiesJson),
+      bodyProportionFeaturesJson:
+          bodyProportionFeaturesJson == null && nullToAbsent
+              ? const Value.absent()
+              : Value(bodyProportionFeaturesJson),
+      captureQualitySummaryJson:
+          captureQualitySummaryJson == null && nullToAbsent
+              ? const Value.absent()
+              : Value(captureQualitySummaryJson),
+      method: Value(method),
+      modelVersion: Value(modelVersion),
+      manifestChecksum: Value(manifestChecksum),
+      trainingDataLabel: Value(trainingDataLabel),
+      nonClinical: Value(nonClinical),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory CameraResult.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CameraResult(
+      id: serializer.fromJson<int>(json['id']),
+      resultUuid: serializer.fromJson<String>(json['resultUuid']),
+      visitId: serializer.fromJson<int>(json['visitId']),
+      version: serializer.fromJson<int>(json['version']),
+      supersedesResultUuid:
+          serializer.fromJson<String?>(json['supersedesResultUuid']),
+      estimatedHeightCm:
+          serializer.fromJson<double?>(json['estimatedHeightCm']),
+      estimatedWeightKg:
+          serializer.fromJson<double?>(json['estimatedWeightKg']),
+      heightSource: serializer.fromJson<String?>(json['heightSource']),
+      weightSource: serializer.fromJson<String?>(json['weightSource']),
+      estimatedHaz: serializer.fromJson<double?>(json['estimatedHaz']),
+      estimatedWhz: serializer.fromJson<double?>(json['estimatedWhz']),
+      estimatedStuntingStatus:
+          serializer.fromJson<String?>(json['estimatedStuntingStatus']),
+      estimatedWastingStatus:
+          serializer.fromJson<String?>(json['estimatedWastingStatus']),
+      experimentalOverallCategory:
+          serializer.fromJson<String?>(json['experimentalOverallCategory']),
+      componentProbabilitiesJson:
+          serializer.fromJson<String?>(json['componentProbabilitiesJson']),
+      bodyProportionFeaturesJson:
+          serializer.fromJson<String?>(json['bodyProportionFeaturesJson']),
+      captureQualitySummaryJson:
+          serializer.fromJson<String?>(json['captureQualitySummaryJson']),
+      method: serializer.fromJson<String>(json['method']),
+      modelVersion: serializer.fromJson<String>(json['modelVersion']),
+      manifestChecksum: serializer.fromJson<String>(json['manifestChecksum']),
+      trainingDataLabel: serializer.fromJson<String>(json['trainingDataLabel']),
+      nonClinical: serializer.fromJson<bool>(json['nonClinical']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'resultUuid': serializer.toJson<String>(resultUuid),
+      'visitId': serializer.toJson<int>(visitId),
+      'version': serializer.toJson<int>(version),
+      'supersedesResultUuid': serializer.toJson<String?>(supersedesResultUuid),
+      'estimatedHeightCm': serializer.toJson<double?>(estimatedHeightCm),
+      'estimatedWeightKg': serializer.toJson<double?>(estimatedWeightKg),
+      'heightSource': serializer.toJson<String?>(heightSource),
+      'weightSource': serializer.toJson<String?>(weightSource),
+      'estimatedHaz': serializer.toJson<double?>(estimatedHaz),
+      'estimatedWhz': serializer.toJson<double?>(estimatedWhz),
+      'estimatedStuntingStatus':
+          serializer.toJson<String?>(estimatedStuntingStatus),
+      'estimatedWastingStatus':
+          serializer.toJson<String?>(estimatedWastingStatus),
+      'experimentalOverallCategory':
+          serializer.toJson<String?>(experimentalOverallCategory),
+      'componentProbabilitiesJson':
+          serializer.toJson<String?>(componentProbabilitiesJson),
+      'bodyProportionFeaturesJson':
+          serializer.toJson<String?>(bodyProportionFeaturesJson),
+      'captureQualitySummaryJson':
+          serializer.toJson<String?>(captureQualitySummaryJson),
+      'method': serializer.toJson<String>(method),
+      'modelVersion': serializer.toJson<String>(modelVersion),
+      'manifestChecksum': serializer.toJson<String>(manifestChecksum),
+      'trainingDataLabel': serializer.toJson<String>(trainingDataLabel),
+      'nonClinical': serializer.toJson<bool>(nonClinical),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  CameraResult copyWith(
+          {int? id,
+          String? resultUuid,
+          int? visitId,
+          int? version,
+          Value<String?> supersedesResultUuid = const Value.absent(),
+          Value<double?> estimatedHeightCm = const Value.absent(),
+          Value<double?> estimatedWeightKg = const Value.absent(),
+          Value<String?> heightSource = const Value.absent(),
+          Value<String?> weightSource = const Value.absent(),
+          Value<double?> estimatedHaz = const Value.absent(),
+          Value<double?> estimatedWhz = const Value.absent(),
+          Value<String?> estimatedStuntingStatus = const Value.absent(),
+          Value<String?> estimatedWastingStatus = const Value.absent(),
+          Value<String?> experimentalOverallCategory = const Value.absent(),
+          Value<String?> componentProbabilitiesJson = const Value.absent(),
+          Value<String?> bodyProportionFeaturesJson = const Value.absent(),
+          Value<String?> captureQualitySummaryJson = const Value.absent(),
+          String? method,
+          String? modelVersion,
+          String? manifestChecksum,
+          String? trainingDataLabel,
+          bool? nonClinical,
+          DateTime? createdAt}) =>
+      CameraResult(
+        id: id ?? this.id,
+        resultUuid: resultUuid ?? this.resultUuid,
+        visitId: visitId ?? this.visitId,
+        version: version ?? this.version,
+        supersedesResultUuid: supersedesResultUuid.present
+            ? supersedesResultUuid.value
+            : this.supersedesResultUuid,
+        estimatedHeightCm: estimatedHeightCm.present
+            ? estimatedHeightCm.value
+            : this.estimatedHeightCm,
+        estimatedWeightKg: estimatedWeightKg.present
+            ? estimatedWeightKg.value
+            : this.estimatedWeightKg,
+        heightSource:
+            heightSource.present ? heightSource.value : this.heightSource,
+        weightSource:
+            weightSource.present ? weightSource.value : this.weightSource,
+        estimatedHaz:
+            estimatedHaz.present ? estimatedHaz.value : this.estimatedHaz,
+        estimatedWhz:
+            estimatedWhz.present ? estimatedWhz.value : this.estimatedWhz,
+        estimatedStuntingStatus: estimatedStuntingStatus.present
+            ? estimatedStuntingStatus.value
+            : this.estimatedStuntingStatus,
+        estimatedWastingStatus: estimatedWastingStatus.present
+            ? estimatedWastingStatus.value
+            : this.estimatedWastingStatus,
+        experimentalOverallCategory: experimentalOverallCategory.present
+            ? experimentalOverallCategory.value
+            : this.experimentalOverallCategory,
+        componentProbabilitiesJson: componentProbabilitiesJson.present
+            ? componentProbabilitiesJson.value
+            : this.componentProbabilitiesJson,
+        bodyProportionFeaturesJson: bodyProportionFeaturesJson.present
+            ? bodyProportionFeaturesJson.value
+            : this.bodyProportionFeaturesJson,
+        captureQualitySummaryJson: captureQualitySummaryJson.present
+            ? captureQualitySummaryJson.value
+            : this.captureQualitySummaryJson,
+        method: method ?? this.method,
+        modelVersion: modelVersion ?? this.modelVersion,
+        manifestChecksum: manifestChecksum ?? this.manifestChecksum,
+        trainingDataLabel: trainingDataLabel ?? this.trainingDataLabel,
+        nonClinical: nonClinical ?? this.nonClinical,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  CameraResult copyWithCompanion(CameraResultsCompanion data) {
+    return CameraResult(
+      id: data.id.present ? data.id.value : this.id,
+      resultUuid:
+          data.resultUuid.present ? data.resultUuid.value : this.resultUuid,
+      visitId: data.visitId.present ? data.visitId.value : this.visitId,
+      version: data.version.present ? data.version.value : this.version,
+      supersedesResultUuid: data.supersedesResultUuid.present
+          ? data.supersedesResultUuid.value
+          : this.supersedesResultUuid,
+      estimatedHeightCm: data.estimatedHeightCm.present
+          ? data.estimatedHeightCm.value
+          : this.estimatedHeightCm,
+      estimatedWeightKg: data.estimatedWeightKg.present
+          ? data.estimatedWeightKg.value
+          : this.estimatedWeightKg,
+      heightSource: data.heightSource.present
+          ? data.heightSource.value
+          : this.heightSource,
+      weightSource: data.weightSource.present
+          ? data.weightSource.value
+          : this.weightSource,
+      estimatedHaz: data.estimatedHaz.present
+          ? data.estimatedHaz.value
+          : this.estimatedHaz,
+      estimatedWhz: data.estimatedWhz.present
+          ? data.estimatedWhz.value
+          : this.estimatedWhz,
+      estimatedStuntingStatus: data.estimatedStuntingStatus.present
+          ? data.estimatedStuntingStatus.value
+          : this.estimatedStuntingStatus,
+      estimatedWastingStatus: data.estimatedWastingStatus.present
+          ? data.estimatedWastingStatus.value
+          : this.estimatedWastingStatus,
+      experimentalOverallCategory: data.experimentalOverallCategory.present
+          ? data.experimentalOverallCategory.value
+          : this.experimentalOverallCategory,
+      componentProbabilitiesJson: data.componentProbabilitiesJson.present
+          ? data.componentProbabilitiesJson.value
+          : this.componentProbabilitiesJson,
+      bodyProportionFeaturesJson: data.bodyProportionFeaturesJson.present
+          ? data.bodyProportionFeaturesJson.value
+          : this.bodyProportionFeaturesJson,
+      captureQualitySummaryJson: data.captureQualitySummaryJson.present
+          ? data.captureQualitySummaryJson.value
+          : this.captureQualitySummaryJson,
+      method: data.method.present ? data.method.value : this.method,
+      modelVersion: data.modelVersion.present
+          ? data.modelVersion.value
+          : this.modelVersion,
+      manifestChecksum: data.manifestChecksum.present
+          ? data.manifestChecksum.value
+          : this.manifestChecksum,
+      trainingDataLabel: data.trainingDataLabel.present
+          ? data.trainingDataLabel.value
+          : this.trainingDataLabel,
+      nonClinical:
+          data.nonClinical.present ? data.nonClinical.value : this.nonClinical,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CameraResult(')
+          ..write('id: $id, ')
+          ..write('resultUuid: $resultUuid, ')
+          ..write('visitId: $visitId, ')
+          ..write('version: $version, ')
+          ..write('supersedesResultUuid: $supersedesResultUuid, ')
+          ..write('estimatedHeightCm: $estimatedHeightCm, ')
+          ..write('estimatedWeightKg: $estimatedWeightKg, ')
+          ..write('heightSource: $heightSource, ')
+          ..write('weightSource: $weightSource, ')
+          ..write('estimatedHaz: $estimatedHaz, ')
+          ..write('estimatedWhz: $estimatedWhz, ')
+          ..write('estimatedStuntingStatus: $estimatedStuntingStatus, ')
+          ..write('estimatedWastingStatus: $estimatedWastingStatus, ')
+          ..write('experimentalOverallCategory: $experimentalOverallCategory, ')
+          ..write('componentProbabilitiesJson: $componentProbabilitiesJson, ')
+          ..write('bodyProportionFeaturesJson: $bodyProportionFeaturesJson, ')
+          ..write('captureQualitySummaryJson: $captureQualitySummaryJson, ')
+          ..write('method: $method, ')
+          ..write('modelVersion: $modelVersion, ')
+          ..write('manifestChecksum: $manifestChecksum, ')
+          ..write('trainingDataLabel: $trainingDataLabel, ')
+          ..write('nonClinical: $nonClinical, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+        id,
+        resultUuid,
+        visitId,
+        version,
+        supersedesResultUuid,
+        estimatedHeightCm,
+        estimatedWeightKg,
+        heightSource,
+        weightSource,
+        estimatedHaz,
+        estimatedWhz,
+        estimatedStuntingStatus,
+        estimatedWastingStatus,
+        experimentalOverallCategory,
+        componentProbabilitiesJson,
+        bodyProportionFeaturesJson,
+        captureQualitySummaryJson,
+        method,
+        modelVersion,
+        manifestChecksum,
+        trainingDataLabel,
+        nonClinical,
+        createdAt
+      ]);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CameraResult &&
+          other.id == this.id &&
+          other.resultUuid == this.resultUuid &&
+          other.visitId == this.visitId &&
+          other.version == this.version &&
+          other.supersedesResultUuid == this.supersedesResultUuid &&
+          other.estimatedHeightCm == this.estimatedHeightCm &&
+          other.estimatedWeightKg == this.estimatedWeightKg &&
+          other.heightSource == this.heightSource &&
+          other.weightSource == this.weightSource &&
+          other.estimatedHaz == this.estimatedHaz &&
+          other.estimatedWhz == this.estimatedWhz &&
+          other.estimatedStuntingStatus == this.estimatedStuntingStatus &&
+          other.estimatedWastingStatus == this.estimatedWastingStatus &&
+          other.experimentalOverallCategory ==
+              this.experimentalOverallCategory &&
+          other.componentProbabilitiesJson == this.componentProbabilitiesJson &&
+          other.bodyProportionFeaturesJson == this.bodyProportionFeaturesJson &&
+          other.captureQualitySummaryJson == this.captureQualitySummaryJson &&
+          other.method == this.method &&
+          other.modelVersion == this.modelVersion &&
+          other.manifestChecksum == this.manifestChecksum &&
+          other.trainingDataLabel == this.trainingDataLabel &&
+          other.nonClinical == this.nonClinical &&
+          other.createdAt == this.createdAt);
+}
+
+class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
+  final Value<int> id;
+  final Value<String> resultUuid;
+  final Value<int> visitId;
+  final Value<int> version;
+  final Value<String?> supersedesResultUuid;
+  final Value<double?> estimatedHeightCm;
+  final Value<double?> estimatedWeightKg;
+  final Value<String?> heightSource;
+  final Value<String?> weightSource;
+  final Value<double?> estimatedHaz;
+  final Value<double?> estimatedWhz;
+  final Value<String?> estimatedStuntingStatus;
+  final Value<String?> estimatedWastingStatus;
+  final Value<String?> experimentalOverallCategory;
+  final Value<String?> componentProbabilitiesJson;
+  final Value<String?> bodyProportionFeaturesJson;
+  final Value<String?> captureQualitySummaryJson;
+  final Value<String> method;
+  final Value<String> modelVersion;
+  final Value<String> manifestChecksum;
+  final Value<String> trainingDataLabel;
+  final Value<bool> nonClinical;
+  final Value<DateTime> createdAt;
+  const CameraResultsCompanion({
+    this.id = const Value.absent(),
+    this.resultUuid = const Value.absent(),
+    this.visitId = const Value.absent(),
+    this.version = const Value.absent(),
+    this.supersedesResultUuid = const Value.absent(),
+    this.estimatedHeightCm = const Value.absent(),
+    this.estimatedWeightKg = const Value.absent(),
+    this.heightSource = const Value.absent(),
+    this.weightSource = const Value.absent(),
+    this.estimatedHaz = const Value.absent(),
+    this.estimatedWhz = const Value.absent(),
+    this.estimatedStuntingStatus = const Value.absent(),
+    this.estimatedWastingStatus = const Value.absent(),
+    this.experimentalOverallCategory = const Value.absent(),
+    this.componentProbabilitiesJson = const Value.absent(),
+    this.bodyProportionFeaturesJson = const Value.absent(),
+    this.captureQualitySummaryJson = const Value.absent(),
+    this.method = const Value.absent(),
+    this.modelVersion = const Value.absent(),
+    this.manifestChecksum = const Value.absent(),
+    this.trainingDataLabel = const Value.absent(),
+    this.nonClinical = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  CameraResultsCompanion.insert({
+    this.id = const Value.absent(),
+    required String resultUuid,
+    required int visitId,
+    required int version,
+    this.supersedesResultUuid = const Value.absent(),
+    this.estimatedHeightCm = const Value.absent(),
+    this.estimatedWeightKg = const Value.absent(),
+    this.heightSource = const Value.absent(),
+    this.weightSource = const Value.absent(),
+    this.estimatedHaz = const Value.absent(),
+    this.estimatedWhz = const Value.absent(),
+    this.estimatedStuntingStatus = const Value.absent(),
+    this.estimatedWastingStatus = const Value.absent(),
+    this.experimentalOverallCategory = const Value.absent(),
+    this.componentProbabilitiesJson = const Value.absent(),
+    this.bodyProportionFeaturesJson = const Value.absent(),
+    this.captureQualitySummaryJson = const Value.absent(),
+    required String method,
+    required String modelVersion,
+    required String manifestChecksum,
+    required String trainingDataLabel,
+    this.nonClinical = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  })  : resultUuid = Value(resultUuid),
+        visitId = Value(visitId),
+        version = Value(version),
+        method = Value(method),
+        modelVersion = Value(modelVersion),
+        manifestChecksum = Value(manifestChecksum),
+        trainingDataLabel = Value(trainingDataLabel);
+  static Insertable<CameraResult> custom({
+    Expression<int>? id,
+    Expression<String>? resultUuid,
+    Expression<int>? visitId,
+    Expression<int>? version,
+    Expression<String>? supersedesResultUuid,
+    Expression<double>? estimatedHeightCm,
+    Expression<double>? estimatedWeightKg,
+    Expression<String>? heightSource,
+    Expression<String>? weightSource,
+    Expression<double>? estimatedHaz,
+    Expression<double>? estimatedWhz,
+    Expression<String>? estimatedStuntingStatus,
+    Expression<String>? estimatedWastingStatus,
+    Expression<String>? experimentalOverallCategory,
+    Expression<String>? componentProbabilitiesJson,
+    Expression<String>? bodyProportionFeaturesJson,
+    Expression<String>? captureQualitySummaryJson,
+    Expression<String>? method,
+    Expression<String>? modelVersion,
+    Expression<String>? manifestChecksum,
+    Expression<String>? trainingDataLabel,
+    Expression<bool>? nonClinical,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (resultUuid != null) 'result_uuid': resultUuid,
+      if (visitId != null) 'visit_id': visitId,
+      if (version != null) 'version': version,
+      if (supersedesResultUuid != null)
+        'supersedes_result_uuid': supersedesResultUuid,
+      if (estimatedHeightCm != null) 'estimated_height_cm': estimatedHeightCm,
+      if (estimatedWeightKg != null) 'estimated_weight_kg': estimatedWeightKg,
+      if (heightSource != null) 'height_source': heightSource,
+      if (weightSource != null) 'weight_source': weightSource,
+      if (estimatedHaz != null) 'estimated_haz': estimatedHaz,
+      if (estimatedWhz != null) 'estimated_whz': estimatedWhz,
+      if (estimatedStuntingStatus != null)
+        'estimated_stunting_status': estimatedStuntingStatus,
+      if (estimatedWastingStatus != null)
+        'estimated_wasting_status': estimatedWastingStatus,
+      if (experimentalOverallCategory != null)
+        'experimental_overall_category': experimentalOverallCategory,
+      if (componentProbabilitiesJson != null)
+        'component_probabilities_json': componentProbabilitiesJson,
+      if (bodyProportionFeaturesJson != null)
+        'body_proportion_features_json': bodyProportionFeaturesJson,
+      if (captureQualitySummaryJson != null)
+        'capture_quality_summary_json': captureQualitySummaryJson,
+      if (method != null) 'method': method,
+      if (modelVersion != null) 'model_version': modelVersion,
+      if (manifestChecksum != null) 'manifest_checksum': manifestChecksum,
+      if (trainingDataLabel != null) 'training_data_label': trainingDataLabel,
+      if (nonClinical != null) 'non_clinical': nonClinical,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  CameraResultsCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? resultUuid,
+      Value<int>? visitId,
+      Value<int>? version,
+      Value<String?>? supersedesResultUuid,
+      Value<double?>? estimatedHeightCm,
+      Value<double?>? estimatedWeightKg,
+      Value<String?>? heightSource,
+      Value<String?>? weightSource,
+      Value<double?>? estimatedHaz,
+      Value<double?>? estimatedWhz,
+      Value<String?>? estimatedStuntingStatus,
+      Value<String?>? estimatedWastingStatus,
+      Value<String?>? experimentalOverallCategory,
+      Value<String?>? componentProbabilitiesJson,
+      Value<String?>? bodyProportionFeaturesJson,
+      Value<String?>? captureQualitySummaryJson,
+      Value<String>? method,
+      Value<String>? modelVersion,
+      Value<String>? manifestChecksum,
+      Value<String>? trainingDataLabel,
+      Value<bool>? nonClinical,
+      Value<DateTime>? createdAt}) {
+    return CameraResultsCompanion(
+      id: id ?? this.id,
+      resultUuid: resultUuid ?? this.resultUuid,
+      visitId: visitId ?? this.visitId,
+      version: version ?? this.version,
+      supersedesResultUuid: supersedesResultUuid ?? this.supersedesResultUuid,
+      estimatedHeightCm: estimatedHeightCm ?? this.estimatedHeightCm,
+      estimatedWeightKg: estimatedWeightKg ?? this.estimatedWeightKg,
+      heightSource: heightSource ?? this.heightSource,
+      weightSource: weightSource ?? this.weightSource,
+      estimatedHaz: estimatedHaz ?? this.estimatedHaz,
+      estimatedWhz: estimatedWhz ?? this.estimatedWhz,
+      estimatedStuntingStatus:
+          estimatedStuntingStatus ?? this.estimatedStuntingStatus,
+      estimatedWastingStatus:
+          estimatedWastingStatus ?? this.estimatedWastingStatus,
+      experimentalOverallCategory:
+          experimentalOverallCategory ?? this.experimentalOverallCategory,
+      componentProbabilitiesJson:
+          componentProbabilitiesJson ?? this.componentProbabilitiesJson,
+      bodyProportionFeaturesJson:
+          bodyProportionFeaturesJson ?? this.bodyProportionFeaturesJson,
+      captureQualitySummaryJson:
+          captureQualitySummaryJson ?? this.captureQualitySummaryJson,
+      method: method ?? this.method,
+      modelVersion: modelVersion ?? this.modelVersion,
+      manifestChecksum: manifestChecksum ?? this.manifestChecksum,
+      trainingDataLabel: trainingDataLabel ?? this.trainingDataLabel,
+      nonClinical: nonClinical ?? this.nonClinical,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (resultUuid.present) {
+      map['result_uuid'] = Variable<String>(resultUuid.value);
+    }
+    if (visitId.present) {
+      map['visit_id'] = Variable<int>(visitId.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (supersedesResultUuid.present) {
+      map['supersedes_result_uuid'] =
+          Variable<String>(supersedesResultUuid.value);
+    }
+    if (estimatedHeightCm.present) {
+      map['estimated_height_cm'] = Variable<double>(estimatedHeightCm.value);
+    }
+    if (estimatedWeightKg.present) {
+      map['estimated_weight_kg'] = Variable<double>(estimatedWeightKg.value);
+    }
+    if (heightSource.present) {
+      map['height_source'] = Variable<String>(heightSource.value);
+    }
+    if (weightSource.present) {
+      map['weight_source'] = Variable<String>(weightSource.value);
+    }
+    if (estimatedHaz.present) {
+      map['estimated_haz'] = Variable<double>(estimatedHaz.value);
+    }
+    if (estimatedWhz.present) {
+      map['estimated_whz'] = Variable<double>(estimatedWhz.value);
+    }
+    if (estimatedStuntingStatus.present) {
+      map['estimated_stunting_status'] =
+          Variable<String>(estimatedStuntingStatus.value);
+    }
+    if (estimatedWastingStatus.present) {
+      map['estimated_wasting_status'] =
+          Variable<String>(estimatedWastingStatus.value);
+    }
+    if (experimentalOverallCategory.present) {
+      map['experimental_overall_category'] =
+          Variable<String>(experimentalOverallCategory.value);
+    }
+    if (componentProbabilitiesJson.present) {
+      map['component_probabilities_json'] =
+          Variable<String>(componentProbabilitiesJson.value);
+    }
+    if (bodyProportionFeaturesJson.present) {
+      map['body_proportion_features_json'] =
+          Variable<String>(bodyProportionFeaturesJson.value);
+    }
+    if (captureQualitySummaryJson.present) {
+      map['capture_quality_summary_json'] =
+          Variable<String>(captureQualitySummaryJson.value);
+    }
+    if (method.present) {
+      map['method'] = Variable<String>(method.value);
+    }
+    if (modelVersion.present) {
+      map['model_version'] = Variable<String>(modelVersion.value);
+    }
+    if (manifestChecksum.present) {
+      map['manifest_checksum'] = Variable<String>(manifestChecksum.value);
+    }
+    if (trainingDataLabel.present) {
+      map['training_data_label'] = Variable<String>(trainingDataLabel.value);
+    }
+    if (nonClinical.present) {
+      map['non_clinical'] = Variable<bool>(nonClinical.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CameraResultsCompanion(')
+          ..write('id: $id, ')
+          ..write('resultUuid: $resultUuid, ')
+          ..write('visitId: $visitId, ')
+          ..write('version: $version, ')
+          ..write('supersedesResultUuid: $supersedesResultUuid, ')
+          ..write('estimatedHeightCm: $estimatedHeightCm, ')
+          ..write('estimatedWeightKg: $estimatedWeightKg, ')
+          ..write('heightSource: $heightSource, ')
+          ..write('weightSource: $weightSource, ')
+          ..write('estimatedHaz: $estimatedHaz, ')
+          ..write('estimatedWhz: $estimatedWhz, ')
+          ..write('estimatedStuntingStatus: $estimatedStuntingStatus, ')
+          ..write('estimatedWastingStatus: $estimatedWastingStatus, ')
+          ..write('experimentalOverallCategory: $experimentalOverallCategory, ')
+          ..write('componentProbabilitiesJson: $componentProbabilitiesJson, ')
+          ..write('bodyProportionFeaturesJson: $bodyProportionFeaturesJson, ')
+          ..write('captureQualitySummaryJson: $captureQualitySummaryJson, ')
+          ..write('method: $method, ')
+          ..write('modelVersion: $modelVersion, ')
+          ..write('manifestChecksum: $manifestChecksum, ')
+          ..write('trainingDataLabel: $trainingDataLabel, ')
+          ..write('nonClinical: $nonClinical, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $MeasuredDetailRevisionsTable extends MeasuredDetailRevisions
+    with TableInfo<$MeasuredDetailRevisionsTable, MeasuredDetailRevision> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MeasuredDetailRevisionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _revisionUuidMeta =
+      const VerificationMeta('revisionUuid');
+  @override
+  late final GeneratedColumn<String> revisionUuid = GeneratedColumn<String>(
+      'revision_uuid', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _visitIdMeta =
+      const VerificationMeta('visitId');
+  @override
+  late final GeneratedColumn<int> visitId = GeneratedColumn<int>(
+      'visit_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES visits (id) ON DELETE CASCADE'));
+  static const VerificationMeta _revisionNumberMeta =
+      const VerificationMeta('revisionNumber');
+  @override
+  late final GeneratedColumn<int> revisionNumber = GeneratedColumn<int>(
+      'revision_number', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _beforeJsonMeta =
+      const VerificationMeta('beforeJson');
+  @override
+  late final GeneratedColumn<String> beforeJson = GeneratedColumn<String>(
+      'before_json', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _afterJsonMeta =
+      const VerificationMeta('afterJson');
+  @override
+  late final GeneratedColumn<String> afterJson = GeneratedColumn<String>(
+      'after_json', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _editorUserIdMeta =
+      const VerificationMeta('editorUserId');
+  @override
+  late final GeneratedColumn<int> editorUserId = GeneratedColumn<int>(
+      'editor_user_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  static const VerificationMeta _reasonMeta = const VerificationMeta('reason');
+  @override
+  late final GeneratedColumn<String> reason = GeneratedColumn<String>(
+      'reason', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        revisionUuid,
+        visitId,
+        revisionNumber,
+        beforeJson,
+        afterJson,
+        editorUserId,
+        createdAt,
+        reason
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'measured_detail_revisions';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<MeasuredDetailRevision> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('revision_uuid')) {
+      context.handle(
+          _revisionUuidMeta,
+          revisionUuid.isAcceptableOrUnknown(
+              data['revision_uuid']!, _revisionUuidMeta));
+    } else if (isInserting) {
+      context.missing(_revisionUuidMeta);
+    }
+    if (data.containsKey('visit_id')) {
+      context.handle(_visitIdMeta,
+          visitId.isAcceptableOrUnknown(data['visit_id']!, _visitIdMeta));
+    } else if (isInserting) {
+      context.missing(_visitIdMeta);
+    }
+    if (data.containsKey('revision_number')) {
+      context.handle(
+          _revisionNumberMeta,
+          revisionNumber.isAcceptableOrUnknown(
+              data['revision_number']!, _revisionNumberMeta));
+    } else if (isInserting) {
+      context.missing(_revisionNumberMeta);
+    }
+    if (data.containsKey('before_json')) {
+      context.handle(
+          _beforeJsonMeta,
+          beforeJson.isAcceptableOrUnknown(
+              data['before_json']!, _beforeJsonMeta));
+    } else if (isInserting) {
+      context.missing(_beforeJsonMeta);
+    }
+    if (data.containsKey('after_json')) {
+      context.handle(_afterJsonMeta,
+          afterJson.isAcceptableOrUnknown(data['after_json']!, _afterJsonMeta));
+    } else if (isInserting) {
+      context.missing(_afterJsonMeta);
+    }
+    if (data.containsKey('editor_user_id')) {
+      context.handle(
+          _editorUserIdMeta,
+          editorUserId.isAcceptableOrUnknown(
+              data['editor_user_id']!, _editorUserIdMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    if (data.containsKey('reason')) {
+      context.handle(_reasonMeta,
+          reason.isAcceptableOrUnknown(data['reason']!, _reasonMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+        {visitId, revisionNumber},
+      ];
+  @override
+  MeasuredDetailRevision map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MeasuredDetailRevision(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      revisionUuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}revision_uuid'])!,
+      visitId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}visit_id'])!,
+      revisionNumber: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}revision_number'])!,
+      beforeJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}before_json'])!,
+      afterJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}after_json'])!,
+      editorUserId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}editor_user_id']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      reason: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}reason']),
+    );
+  }
+
+  @override
+  $MeasuredDetailRevisionsTable createAlias(String alias) {
+    return $MeasuredDetailRevisionsTable(attachedDatabase, alias);
+  }
+}
+
+class MeasuredDetailRevision extends DataClass
+    implements Insertable<MeasuredDetailRevision> {
+  final int id;
+  final String revisionUuid;
+  final int visitId;
+  final int revisionNumber;
+  final String beforeJson;
+  final String afterJson;
+  final int? editorUserId;
+  final DateTime createdAt;
+  final String? reason;
+  const MeasuredDetailRevision(
+      {required this.id,
+      required this.revisionUuid,
+      required this.visitId,
+      required this.revisionNumber,
+      required this.beforeJson,
+      required this.afterJson,
+      this.editorUserId,
+      required this.createdAt,
+      this.reason});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['revision_uuid'] = Variable<String>(revisionUuid);
+    map['visit_id'] = Variable<int>(visitId);
+    map['revision_number'] = Variable<int>(revisionNumber);
+    map['before_json'] = Variable<String>(beforeJson);
+    map['after_json'] = Variable<String>(afterJson);
+    if (!nullToAbsent || editorUserId != null) {
+      map['editor_user_id'] = Variable<int>(editorUserId);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || reason != null) {
+      map['reason'] = Variable<String>(reason);
+    }
+    return map;
+  }
+
+  MeasuredDetailRevisionsCompanion toCompanion(bool nullToAbsent) {
+    return MeasuredDetailRevisionsCompanion(
+      id: Value(id),
+      revisionUuid: Value(revisionUuid),
+      visitId: Value(visitId),
+      revisionNumber: Value(revisionNumber),
+      beforeJson: Value(beforeJson),
+      afterJson: Value(afterJson),
+      editorUserId: editorUserId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(editorUserId),
+      createdAt: Value(createdAt),
+      reason:
+          reason == null && nullToAbsent ? const Value.absent() : Value(reason),
+    );
+  }
+
+  factory MeasuredDetailRevision.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MeasuredDetailRevision(
+      id: serializer.fromJson<int>(json['id']),
+      revisionUuid: serializer.fromJson<String>(json['revisionUuid']),
+      visitId: serializer.fromJson<int>(json['visitId']),
+      revisionNumber: serializer.fromJson<int>(json['revisionNumber']),
+      beforeJson: serializer.fromJson<String>(json['beforeJson']),
+      afterJson: serializer.fromJson<String>(json['afterJson']),
+      editorUserId: serializer.fromJson<int?>(json['editorUserId']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      reason: serializer.fromJson<String?>(json['reason']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'revisionUuid': serializer.toJson<String>(revisionUuid),
+      'visitId': serializer.toJson<int>(visitId),
+      'revisionNumber': serializer.toJson<int>(revisionNumber),
+      'beforeJson': serializer.toJson<String>(beforeJson),
+      'afterJson': serializer.toJson<String>(afterJson),
+      'editorUserId': serializer.toJson<int?>(editorUserId),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'reason': serializer.toJson<String?>(reason),
+    };
+  }
+
+  MeasuredDetailRevision copyWith(
+          {int? id,
+          String? revisionUuid,
+          int? visitId,
+          int? revisionNumber,
+          String? beforeJson,
+          String? afterJson,
+          Value<int?> editorUserId = const Value.absent(),
+          DateTime? createdAt,
+          Value<String?> reason = const Value.absent()}) =>
+      MeasuredDetailRevision(
+        id: id ?? this.id,
+        revisionUuid: revisionUuid ?? this.revisionUuid,
+        visitId: visitId ?? this.visitId,
+        revisionNumber: revisionNumber ?? this.revisionNumber,
+        beforeJson: beforeJson ?? this.beforeJson,
+        afterJson: afterJson ?? this.afterJson,
+        editorUserId:
+            editorUserId.present ? editorUserId.value : this.editorUserId,
+        createdAt: createdAt ?? this.createdAt,
+        reason: reason.present ? reason.value : this.reason,
+      );
+  MeasuredDetailRevision copyWithCompanion(
+      MeasuredDetailRevisionsCompanion data) {
+    return MeasuredDetailRevision(
+      id: data.id.present ? data.id.value : this.id,
+      revisionUuid: data.revisionUuid.present
+          ? data.revisionUuid.value
+          : this.revisionUuid,
+      visitId: data.visitId.present ? data.visitId.value : this.visitId,
+      revisionNumber: data.revisionNumber.present
+          ? data.revisionNumber.value
+          : this.revisionNumber,
+      beforeJson:
+          data.beforeJson.present ? data.beforeJson.value : this.beforeJson,
+      afterJson: data.afterJson.present ? data.afterJson.value : this.afterJson,
+      editorUserId: data.editorUserId.present
+          ? data.editorUserId.value
+          : this.editorUserId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      reason: data.reason.present ? data.reason.value : this.reason,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MeasuredDetailRevision(')
+          ..write('id: $id, ')
+          ..write('revisionUuid: $revisionUuid, ')
+          ..write('visitId: $visitId, ')
+          ..write('revisionNumber: $revisionNumber, ')
+          ..write('beforeJson: $beforeJson, ')
+          ..write('afterJson: $afterJson, ')
+          ..write('editorUserId: $editorUserId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('reason: $reason')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, revisionUuid, visitId, revisionNumber,
+      beforeJson, afterJson, editorUserId, createdAt, reason);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MeasuredDetailRevision &&
+          other.id == this.id &&
+          other.revisionUuid == this.revisionUuid &&
+          other.visitId == this.visitId &&
+          other.revisionNumber == this.revisionNumber &&
+          other.beforeJson == this.beforeJson &&
+          other.afterJson == this.afterJson &&
+          other.editorUserId == this.editorUserId &&
+          other.createdAt == this.createdAt &&
+          other.reason == this.reason);
+}
+
+class MeasuredDetailRevisionsCompanion
+    extends UpdateCompanion<MeasuredDetailRevision> {
+  final Value<int> id;
+  final Value<String> revisionUuid;
+  final Value<int> visitId;
+  final Value<int> revisionNumber;
+  final Value<String> beforeJson;
+  final Value<String> afterJson;
+  final Value<int?> editorUserId;
+  final Value<DateTime> createdAt;
+  final Value<String?> reason;
+  const MeasuredDetailRevisionsCompanion({
+    this.id = const Value.absent(),
+    this.revisionUuid = const Value.absent(),
+    this.visitId = const Value.absent(),
+    this.revisionNumber = const Value.absent(),
+    this.beforeJson = const Value.absent(),
+    this.afterJson = const Value.absent(),
+    this.editorUserId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.reason = const Value.absent(),
+  });
+  MeasuredDetailRevisionsCompanion.insert({
+    this.id = const Value.absent(),
+    required String revisionUuid,
+    required int visitId,
+    required int revisionNumber,
+    required String beforeJson,
+    required String afterJson,
+    this.editorUserId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.reason = const Value.absent(),
+  })  : revisionUuid = Value(revisionUuid),
+        visitId = Value(visitId),
+        revisionNumber = Value(revisionNumber),
+        beforeJson = Value(beforeJson),
+        afterJson = Value(afterJson);
+  static Insertable<MeasuredDetailRevision> custom({
+    Expression<int>? id,
+    Expression<String>? revisionUuid,
+    Expression<int>? visitId,
+    Expression<int>? revisionNumber,
+    Expression<String>? beforeJson,
+    Expression<String>? afterJson,
+    Expression<int>? editorUserId,
+    Expression<DateTime>? createdAt,
+    Expression<String>? reason,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (revisionUuid != null) 'revision_uuid': revisionUuid,
+      if (visitId != null) 'visit_id': visitId,
+      if (revisionNumber != null) 'revision_number': revisionNumber,
+      if (beforeJson != null) 'before_json': beforeJson,
+      if (afterJson != null) 'after_json': afterJson,
+      if (editorUserId != null) 'editor_user_id': editorUserId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (reason != null) 'reason': reason,
+    });
+  }
+
+  MeasuredDetailRevisionsCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? revisionUuid,
+      Value<int>? visitId,
+      Value<int>? revisionNumber,
+      Value<String>? beforeJson,
+      Value<String>? afterJson,
+      Value<int?>? editorUserId,
+      Value<DateTime>? createdAt,
+      Value<String?>? reason}) {
+    return MeasuredDetailRevisionsCompanion(
+      id: id ?? this.id,
+      revisionUuid: revisionUuid ?? this.revisionUuid,
+      visitId: visitId ?? this.visitId,
+      revisionNumber: revisionNumber ?? this.revisionNumber,
+      beforeJson: beforeJson ?? this.beforeJson,
+      afterJson: afterJson ?? this.afterJson,
+      editorUserId: editorUserId ?? this.editorUserId,
+      createdAt: createdAt ?? this.createdAt,
+      reason: reason ?? this.reason,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (revisionUuid.present) {
+      map['revision_uuid'] = Variable<String>(revisionUuid.value);
+    }
+    if (visitId.present) {
+      map['visit_id'] = Variable<int>(visitId.value);
+    }
+    if (revisionNumber.present) {
+      map['revision_number'] = Variable<int>(revisionNumber.value);
+    }
+    if (beforeJson.present) {
+      map['before_json'] = Variable<String>(beforeJson.value);
+    }
+    if (afterJson.present) {
+      map['after_json'] = Variable<String>(afterJson.value);
+    }
+    if (editorUserId.present) {
+      map['editor_user_id'] = Variable<int>(editorUserId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (reason.present) {
+      map['reason'] = Variable<String>(reason.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MeasuredDetailRevisionsCompanion(')
+          ..write('id: $id, ')
+          ..write('revisionUuid: $revisionUuid, ')
+          ..write('visitId: $visitId, ')
+          ..write('revisionNumber: $revisionNumber, ')
+          ..write('beforeJson: $beforeJson, ')
+          ..write('afterJson: $afterJson, ')
+          ..write('editorUserId: $editorUserId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('reason: $reason')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SyncOutboxTable extends SyncOutbox
+    with TableInfo<$SyncOutboxTable, SyncOutboxData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyncOutboxTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _ownerUserIdMeta =
+      const VerificationMeta('ownerUserId');
+  @override
+  late final GeneratedColumn<int> ownerUserId = GeneratedColumn<int>(
+      'owner_user_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _visitUuidMeta =
+      const VerificationMeta('visitUuid');
+  @override
+  late final GeneratedColumn<String> visitUuid = GeneratedColumn<String>(
+      'visit_uuid', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _entityTypeMeta =
+      const VerificationMeta('entityType');
+  @override
+  late final GeneratedColumn<String> entityType = GeneratedColumn<String>(
+      'entity_type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _entityUuidMeta =
+      const VerificationMeta('entityUuid');
+  @override
+  late final GeneratedColumn<String> entityUuid = GeneratedColumn<String>(
+      'entity_uuid', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _operationMeta =
+      const VerificationMeta('operation');
+  @override
+  late final GeneratedColumn<String> operation = GeneratedColumn<String>(
+      'operation', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('upsert'));
+  static const VerificationMeta _dependencyEntityUuidMeta =
+      const VerificationMeta('dependencyEntityUuid');
+  @override
+  late final GeneratedColumn<String> dependencyEntityUuid =
+      GeneratedColumn<String>('dependency_entity_uuid', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _payloadJsonMeta =
+      const VerificationMeta('payloadJson');
+  @override
+  late final GeneratedColumn<String> payloadJson = GeneratedColumn<String>(
+      'payload_json', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _payloadChecksumMeta =
+      const VerificationMeta('payloadChecksum');
+  @override
+  late final GeneratedColumn<String> payloadChecksum = GeneratedColumn<String>(
+      'payload_checksum', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+      'status', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('pending'));
+  static const VerificationMeta _retryCountMeta =
+      const VerificationMeta('retryCount');
+  @override
+  late final GeneratedColumn<int> retryCount = GeneratedColumn<int>(
+      'retry_count', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  static const VerificationMeta _lastAttemptAtMeta =
+      const VerificationMeta('lastAttemptAt');
+  @override
+  late final GeneratedColumn<DateTime> lastAttemptAt =
+      GeneratedColumn<DateTime>('last_attempt_at', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _acknowledgedAtMeta =
+      const VerificationMeta('acknowledgedAt');
+  @override
+  late final GeneratedColumn<DateTime> acknowledgedAt =
+      GeneratedColumn<DateTime>('acknowledged_at', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _acknowledgementPayloadJsonMeta =
+      const VerificationMeta('acknowledgementPayloadJson');
+  @override
+  late final GeneratedColumn<String> acknowledgementPayloadJson =
+      GeneratedColumn<String>('acknowledgement_payload_json', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _errorMessageMeta =
+      const VerificationMeta('errorMessage');
+  @override
+  late final GeneratedColumn<String> errorMessage = GeneratedColumn<String>(
+      'error_message', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        ownerUserId,
+        visitUuid,
+        entityType,
+        entityUuid,
+        operation,
+        dependencyEntityUuid,
+        payloadJson,
+        payloadChecksum,
+        status,
+        retryCount,
+        createdAt,
+        lastAttemptAt,
+        acknowledgedAt,
+        acknowledgementPayloadJson,
+        errorMessage
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sync_outbox';
+  @override
+  VerificationContext validateIntegrity(Insertable<SyncOutboxData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('owner_user_id')) {
+      context.handle(
+          _ownerUserIdMeta,
+          ownerUserId.isAcceptableOrUnknown(
+              data['owner_user_id']!, _ownerUserIdMeta));
+    } else if (isInserting) {
+      context.missing(_ownerUserIdMeta);
+    }
+    if (data.containsKey('visit_uuid')) {
+      context.handle(_visitUuidMeta,
+          visitUuid.isAcceptableOrUnknown(data['visit_uuid']!, _visitUuidMeta));
+    } else if (isInserting) {
+      context.missing(_visitUuidMeta);
+    }
+    if (data.containsKey('entity_type')) {
+      context.handle(
+          _entityTypeMeta,
+          entityType.isAcceptableOrUnknown(
+              data['entity_type']!, _entityTypeMeta));
+    } else if (isInserting) {
+      context.missing(_entityTypeMeta);
+    }
+    if (data.containsKey('entity_uuid')) {
+      context.handle(
+          _entityUuidMeta,
+          entityUuid.isAcceptableOrUnknown(
+              data['entity_uuid']!, _entityUuidMeta));
+    } else if (isInserting) {
+      context.missing(_entityUuidMeta);
+    }
+    if (data.containsKey('operation')) {
+      context.handle(_operationMeta,
+          operation.isAcceptableOrUnknown(data['operation']!, _operationMeta));
+    }
+    if (data.containsKey('dependency_entity_uuid')) {
+      context.handle(
+          _dependencyEntityUuidMeta,
+          dependencyEntityUuid.isAcceptableOrUnknown(
+              data['dependency_entity_uuid']!, _dependencyEntityUuidMeta));
+    }
+    if (data.containsKey('payload_json')) {
+      context.handle(
+          _payloadJsonMeta,
+          payloadJson.isAcceptableOrUnknown(
+              data['payload_json']!, _payloadJsonMeta));
+    } else if (isInserting) {
+      context.missing(_payloadJsonMeta);
+    }
+    if (data.containsKey('payload_checksum')) {
+      context.handle(
+          _payloadChecksumMeta,
+          payloadChecksum.isAcceptableOrUnknown(
+              data['payload_checksum']!, _payloadChecksumMeta));
+    } else if (isInserting) {
+      context.missing(_payloadChecksumMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta,
+          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    }
+    if (data.containsKey('retry_count')) {
+      context.handle(
+          _retryCountMeta,
+          retryCount.isAcceptableOrUnknown(
+              data['retry_count']!, _retryCountMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    if (data.containsKey('last_attempt_at')) {
+      context.handle(
+          _lastAttemptAtMeta,
+          lastAttemptAt.isAcceptableOrUnknown(
+              data['last_attempt_at']!, _lastAttemptAtMeta));
+    }
+    if (data.containsKey('acknowledged_at')) {
+      context.handle(
+          _acknowledgedAtMeta,
+          acknowledgedAt.isAcceptableOrUnknown(
+              data['acknowledged_at']!, _acknowledgedAtMeta));
+    }
+    if (data.containsKey('acknowledgement_payload_json')) {
+      context.handle(
+          _acknowledgementPayloadJsonMeta,
+          acknowledgementPayloadJson.isAcceptableOrUnknown(
+              data['acknowledgement_payload_json']!,
+              _acknowledgementPayloadJsonMeta));
+    }
+    if (data.containsKey('error_message')) {
+      context.handle(
+          _errorMessageMeta,
+          errorMessage.isAcceptableOrUnknown(
+              data['error_message']!, _errorMessageMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+        {entityType, entityUuid},
+      ];
+  @override
+  SyncOutboxData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyncOutboxData(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      ownerUserId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}owner_user_id'])!,
+      visitUuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}visit_uuid'])!,
+      entityType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}entity_type'])!,
+      entityUuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}entity_uuid'])!,
+      operation: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}operation'])!,
+      dependencyEntityUuid: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}dependency_entity_uuid']),
+      payloadJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}payload_json'])!,
+      payloadChecksum: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}payload_checksum'])!,
+      status: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      retryCount: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}retry_count'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      lastAttemptAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}last_attempt_at']),
+      acknowledgedAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}acknowledged_at']),
+      acknowledgementPayloadJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}acknowledgement_payload_json']),
+      errorMessage: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}error_message']),
+    );
+  }
+
+  @override
+  $SyncOutboxTable createAlias(String alias) {
+    return $SyncOutboxTable(attachedDatabase, alias);
+  }
+}
+
+class SyncOutboxData extends DataClass implements Insertable<SyncOutboxData> {
+  final int id;
+  final int ownerUserId;
+  final String visitUuid;
+  final String entityType;
+  final String entityUuid;
+  final String operation;
+  final String? dependencyEntityUuid;
+  final String payloadJson;
+  final String payloadChecksum;
+  final String status;
+  final int retryCount;
+  final DateTime createdAt;
+  final DateTime? lastAttemptAt;
+  final DateTime? acknowledgedAt;
+  final String? acknowledgementPayloadJson;
+  final String? errorMessage;
+  const SyncOutboxData(
+      {required this.id,
+      required this.ownerUserId,
+      required this.visitUuid,
+      required this.entityType,
+      required this.entityUuid,
+      required this.operation,
+      this.dependencyEntityUuid,
+      required this.payloadJson,
+      required this.payloadChecksum,
+      required this.status,
+      required this.retryCount,
+      required this.createdAt,
+      this.lastAttemptAt,
+      this.acknowledgedAt,
+      this.acknowledgementPayloadJson,
+      this.errorMessage});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['owner_user_id'] = Variable<int>(ownerUserId);
+    map['visit_uuid'] = Variable<String>(visitUuid);
+    map['entity_type'] = Variable<String>(entityType);
+    map['entity_uuid'] = Variable<String>(entityUuid);
+    map['operation'] = Variable<String>(operation);
+    if (!nullToAbsent || dependencyEntityUuid != null) {
+      map['dependency_entity_uuid'] = Variable<String>(dependencyEntityUuid);
+    }
+    map['payload_json'] = Variable<String>(payloadJson);
+    map['payload_checksum'] = Variable<String>(payloadChecksum);
+    map['status'] = Variable<String>(status);
+    map['retry_count'] = Variable<int>(retryCount);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || lastAttemptAt != null) {
+      map['last_attempt_at'] = Variable<DateTime>(lastAttemptAt);
+    }
+    if (!nullToAbsent || acknowledgedAt != null) {
+      map['acknowledged_at'] = Variable<DateTime>(acknowledgedAt);
+    }
+    if (!nullToAbsent || acknowledgementPayloadJson != null) {
+      map['acknowledgement_payload_json'] =
+          Variable<String>(acknowledgementPayloadJson);
+    }
+    if (!nullToAbsent || errorMessage != null) {
+      map['error_message'] = Variable<String>(errorMessage);
+    }
+    return map;
+  }
+
+  SyncOutboxCompanion toCompanion(bool nullToAbsent) {
+    return SyncOutboxCompanion(
+      id: Value(id),
+      ownerUserId: Value(ownerUserId),
+      visitUuid: Value(visitUuid),
+      entityType: Value(entityType),
+      entityUuid: Value(entityUuid),
+      operation: Value(operation),
+      dependencyEntityUuid: dependencyEntityUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dependencyEntityUuid),
+      payloadJson: Value(payloadJson),
+      payloadChecksum: Value(payloadChecksum),
+      status: Value(status),
+      retryCount: Value(retryCount),
+      createdAt: Value(createdAt),
+      lastAttemptAt: lastAttemptAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastAttemptAt),
+      acknowledgedAt: acknowledgedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(acknowledgedAt),
+      acknowledgementPayloadJson:
+          acknowledgementPayloadJson == null && nullToAbsent
+              ? const Value.absent()
+              : Value(acknowledgementPayloadJson),
+      errorMessage: errorMessage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(errorMessage),
+    );
+  }
+
+  factory SyncOutboxData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyncOutboxData(
+      id: serializer.fromJson<int>(json['id']),
+      ownerUserId: serializer.fromJson<int>(json['ownerUserId']),
+      visitUuid: serializer.fromJson<String>(json['visitUuid']),
+      entityType: serializer.fromJson<String>(json['entityType']),
+      entityUuid: serializer.fromJson<String>(json['entityUuid']),
+      operation: serializer.fromJson<String>(json['operation']),
+      dependencyEntityUuid:
+          serializer.fromJson<String?>(json['dependencyEntityUuid']),
+      payloadJson: serializer.fromJson<String>(json['payloadJson']),
+      payloadChecksum: serializer.fromJson<String>(json['payloadChecksum']),
+      status: serializer.fromJson<String>(json['status']),
+      retryCount: serializer.fromJson<int>(json['retryCount']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      lastAttemptAt: serializer.fromJson<DateTime?>(json['lastAttemptAt']),
+      acknowledgedAt: serializer.fromJson<DateTime?>(json['acknowledgedAt']),
+      acknowledgementPayloadJson:
+          serializer.fromJson<String?>(json['acknowledgementPayloadJson']),
+      errorMessage: serializer.fromJson<String?>(json['errorMessage']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'ownerUserId': serializer.toJson<int>(ownerUserId),
+      'visitUuid': serializer.toJson<String>(visitUuid),
+      'entityType': serializer.toJson<String>(entityType),
+      'entityUuid': serializer.toJson<String>(entityUuid),
+      'operation': serializer.toJson<String>(operation),
+      'dependencyEntityUuid': serializer.toJson<String?>(dependencyEntityUuid),
+      'payloadJson': serializer.toJson<String>(payloadJson),
+      'payloadChecksum': serializer.toJson<String>(payloadChecksum),
+      'status': serializer.toJson<String>(status),
+      'retryCount': serializer.toJson<int>(retryCount),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'lastAttemptAt': serializer.toJson<DateTime?>(lastAttemptAt),
+      'acknowledgedAt': serializer.toJson<DateTime?>(acknowledgedAt),
+      'acknowledgementPayloadJson':
+          serializer.toJson<String?>(acknowledgementPayloadJson),
+      'errorMessage': serializer.toJson<String?>(errorMessage),
+    };
+  }
+
+  SyncOutboxData copyWith(
+          {int? id,
+          int? ownerUserId,
+          String? visitUuid,
+          String? entityType,
+          String? entityUuid,
+          String? operation,
+          Value<String?> dependencyEntityUuid = const Value.absent(),
+          String? payloadJson,
+          String? payloadChecksum,
+          String? status,
+          int? retryCount,
+          DateTime? createdAt,
+          Value<DateTime?> lastAttemptAt = const Value.absent(),
+          Value<DateTime?> acknowledgedAt = const Value.absent(),
+          Value<String?> acknowledgementPayloadJson = const Value.absent(),
+          Value<String?> errorMessage = const Value.absent()}) =>
+      SyncOutboxData(
+        id: id ?? this.id,
+        ownerUserId: ownerUserId ?? this.ownerUserId,
+        visitUuid: visitUuid ?? this.visitUuid,
+        entityType: entityType ?? this.entityType,
+        entityUuid: entityUuid ?? this.entityUuid,
+        operation: operation ?? this.operation,
+        dependencyEntityUuid: dependencyEntityUuid.present
+            ? dependencyEntityUuid.value
+            : this.dependencyEntityUuid,
+        payloadJson: payloadJson ?? this.payloadJson,
+        payloadChecksum: payloadChecksum ?? this.payloadChecksum,
+        status: status ?? this.status,
+        retryCount: retryCount ?? this.retryCount,
+        createdAt: createdAt ?? this.createdAt,
+        lastAttemptAt:
+            lastAttemptAt.present ? lastAttemptAt.value : this.lastAttemptAt,
+        acknowledgedAt:
+            acknowledgedAt.present ? acknowledgedAt.value : this.acknowledgedAt,
+        acknowledgementPayloadJson: acknowledgementPayloadJson.present
+            ? acknowledgementPayloadJson.value
+            : this.acknowledgementPayloadJson,
+        errorMessage:
+            errorMessage.present ? errorMessage.value : this.errorMessage,
+      );
+  SyncOutboxData copyWithCompanion(SyncOutboxCompanion data) {
+    return SyncOutboxData(
+      id: data.id.present ? data.id.value : this.id,
+      ownerUserId:
+          data.ownerUserId.present ? data.ownerUserId.value : this.ownerUserId,
+      visitUuid: data.visitUuid.present ? data.visitUuid.value : this.visitUuid,
+      entityType:
+          data.entityType.present ? data.entityType.value : this.entityType,
+      entityUuid:
+          data.entityUuid.present ? data.entityUuid.value : this.entityUuid,
+      operation: data.operation.present ? data.operation.value : this.operation,
+      dependencyEntityUuid: data.dependencyEntityUuid.present
+          ? data.dependencyEntityUuid.value
+          : this.dependencyEntityUuid,
+      payloadJson:
+          data.payloadJson.present ? data.payloadJson.value : this.payloadJson,
+      payloadChecksum: data.payloadChecksum.present
+          ? data.payloadChecksum.value
+          : this.payloadChecksum,
+      status: data.status.present ? data.status.value : this.status,
+      retryCount:
+          data.retryCount.present ? data.retryCount.value : this.retryCount,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      lastAttemptAt: data.lastAttemptAt.present
+          ? data.lastAttemptAt.value
+          : this.lastAttemptAt,
+      acknowledgedAt: data.acknowledgedAt.present
+          ? data.acknowledgedAt.value
+          : this.acknowledgedAt,
+      acknowledgementPayloadJson: data.acknowledgementPayloadJson.present
+          ? data.acknowledgementPayloadJson.value
+          : this.acknowledgementPayloadJson,
+      errorMessage: data.errorMessage.present
+          ? data.errorMessage.value
+          : this.errorMessage,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncOutboxData(')
+          ..write('id: $id, ')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('visitUuid: $visitUuid, ')
+          ..write('entityType: $entityType, ')
+          ..write('entityUuid: $entityUuid, ')
+          ..write('operation: $operation, ')
+          ..write('dependencyEntityUuid: $dependencyEntityUuid, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('payloadChecksum: $payloadChecksum, ')
+          ..write('status: $status, ')
+          ..write('retryCount: $retryCount, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('lastAttemptAt: $lastAttemptAt, ')
+          ..write('acknowledgedAt: $acknowledgedAt, ')
+          ..write('acknowledgementPayloadJson: $acknowledgementPayloadJson, ')
+          ..write('errorMessage: $errorMessage')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      ownerUserId,
+      visitUuid,
+      entityType,
+      entityUuid,
+      operation,
+      dependencyEntityUuid,
+      payloadJson,
+      payloadChecksum,
+      status,
+      retryCount,
+      createdAt,
+      lastAttemptAt,
+      acknowledgedAt,
+      acknowledgementPayloadJson,
+      errorMessage);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyncOutboxData &&
+          other.id == this.id &&
+          other.ownerUserId == this.ownerUserId &&
+          other.visitUuid == this.visitUuid &&
+          other.entityType == this.entityType &&
+          other.entityUuid == this.entityUuid &&
+          other.operation == this.operation &&
+          other.dependencyEntityUuid == this.dependencyEntityUuid &&
+          other.payloadJson == this.payloadJson &&
+          other.payloadChecksum == this.payloadChecksum &&
+          other.status == this.status &&
+          other.retryCount == this.retryCount &&
+          other.createdAt == this.createdAt &&
+          other.lastAttemptAt == this.lastAttemptAt &&
+          other.acknowledgedAt == this.acknowledgedAt &&
+          other.acknowledgementPayloadJson == this.acknowledgementPayloadJson &&
+          other.errorMessage == this.errorMessage);
+}
+
+class SyncOutboxCompanion extends UpdateCompanion<SyncOutboxData> {
+  final Value<int> id;
+  final Value<int> ownerUserId;
+  final Value<String> visitUuid;
+  final Value<String> entityType;
+  final Value<String> entityUuid;
+  final Value<String> operation;
+  final Value<String?> dependencyEntityUuid;
+  final Value<String> payloadJson;
+  final Value<String> payloadChecksum;
+  final Value<String> status;
+  final Value<int> retryCount;
+  final Value<DateTime> createdAt;
+  final Value<DateTime?> lastAttemptAt;
+  final Value<DateTime?> acknowledgedAt;
+  final Value<String?> acknowledgementPayloadJson;
+  final Value<String?> errorMessage;
+  const SyncOutboxCompanion({
+    this.id = const Value.absent(),
+    this.ownerUserId = const Value.absent(),
+    this.visitUuid = const Value.absent(),
+    this.entityType = const Value.absent(),
+    this.entityUuid = const Value.absent(),
+    this.operation = const Value.absent(),
+    this.dependencyEntityUuid = const Value.absent(),
+    this.payloadJson = const Value.absent(),
+    this.payloadChecksum = const Value.absent(),
+    this.status = const Value.absent(),
+    this.retryCount = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.lastAttemptAt = const Value.absent(),
+    this.acknowledgedAt = const Value.absent(),
+    this.acknowledgementPayloadJson = const Value.absent(),
+    this.errorMessage = const Value.absent(),
+  });
+  SyncOutboxCompanion.insert({
+    this.id = const Value.absent(),
+    required int ownerUserId,
+    required String visitUuid,
+    required String entityType,
+    required String entityUuid,
+    this.operation = const Value.absent(),
+    this.dependencyEntityUuid = const Value.absent(),
+    required String payloadJson,
+    required String payloadChecksum,
+    this.status = const Value.absent(),
+    this.retryCount = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.lastAttemptAt = const Value.absent(),
+    this.acknowledgedAt = const Value.absent(),
+    this.acknowledgementPayloadJson = const Value.absent(),
+    this.errorMessage = const Value.absent(),
+  })  : ownerUserId = Value(ownerUserId),
+        visitUuid = Value(visitUuid),
+        entityType = Value(entityType),
+        entityUuid = Value(entityUuid),
+        payloadJson = Value(payloadJson),
+        payloadChecksum = Value(payloadChecksum);
+  static Insertable<SyncOutboxData> custom({
+    Expression<int>? id,
+    Expression<int>? ownerUserId,
+    Expression<String>? visitUuid,
+    Expression<String>? entityType,
+    Expression<String>? entityUuid,
+    Expression<String>? operation,
+    Expression<String>? dependencyEntityUuid,
+    Expression<String>? payloadJson,
+    Expression<String>? payloadChecksum,
+    Expression<String>? status,
+    Expression<int>? retryCount,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? lastAttemptAt,
+    Expression<DateTime>? acknowledgedAt,
+    Expression<String>? acknowledgementPayloadJson,
+    Expression<String>? errorMessage,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (ownerUserId != null) 'owner_user_id': ownerUserId,
+      if (visitUuid != null) 'visit_uuid': visitUuid,
+      if (entityType != null) 'entity_type': entityType,
+      if (entityUuid != null) 'entity_uuid': entityUuid,
+      if (operation != null) 'operation': operation,
+      if (dependencyEntityUuid != null)
+        'dependency_entity_uuid': dependencyEntityUuid,
+      if (payloadJson != null) 'payload_json': payloadJson,
+      if (payloadChecksum != null) 'payload_checksum': payloadChecksum,
+      if (status != null) 'status': status,
+      if (retryCount != null) 'retry_count': retryCount,
+      if (createdAt != null) 'created_at': createdAt,
+      if (lastAttemptAt != null) 'last_attempt_at': lastAttemptAt,
+      if (acknowledgedAt != null) 'acknowledged_at': acknowledgedAt,
+      if (acknowledgementPayloadJson != null)
+        'acknowledgement_payload_json': acknowledgementPayloadJson,
+      if (errorMessage != null) 'error_message': errorMessage,
+    });
+  }
+
+  SyncOutboxCompanion copyWith(
+      {Value<int>? id,
+      Value<int>? ownerUserId,
+      Value<String>? visitUuid,
+      Value<String>? entityType,
+      Value<String>? entityUuid,
+      Value<String>? operation,
+      Value<String?>? dependencyEntityUuid,
+      Value<String>? payloadJson,
+      Value<String>? payloadChecksum,
+      Value<String>? status,
+      Value<int>? retryCount,
+      Value<DateTime>? createdAt,
+      Value<DateTime?>? lastAttemptAt,
+      Value<DateTime?>? acknowledgedAt,
+      Value<String?>? acknowledgementPayloadJson,
+      Value<String?>? errorMessage}) {
+    return SyncOutboxCompanion(
+      id: id ?? this.id,
+      ownerUserId: ownerUserId ?? this.ownerUserId,
+      visitUuid: visitUuid ?? this.visitUuid,
+      entityType: entityType ?? this.entityType,
+      entityUuid: entityUuid ?? this.entityUuid,
+      operation: operation ?? this.operation,
+      dependencyEntityUuid: dependencyEntityUuid ?? this.dependencyEntityUuid,
+      payloadJson: payloadJson ?? this.payloadJson,
+      payloadChecksum: payloadChecksum ?? this.payloadChecksum,
+      status: status ?? this.status,
+      retryCount: retryCount ?? this.retryCount,
+      createdAt: createdAt ?? this.createdAt,
+      lastAttemptAt: lastAttemptAt ?? this.lastAttemptAt,
+      acknowledgedAt: acknowledgedAt ?? this.acknowledgedAt,
+      acknowledgementPayloadJson:
+          acknowledgementPayloadJson ?? this.acknowledgementPayloadJson,
+      errorMessage: errorMessage ?? this.errorMessage,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (ownerUserId.present) {
+      map['owner_user_id'] = Variable<int>(ownerUserId.value);
+    }
+    if (visitUuid.present) {
+      map['visit_uuid'] = Variable<String>(visitUuid.value);
+    }
+    if (entityType.present) {
+      map['entity_type'] = Variable<String>(entityType.value);
+    }
+    if (entityUuid.present) {
+      map['entity_uuid'] = Variable<String>(entityUuid.value);
+    }
+    if (operation.present) {
+      map['operation'] = Variable<String>(operation.value);
+    }
+    if (dependencyEntityUuid.present) {
+      map['dependency_entity_uuid'] =
+          Variable<String>(dependencyEntityUuid.value);
+    }
+    if (payloadJson.present) {
+      map['payload_json'] = Variable<String>(payloadJson.value);
+    }
+    if (payloadChecksum.present) {
+      map['payload_checksum'] = Variable<String>(payloadChecksum.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (retryCount.present) {
+      map['retry_count'] = Variable<int>(retryCount.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (lastAttemptAt.present) {
+      map['last_attempt_at'] = Variable<DateTime>(lastAttemptAt.value);
+    }
+    if (acknowledgedAt.present) {
+      map['acknowledged_at'] = Variable<DateTime>(acknowledgedAt.value);
+    }
+    if (acknowledgementPayloadJson.present) {
+      map['acknowledgement_payload_json'] =
+          Variable<String>(acknowledgementPayloadJson.value);
+    }
+    if (errorMessage.present) {
+      map['error_message'] = Variable<String>(errorMessage.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncOutboxCompanion(')
+          ..write('id: $id, ')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('visitUuid: $visitUuid, ')
+          ..write('entityType: $entityType, ')
+          ..write('entityUuid: $entityUuid, ')
+          ..write('operation: $operation, ')
+          ..write('dependencyEntityUuid: $dependencyEntityUuid, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('payloadChecksum: $payloadChecksum, ')
+          ..write('status: $status, ')
+          ..write('retryCount: $retryCount, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('lastAttemptAt: $lastAttemptAt, ')
+          ..write('acknowledgedAt: $acknowledgedAt, ')
+          ..write('acknowledgementPayloadJson: $acknowledgementPayloadJson, ')
+          ..write('errorMessage: $errorMessage')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4274,12 +8675,73 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $VisitsTable visits = $VisitsTable(this);
   late final $MeasurementsTable measurements = $MeasurementsTable(this);
   late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
+  late final $CaptureAssetsTable captureAssets = $CaptureAssetsTable(this);
+  late final $CameraResultsTable cameraResults = $CameraResultsTable(this);
+  late final $MeasuredDetailRevisionsTable measuredDetailRevisions =
+      $MeasuredDetailRevisionsTable(this);
+  late final $SyncOutboxTable syncOutbox = $SyncOutboxTable(this);
+  late final Index ixVisitsOwnerLocalUuid = Index('ix_visits_owner_local_uuid',
+      'CREATE INDEX ix_visits_owner_local_uuid ON visits (owner_user_id, local_uuid)');
+  late final Index ixCaptureAssetsVisitRole = Index(
+      'ix_capture_assets_visit_role',
+      'CREATE INDEX ix_capture_assets_visit_role ON capture_assets (visit_id, role)');
+  late final Index ixCameraResultsVisitVersion = Index(
+      'ix_camera_results_visit_version',
+      'CREATE INDEX ix_camera_results_visit_version ON camera_results (visit_id, version)');
+  late final Index ixMeasuredRevisionsVisitRevision = Index(
+      'ix_measured_revisions_visit_revision',
+      'CREATE INDEX ix_measured_revisions_visit_revision ON measured_detail_revisions (visit_id, revision_number)');
+  late final Index ixSyncOutboxOwnerStatusCreated = Index(
+      'ix_sync_outbox_owner_status_created',
+      'CREATE INDEX ix_sync_outbox_owner_status_created ON sync_outbox (owner_user_id, status, created_at)');
+  late final Index ixSyncOutboxVisitType = Index('ix_sync_outbox_visit_type',
+      'CREATE INDEX ix_sync_outbox_visit_type ON sync_outbox (visit_uuid, entity_type)');
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [children, visits, measurements, syncQueue];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+        children,
+        visits,
+        measurements,
+        syncQueue,
+        captureAssets,
+        cameraResults,
+        measuredDetailRevisions,
+        syncOutbox,
+        ixVisitsOwnerLocalUuid,
+        ixCaptureAssetsVisitRole,
+        ixCameraResultsVisitVersion,
+        ixMeasuredRevisionsVisitRevision,
+        ixSyncOutboxOwnerStatusCreated,
+        ixSyncOutboxVisitType
+      ];
+  @override
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
+        [
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('visits',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('capture_assets', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('visits',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('camera_results', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('visits',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('measured_detail_revisions', kind: UpdateKind.delete),
+            ],
+          ),
+        ],
+      );
 }
 
 typedef $$ChildrenTableCreateCompanionBuilder = ChildrenCompanion Function({
@@ -4628,6 +9090,14 @@ typedef $$VisitsTableCreateCompanionBuilder = VisitsCompanion Function({
   Value<String?> notes,
   Value<int?> ownerUserId,
   Value<String> entryMethod,
+  Value<String?> captureState,
+  Value<DateTime?> captureStartedAt,
+  Value<DateTime?> captureCompletedAt,
+  Value<String?> deviceMetadataJson,
+  Value<String?> consentVersion,
+  Value<DateTime?> consentTimestamp,
+  Value<String?> consentOperatorIdentifier,
+  Value<DateTime?> mediaDeletedAt,
 });
 typedef $$VisitsTableUpdateCompanionBuilder = VisitsCompanion Function({
   Value<int> id,
@@ -4641,6 +9111,14 @@ typedef $$VisitsTableUpdateCompanionBuilder = VisitsCompanion Function({
   Value<String?> notes,
   Value<int?> ownerUserId,
   Value<String> entryMethod,
+  Value<String?> captureState,
+  Value<DateTime?> captureStartedAt,
+  Value<DateTime?> captureCompletedAt,
+  Value<String?> deviceMetadataJson,
+  Value<String?> consentVersion,
+  Value<DateTime?> consentTimestamp,
+  Value<String?> consentOperatorIdentifier,
+  Value<DateTime?> mediaDeletedAt,
 });
 
 final class $$VisitsTableReferences
@@ -4689,6 +9167,55 @@ final class $$VisitsTableReferences
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
+
+  static MultiTypedResultKey<$CaptureAssetsTable, List<CaptureAsset>>
+      _captureAssetsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.captureAssets,
+              aliasName:
+                  $_aliasNameGenerator(db.visits.id, db.captureAssets.visitId));
+
+  $$CaptureAssetsTableProcessedTableManager get captureAssetsRefs {
+    final manager = $$CaptureAssetsTableTableManager($_db, $_db.captureAssets)
+        .filter((f) => f.visitId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_captureAssetsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$CameraResultsTable, List<CameraResult>>
+      _cameraResultsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.cameraResults,
+              aliasName:
+                  $_aliasNameGenerator(db.visits.id, db.cameraResults.visitId));
+
+  $$CameraResultsTableProcessedTableManager get cameraResultsRefs {
+    final manager = $$CameraResultsTableTableManager($_db, $_db.cameraResults)
+        .filter((f) => f.visitId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_cameraResultsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$MeasuredDetailRevisionsTable,
+      List<MeasuredDetailRevision>> _measuredDetailRevisionsRefsTable(
+          _$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(db.measuredDetailRevisions,
+          aliasName: $_aliasNameGenerator(
+              db.visits.id, db.measuredDetailRevisions.visitId));
+
+  $$MeasuredDetailRevisionsTableProcessedTableManager
+      get measuredDetailRevisionsRefs {
+    final manager = $$MeasuredDetailRevisionsTableTableManager(
+            $_db, $_db.measuredDetailRevisions)
+        .filter((f) => f.visitId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_measuredDetailRevisionsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
 }
 
 class $$VisitsTableFilterComposer
@@ -4729,6 +9256,37 @@ class $$VisitsTableFilterComposer
 
   ColumnFilters<String> get entryMethod => $composableBuilder(
       column: $table.entryMethod, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get captureState => $composableBuilder(
+      column: $table.captureState, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get captureStartedAt => $composableBuilder(
+      column: $table.captureStartedAt,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get captureCompletedAt => $composableBuilder(
+      column: $table.captureCompletedAt,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get deviceMetadataJson => $composableBuilder(
+      column: $table.deviceMetadataJson,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get consentVersion => $composableBuilder(
+      column: $table.consentVersion,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get consentTimestamp => $composableBuilder(
+      column: $table.consentTimestamp,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get consentOperatorIdentifier => $composableBuilder(
+      column: $table.consentOperatorIdentifier,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get mediaDeletedAt => $composableBuilder(
+      column: $table.mediaDeletedAt,
+      builder: (column) => ColumnFilters(column));
 
   $$ChildrenTableFilterComposer get childId {
     final $$ChildrenTableFilterComposer composer = $composerBuilder(
@@ -4791,6 +9349,71 @@ class $$VisitsTableFilterComposer
             ));
     return f(composer);
   }
+
+  Expression<bool> captureAssetsRefs(
+      Expression<bool> Function($$CaptureAssetsTableFilterComposer f) f) {
+    final $$CaptureAssetsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.captureAssets,
+        getReferencedColumn: (t) => t.visitId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CaptureAssetsTableFilterComposer(
+              $db: $db,
+              $table: $db.captureAssets,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> cameraResultsRefs(
+      Expression<bool> Function($$CameraResultsTableFilterComposer f) f) {
+    final $$CameraResultsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.cameraResults,
+        getReferencedColumn: (t) => t.visitId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CameraResultsTableFilterComposer(
+              $db: $db,
+              $table: $db.cameraResults,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> measuredDetailRevisionsRefs(
+      Expression<bool> Function($$MeasuredDetailRevisionsTableFilterComposer f)
+          f) {
+    final $$MeasuredDetailRevisionsTableFilterComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $db.measuredDetailRevisions,
+            getReferencedColumn: (t) => t.visitId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$MeasuredDetailRevisionsTableFilterComposer(
+                  $db: $db,
+                  $table: $db.measuredDetailRevisions,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
 }
 
 class $$VisitsTableOrderingComposer
@@ -4833,6 +9456,38 @@ class $$VisitsTableOrderingComposer
 
   ColumnOrderings<String> get entryMethod => $composableBuilder(
       column: $table.entryMethod, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get captureState => $composableBuilder(
+      column: $table.captureState,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get captureStartedAt => $composableBuilder(
+      column: $table.captureStartedAt,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get captureCompletedAt => $composableBuilder(
+      column: $table.captureCompletedAt,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get deviceMetadataJson => $composableBuilder(
+      column: $table.deviceMetadataJson,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get consentVersion => $composableBuilder(
+      column: $table.consentVersion,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get consentTimestamp => $composableBuilder(
+      column: $table.consentTimestamp,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get consentOperatorIdentifier => $composableBuilder(
+      column: $table.consentOperatorIdentifier,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get mediaDeletedAt => $composableBuilder(
+      column: $table.mediaDeletedAt,
+      builder: (column) => ColumnOrderings(column));
 
   $$ChildrenTableOrderingComposer get childId {
     final $$ChildrenTableOrderingComposer composer = $composerBuilder(
@@ -4893,6 +9548,30 @@ class $$VisitsTableAnnotationComposer
 
   GeneratedColumn<String> get entryMethod => $composableBuilder(
       column: $table.entryMethod, builder: (column) => column);
+
+  GeneratedColumn<String> get captureState => $composableBuilder(
+      column: $table.captureState, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get captureStartedAt => $composableBuilder(
+      column: $table.captureStartedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get captureCompletedAt => $composableBuilder(
+      column: $table.captureCompletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get deviceMetadataJson => $composableBuilder(
+      column: $table.deviceMetadataJson, builder: (column) => column);
+
+  GeneratedColumn<String> get consentVersion => $composableBuilder(
+      column: $table.consentVersion, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get consentTimestamp => $composableBuilder(
+      column: $table.consentTimestamp, builder: (column) => column);
+
+  GeneratedColumn<String> get consentOperatorIdentifier => $composableBuilder(
+      column: $table.consentOperatorIdentifier, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get mediaDeletedAt => $composableBuilder(
+      column: $table.mediaDeletedAt, builder: (column) => column);
 
   $$ChildrenTableAnnotationComposer get childId {
     final $$ChildrenTableAnnotationComposer composer = $composerBuilder(
@@ -4955,6 +9634,71 @@ class $$VisitsTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> captureAssetsRefs<T extends Object>(
+      Expression<T> Function($$CaptureAssetsTableAnnotationComposer a) f) {
+    final $$CaptureAssetsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.captureAssets,
+        getReferencedColumn: (t) => t.visitId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CaptureAssetsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.captureAssets,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> cameraResultsRefs<T extends Object>(
+      Expression<T> Function($$CameraResultsTableAnnotationComposer a) f) {
+    final $$CameraResultsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.cameraResults,
+        getReferencedColumn: (t) => t.visitId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CameraResultsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.cameraResults,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> measuredDetailRevisionsRefs<T extends Object>(
+      Expression<T> Function($$MeasuredDetailRevisionsTableAnnotationComposer a)
+          f) {
+    final $$MeasuredDetailRevisionsTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $db.measuredDetailRevisions,
+            getReferencedColumn: (t) => t.visitId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$MeasuredDetailRevisionsTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.measuredDetailRevisions,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
 }
 
 class $$VisitsTableTableManager extends RootTableManager<
@@ -4969,7 +9713,12 @@ class $$VisitsTableTableManager extends RootTableManager<
     (Visit, $$VisitsTableReferences),
     Visit,
     PrefetchHooks Function(
-        {bool childId, bool measurementsRefs, bool syncQueueRefs})> {
+        {bool childId,
+        bool measurementsRefs,
+        bool syncQueueRefs,
+        bool captureAssetsRefs,
+        bool cameraResultsRefs,
+        bool measuredDetailRevisionsRefs})> {
   $$VisitsTableTableManager(_$AppDatabase db, $VisitsTable table)
       : super(TableManagerState(
           db: db,
@@ -4992,6 +9741,14 @@ class $$VisitsTableTableManager extends RootTableManager<
             Value<String?> notes = const Value.absent(),
             Value<int?> ownerUserId = const Value.absent(),
             Value<String> entryMethod = const Value.absent(),
+            Value<String?> captureState = const Value.absent(),
+            Value<DateTime?> captureStartedAt = const Value.absent(),
+            Value<DateTime?> captureCompletedAt = const Value.absent(),
+            Value<String?> deviceMetadataJson = const Value.absent(),
+            Value<String?> consentVersion = const Value.absent(),
+            Value<DateTime?> consentTimestamp = const Value.absent(),
+            Value<String?> consentOperatorIdentifier = const Value.absent(),
+            Value<DateTime?> mediaDeletedAt = const Value.absent(),
           }) =>
               VisitsCompanion(
             id: id,
@@ -5005,6 +9762,14 @@ class $$VisitsTableTableManager extends RootTableManager<
             notes: notes,
             ownerUserId: ownerUserId,
             entryMethod: entryMethod,
+            captureState: captureState,
+            captureStartedAt: captureStartedAt,
+            captureCompletedAt: captureCompletedAt,
+            deviceMetadataJson: deviceMetadataJson,
+            consentVersion: consentVersion,
+            consentTimestamp: consentTimestamp,
+            consentOperatorIdentifier: consentOperatorIdentifier,
+            mediaDeletedAt: mediaDeletedAt,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -5018,6 +9783,14 @@ class $$VisitsTableTableManager extends RootTableManager<
             Value<String?> notes = const Value.absent(),
             Value<int?> ownerUserId = const Value.absent(),
             Value<String> entryMethod = const Value.absent(),
+            Value<String?> captureState = const Value.absent(),
+            Value<DateTime?> captureStartedAt = const Value.absent(),
+            Value<DateTime?> captureCompletedAt = const Value.absent(),
+            Value<String?> deviceMetadataJson = const Value.absent(),
+            Value<String?> consentVersion = const Value.absent(),
+            Value<DateTime?> consentTimestamp = const Value.absent(),
+            Value<String?> consentOperatorIdentifier = const Value.absent(),
+            Value<DateTime?> mediaDeletedAt = const Value.absent(),
           }) =>
               VisitsCompanion.insert(
             id: id,
@@ -5031,6 +9804,14 @@ class $$VisitsTableTableManager extends RootTableManager<
             notes: notes,
             ownerUserId: ownerUserId,
             entryMethod: entryMethod,
+            captureState: captureState,
+            captureStartedAt: captureStartedAt,
+            captureCompletedAt: captureCompletedAt,
+            deviceMetadataJson: deviceMetadataJson,
+            consentVersion: consentVersion,
+            consentTimestamp: consentTimestamp,
+            consentOperatorIdentifier: consentOperatorIdentifier,
+            mediaDeletedAt: mediaDeletedAt,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) =>
@@ -5039,12 +9820,18 @@ class $$VisitsTableTableManager extends RootTableManager<
           prefetchHooksCallback: (
               {childId = false,
               measurementsRefs = false,
-              syncQueueRefs = false}) {
+              syncQueueRefs = false,
+              captureAssetsRefs = false,
+              cameraResultsRefs = false,
+              measuredDetailRevisionsRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
                 if (measurementsRefs) db.measurements,
-                if (syncQueueRefs) db.syncQueue
+                if (syncQueueRefs) db.syncQueue,
+                if (captureAssetsRefs) db.captureAssets,
+                if (cameraResultsRefs) db.cameraResults,
+                if (measuredDetailRevisionsRefs) db.measuredDetailRevisions
               ],
               addJoins: <
                   T extends TableManagerState<
@@ -5097,6 +9884,45 @@ class $$VisitsTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem: (item,
                                 referencedItems) =>
                             referencedItems.where((e) => e.visitId == item.id),
+                        typedResults: items),
+                  if (captureAssetsRefs)
+                    await $_getPrefetchedData<Visit, $VisitsTable,
+                            CaptureAsset>(
+                        currentTable: table,
+                        referencedTable:
+                            $$VisitsTableReferences._captureAssetsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$VisitsTableReferences(db, table, p0)
+                                .captureAssetsRefs,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.visitId == item.id),
+                        typedResults: items),
+                  if (cameraResultsRefs)
+                    await $_getPrefetchedData<Visit, $VisitsTable,
+                            CameraResult>(
+                        currentTable: table,
+                        referencedTable:
+                            $$VisitsTableReferences._cameraResultsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$VisitsTableReferences(db, table, p0)
+                                .cameraResultsRefs,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.visitId == item.id),
+                        typedResults: items),
+                  if (measuredDetailRevisionsRefs)
+                    await $_getPrefetchedData<Visit, $VisitsTable,
+                            MeasuredDetailRevision>(
+                        currentTable: table,
+                        referencedTable: $$VisitsTableReferences
+                            ._measuredDetailRevisionsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$VisitsTableReferences(db, table, p0)
+                                .measuredDetailRevisionsRefs,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.visitId == item.id),
                         typedResults: items)
                 ];
               },
@@ -5117,7 +9943,12 @@ typedef $$VisitsTableProcessedTableManager = ProcessedTableManager<
     (Visit, $$VisitsTableReferences),
     Visit,
     PrefetchHooks Function(
-        {bool childId, bool measurementsRefs, bool syncQueueRefs})>;
+        {bool childId,
+        bool measurementsRefs,
+        bool syncQueueRefs,
+        bool captureAssetsRefs,
+        bool cameraResultsRefs,
+        bool measuredDetailRevisionsRefs})>;
 typedef $$MeasurementsTableCreateCompanionBuilder = MeasurementsCompanion
     Function({
   Value<int> id,
@@ -5176,6 +10007,14 @@ typedef $$MeasurementsTableCreateCompanionBuilder = MeasurementsCompanion
   Value<String?> classificationMethod,
   Value<String?> classificationRationale,
   Value<bool?> poshanComplete,
+  Value<String?> measurementMode,
+  Value<String?> oedema,
+  Value<DateTime?> measuredAt,
+  Value<int?> editorUserId,
+  Value<String?> measuredNotes,
+  Value<String?> whoAcuteStatus,
+  Value<String?> whoAcuteTriggeredBy,
+  Value<String?> whoAcuteRationale,
 });
 typedef $$MeasurementsTableUpdateCompanionBuilder = MeasurementsCompanion
     Function({
@@ -5235,6 +10074,14 @@ typedef $$MeasurementsTableUpdateCompanionBuilder = MeasurementsCompanion
   Value<String?> classificationMethod,
   Value<String?> classificationRationale,
   Value<bool?> poshanComplete,
+  Value<String?> measurementMode,
+  Value<String?> oedema,
+  Value<DateTime?> measuredAt,
+  Value<int?> editorUserId,
+  Value<String?> measuredNotes,
+  Value<String?> whoAcuteStatus,
+  Value<String?> whoAcuteTriggeredBy,
+  Value<String?> whoAcuteRationale,
 });
 
 final class $$MeasurementsTableReferences
@@ -5464,6 +10311,34 @@ class $$MeasurementsTableFilterComposer
 
   ColumnFilters<bool> get poshanComplete => $composableBuilder(
       column: $table.poshanComplete,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get measurementMode => $composableBuilder(
+      column: $table.measurementMode,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get oedema => $composableBuilder(
+      column: $table.oedema, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get measuredAt => $composableBuilder(
+      column: $table.measuredAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get editorUserId => $composableBuilder(
+      column: $table.editorUserId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get measuredNotes => $composableBuilder(
+      column: $table.measuredNotes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get whoAcuteStatus => $composableBuilder(
+      column: $table.whoAcuteStatus,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get whoAcuteTriggeredBy => $composableBuilder(
+      column: $table.whoAcuteTriggeredBy,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get whoAcuteRationale => $composableBuilder(
+      column: $table.whoAcuteRationale,
       builder: (column) => ColumnFilters(column));
 
   $$VisitsTableFilterComposer get visitId {
@@ -5704,6 +10579,36 @@ class $$MeasurementsTableOrderingComposer
       column: $table.poshanComplete,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get measurementMode => $composableBuilder(
+      column: $table.measurementMode,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get oedema => $composableBuilder(
+      column: $table.oedema, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get measuredAt => $composableBuilder(
+      column: $table.measuredAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get editorUserId => $composableBuilder(
+      column: $table.editorUserId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get measuredNotes => $composableBuilder(
+      column: $table.measuredNotes,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get whoAcuteStatus => $composableBuilder(
+      column: $table.whoAcuteStatus,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get whoAcuteTriggeredBy => $composableBuilder(
+      column: $table.whoAcuteTriggeredBy,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get whoAcuteRationale => $composableBuilder(
+      column: $table.whoAcuteRationale,
+      builder: (column) => ColumnOrderings(column));
+
   $$VisitsTableOrderingComposer get visitId {
     final $$VisitsTableOrderingComposer composer = $composerBuilder(
         composer: this,
@@ -5899,6 +10804,30 @@ class $$MeasurementsTableAnnotationComposer
   GeneratedColumn<bool> get poshanComplete => $composableBuilder(
       column: $table.poshanComplete, builder: (column) => column);
 
+  GeneratedColumn<String> get measurementMode => $composableBuilder(
+      column: $table.measurementMode, builder: (column) => column);
+
+  GeneratedColumn<String> get oedema =>
+      $composableBuilder(column: $table.oedema, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get measuredAt => $composableBuilder(
+      column: $table.measuredAt, builder: (column) => column);
+
+  GeneratedColumn<int> get editorUserId => $composableBuilder(
+      column: $table.editorUserId, builder: (column) => column);
+
+  GeneratedColumn<String> get measuredNotes => $composableBuilder(
+      column: $table.measuredNotes, builder: (column) => column);
+
+  GeneratedColumn<String> get whoAcuteStatus => $composableBuilder(
+      column: $table.whoAcuteStatus, builder: (column) => column);
+
+  GeneratedColumn<String> get whoAcuteTriggeredBy => $composableBuilder(
+      column: $table.whoAcuteTriggeredBy, builder: (column) => column);
+
+  GeneratedColumn<String> get whoAcuteRationale => $composableBuilder(
+      column: $table.whoAcuteRationale, builder: (column) => column);
+
   $$VisitsTableAnnotationComposer get visitId {
     final $$VisitsTableAnnotationComposer composer = $composerBuilder(
         composer: this,
@@ -5999,6 +10928,14 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             Value<String?> classificationMethod = const Value.absent(),
             Value<String?> classificationRationale = const Value.absent(),
             Value<bool?> poshanComplete = const Value.absent(),
+            Value<String?> measurementMode = const Value.absent(),
+            Value<String?> oedema = const Value.absent(),
+            Value<DateTime?> measuredAt = const Value.absent(),
+            Value<int?> editorUserId = const Value.absent(),
+            Value<String?> measuredNotes = const Value.absent(),
+            Value<String?> whoAcuteStatus = const Value.absent(),
+            Value<String?> whoAcuteTriggeredBy = const Value.absent(),
+            Value<String?> whoAcuteRationale = const Value.absent(),
           }) =>
               MeasurementsCompanion(
             id: id,
@@ -6057,6 +10994,14 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             classificationMethod: classificationMethod,
             classificationRationale: classificationRationale,
             poshanComplete: poshanComplete,
+            measurementMode: measurementMode,
+            oedema: oedema,
+            measuredAt: measuredAt,
+            editorUserId: editorUserId,
+            measuredNotes: measuredNotes,
+            whoAcuteStatus: whoAcuteStatus,
+            whoAcuteTriggeredBy: whoAcuteTriggeredBy,
+            whoAcuteRationale: whoAcuteRationale,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -6115,6 +11060,14 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             Value<String?> classificationMethod = const Value.absent(),
             Value<String?> classificationRationale = const Value.absent(),
             Value<bool?> poshanComplete = const Value.absent(),
+            Value<String?> measurementMode = const Value.absent(),
+            Value<String?> oedema = const Value.absent(),
+            Value<DateTime?> measuredAt = const Value.absent(),
+            Value<int?> editorUserId = const Value.absent(),
+            Value<String?> measuredNotes = const Value.absent(),
+            Value<String?> whoAcuteStatus = const Value.absent(),
+            Value<String?> whoAcuteTriggeredBy = const Value.absent(),
+            Value<String?> whoAcuteRationale = const Value.absent(),
           }) =>
               MeasurementsCompanion.insert(
             id: id,
@@ -6173,6 +11126,14 @@ class $$MeasurementsTableTableManager extends RootTableManager<
             classificationMethod: classificationMethod,
             classificationRationale: classificationRationale,
             poshanComplete: poshanComplete,
+            measurementMode: measurementMode,
+            oedema: oedema,
+            measuredAt: measuredAt,
+            editorUserId: editorUserId,
+            measuredNotes: measuredNotes,
+            whoAcuteStatus: whoAcuteStatus,
+            whoAcuteTriggeredBy: whoAcuteTriggeredBy,
+            whoAcuteRationale: whoAcuteRationale,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (
@@ -6544,6 +11505,1829 @@ typedef $$SyncQueueTableProcessedTableManager = ProcessedTableManager<
     (SyncQueueData, $$SyncQueueTableReferences),
     SyncQueueData,
     PrefetchHooks Function({bool visitId})>;
+typedef $$CaptureAssetsTableCreateCompanionBuilder = CaptureAssetsCompanion
+    Function({
+  Value<int> id,
+  required String assetUuid,
+  required int visitId,
+  required String role,
+  Value<String?> localPath,
+  Value<String?> serverObjectId,
+  required DateTime capturedAt,
+  Value<int?> selectedRank,
+  Value<double?> poseScore,
+  Value<double?> coverageScore,
+  Value<double?> orientationScore,
+  Value<double?> sharpnessScore,
+  Value<double?> lightingScore,
+  Value<double?> overallScore,
+  Value<String?> qualityVerdict,
+  Value<String?> rejectionReason,
+  Value<String?> qualityThresholdVersion,
+  Value<int?> imageWidth,
+  Value<int?> imageHeight,
+  Value<int?> exifOrientation,
+  Value<int?> displayOrientation,
+  Value<String?> deviceCameraMetadataJson,
+  Value<String> syncState,
+  Value<DateTime?> serverAcknowledgedAt,
+});
+typedef $$CaptureAssetsTableUpdateCompanionBuilder = CaptureAssetsCompanion
+    Function({
+  Value<int> id,
+  Value<String> assetUuid,
+  Value<int> visitId,
+  Value<String> role,
+  Value<String?> localPath,
+  Value<String?> serverObjectId,
+  Value<DateTime> capturedAt,
+  Value<int?> selectedRank,
+  Value<double?> poseScore,
+  Value<double?> coverageScore,
+  Value<double?> orientationScore,
+  Value<double?> sharpnessScore,
+  Value<double?> lightingScore,
+  Value<double?> overallScore,
+  Value<String?> qualityVerdict,
+  Value<String?> rejectionReason,
+  Value<String?> qualityThresholdVersion,
+  Value<int?> imageWidth,
+  Value<int?> imageHeight,
+  Value<int?> exifOrientation,
+  Value<int?> displayOrientation,
+  Value<String?> deviceCameraMetadataJson,
+  Value<String> syncState,
+  Value<DateTime?> serverAcknowledgedAt,
+});
+
+final class $$CaptureAssetsTableReferences
+    extends BaseReferences<_$AppDatabase, $CaptureAssetsTable, CaptureAsset> {
+  $$CaptureAssetsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $VisitsTable _visitIdTable(_$AppDatabase db) => db.visits.createAlias(
+      $_aliasNameGenerator(db.captureAssets.visitId, db.visits.id));
+
+  $$VisitsTableProcessedTableManager get visitId {
+    final $_column = $_itemColumn<int>('visit_id')!;
+
+    final manager = $$VisitsTableTableManager($_db, $_db.visits)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_visitIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$CaptureAssetsTableFilterComposer
+    extends Composer<_$AppDatabase, $CaptureAssetsTable> {
+  $$CaptureAssetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get assetUuid => $composableBuilder(
+      column: $table.assetUuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get role => $composableBuilder(
+      column: $table.role, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get localPath => $composableBuilder(
+      column: $table.localPath, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get serverObjectId => $composableBuilder(
+      column: $table.serverObjectId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get capturedAt => $composableBuilder(
+      column: $table.capturedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get selectedRank => $composableBuilder(
+      column: $table.selectedRank, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get poseScore => $composableBuilder(
+      column: $table.poseScore, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get coverageScore => $composableBuilder(
+      column: $table.coverageScore, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get orientationScore => $composableBuilder(
+      column: $table.orientationScore,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get sharpnessScore => $composableBuilder(
+      column: $table.sharpnessScore,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get lightingScore => $composableBuilder(
+      column: $table.lightingScore, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get overallScore => $composableBuilder(
+      column: $table.overallScore, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get qualityVerdict => $composableBuilder(
+      column: $table.qualityVerdict,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get rejectionReason => $composableBuilder(
+      column: $table.rejectionReason,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get qualityThresholdVersion => $composableBuilder(
+      column: $table.qualityThresholdVersion,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get imageWidth => $composableBuilder(
+      column: $table.imageWidth, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get imageHeight => $composableBuilder(
+      column: $table.imageHeight, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get exifOrientation => $composableBuilder(
+      column: $table.exifOrientation,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get displayOrientation => $composableBuilder(
+      column: $table.displayOrientation,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get deviceCameraMetadataJson => $composableBuilder(
+      column: $table.deviceCameraMetadataJson,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get syncState => $composableBuilder(
+      column: $table.syncState, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get serverAcknowledgedAt => $composableBuilder(
+      column: $table.serverAcknowledgedAt,
+      builder: (column) => ColumnFilters(column));
+
+  $$VisitsTableFilterComposer get visitId {
+    final $$VisitsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.visitId,
+        referencedTable: $db.visits,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$VisitsTableFilterComposer(
+              $db: $db,
+              $table: $db.visits,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$CaptureAssetsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CaptureAssetsTable> {
+  $$CaptureAssetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get assetUuid => $composableBuilder(
+      column: $table.assetUuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get role => $composableBuilder(
+      column: $table.role, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get localPath => $composableBuilder(
+      column: $table.localPath, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get serverObjectId => $composableBuilder(
+      column: $table.serverObjectId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get capturedAt => $composableBuilder(
+      column: $table.capturedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get selectedRank => $composableBuilder(
+      column: $table.selectedRank,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get poseScore => $composableBuilder(
+      column: $table.poseScore, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get coverageScore => $composableBuilder(
+      column: $table.coverageScore,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get orientationScore => $composableBuilder(
+      column: $table.orientationScore,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get sharpnessScore => $composableBuilder(
+      column: $table.sharpnessScore,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get lightingScore => $composableBuilder(
+      column: $table.lightingScore,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get overallScore => $composableBuilder(
+      column: $table.overallScore,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get qualityVerdict => $composableBuilder(
+      column: $table.qualityVerdict,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get rejectionReason => $composableBuilder(
+      column: $table.rejectionReason,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get qualityThresholdVersion => $composableBuilder(
+      column: $table.qualityThresholdVersion,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get imageWidth => $composableBuilder(
+      column: $table.imageWidth, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get imageHeight => $composableBuilder(
+      column: $table.imageHeight, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get exifOrientation => $composableBuilder(
+      column: $table.exifOrientation,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get displayOrientation => $composableBuilder(
+      column: $table.displayOrientation,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get deviceCameraMetadataJson => $composableBuilder(
+      column: $table.deviceCameraMetadataJson,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get syncState => $composableBuilder(
+      column: $table.syncState, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get serverAcknowledgedAt => $composableBuilder(
+      column: $table.serverAcknowledgedAt,
+      builder: (column) => ColumnOrderings(column));
+
+  $$VisitsTableOrderingComposer get visitId {
+    final $$VisitsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.visitId,
+        referencedTable: $db.visits,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$VisitsTableOrderingComposer(
+              $db: $db,
+              $table: $db.visits,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$CaptureAssetsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CaptureAssetsTable> {
+  $$CaptureAssetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get assetUuid =>
+      $composableBuilder(column: $table.assetUuid, builder: (column) => column);
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<String> get localPath =>
+      $composableBuilder(column: $table.localPath, builder: (column) => column);
+
+  GeneratedColumn<String> get serverObjectId => $composableBuilder(
+      column: $table.serverObjectId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get capturedAt => $composableBuilder(
+      column: $table.capturedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get selectedRank => $composableBuilder(
+      column: $table.selectedRank, builder: (column) => column);
+
+  GeneratedColumn<double> get poseScore =>
+      $composableBuilder(column: $table.poseScore, builder: (column) => column);
+
+  GeneratedColumn<double> get coverageScore => $composableBuilder(
+      column: $table.coverageScore, builder: (column) => column);
+
+  GeneratedColumn<double> get orientationScore => $composableBuilder(
+      column: $table.orientationScore, builder: (column) => column);
+
+  GeneratedColumn<double> get sharpnessScore => $composableBuilder(
+      column: $table.sharpnessScore, builder: (column) => column);
+
+  GeneratedColumn<double> get lightingScore => $composableBuilder(
+      column: $table.lightingScore, builder: (column) => column);
+
+  GeneratedColumn<double> get overallScore => $composableBuilder(
+      column: $table.overallScore, builder: (column) => column);
+
+  GeneratedColumn<String> get qualityVerdict => $composableBuilder(
+      column: $table.qualityVerdict, builder: (column) => column);
+
+  GeneratedColumn<String> get rejectionReason => $composableBuilder(
+      column: $table.rejectionReason, builder: (column) => column);
+
+  GeneratedColumn<String> get qualityThresholdVersion => $composableBuilder(
+      column: $table.qualityThresholdVersion, builder: (column) => column);
+
+  GeneratedColumn<int> get imageWidth => $composableBuilder(
+      column: $table.imageWidth, builder: (column) => column);
+
+  GeneratedColumn<int> get imageHeight => $composableBuilder(
+      column: $table.imageHeight, builder: (column) => column);
+
+  GeneratedColumn<int> get exifOrientation => $composableBuilder(
+      column: $table.exifOrientation, builder: (column) => column);
+
+  GeneratedColumn<int> get displayOrientation => $composableBuilder(
+      column: $table.displayOrientation, builder: (column) => column);
+
+  GeneratedColumn<String> get deviceCameraMetadataJson => $composableBuilder(
+      column: $table.deviceCameraMetadataJson, builder: (column) => column);
+
+  GeneratedColumn<String> get syncState =>
+      $composableBuilder(column: $table.syncState, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get serverAcknowledgedAt => $composableBuilder(
+      column: $table.serverAcknowledgedAt, builder: (column) => column);
+
+  $$VisitsTableAnnotationComposer get visitId {
+    final $$VisitsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.visitId,
+        referencedTable: $db.visits,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$VisitsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.visits,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$CaptureAssetsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $CaptureAssetsTable,
+    CaptureAsset,
+    $$CaptureAssetsTableFilterComposer,
+    $$CaptureAssetsTableOrderingComposer,
+    $$CaptureAssetsTableAnnotationComposer,
+    $$CaptureAssetsTableCreateCompanionBuilder,
+    $$CaptureAssetsTableUpdateCompanionBuilder,
+    (CaptureAsset, $$CaptureAssetsTableReferences),
+    CaptureAsset,
+    PrefetchHooks Function({bool visitId})> {
+  $$CaptureAssetsTableTableManager(_$AppDatabase db, $CaptureAssetsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CaptureAssetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CaptureAssetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CaptureAssetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> assetUuid = const Value.absent(),
+            Value<int> visitId = const Value.absent(),
+            Value<String> role = const Value.absent(),
+            Value<String?> localPath = const Value.absent(),
+            Value<String?> serverObjectId = const Value.absent(),
+            Value<DateTime> capturedAt = const Value.absent(),
+            Value<int?> selectedRank = const Value.absent(),
+            Value<double?> poseScore = const Value.absent(),
+            Value<double?> coverageScore = const Value.absent(),
+            Value<double?> orientationScore = const Value.absent(),
+            Value<double?> sharpnessScore = const Value.absent(),
+            Value<double?> lightingScore = const Value.absent(),
+            Value<double?> overallScore = const Value.absent(),
+            Value<String?> qualityVerdict = const Value.absent(),
+            Value<String?> rejectionReason = const Value.absent(),
+            Value<String?> qualityThresholdVersion = const Value.absent(),
+            Value<int?> imageWidth = const Value.absent(),
+            Value<int?> imageHeight = const Value.absent(),
+            Value<int?> exifOrientation = const Value.absent(),
+            Value<int?> displayOrientation = const Value.absent(),
+            Value<String?> deviceCameraMetadataJson = const Value.absent(),
+            Value<String> syncState = const Value.absent(),
+            Value<DateTime?> serverAcknowledgedAt = const Value.absent(),
+          }) =>
+              CaptureAssetsCompanion(
+            id: id,
+            assetUuid: assetUuid,
+            visitId: visitId,
+            role: role,
+            localPath: localPath,
+            serverObjectId: serverObjectId,
+            capturedAt: capturedAt,
+            selectedRank: selectedRank,
+            poseScore: poseScore,
+            coverageScore: coverageScore,
+            orientationScore: orientationScore,
+            sharpnessScore: sharpnessScore,
+            lightingScore: lightingScore,
+            overallScore: overallScore,
+            qualityVerdict: qualityVerdict,
+            rejectionReason: rejectionReason,
+            qualityThresholdVersion: qualityThresholdVersion,
+            imageWidth: imageWidth,
+            imageHeight: imageHeight,
+            exifOrientation: exifOrientation,
+            displayOrientation: displayOrientation,
+            deviceCameraMetadataJson: deviceCameraMetadataJson,
+            syncState: syncState,
+            serverAcknowledgedAt: serverAcknowledgedAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String assetUuid,
+            required int visitId,
+            required String role,
+            Value<String?> localPath = const Value.absent(),
+            Value<String?> serverObjectId = const Value.absent(),
+            required DateTime capturedAt,
+            Value<int?> selectedRank = const Value.absent(),
+            Value<double?> poseScore = const Value.absent(),
+            Value<double?> coverageScore = const Value.absent(),
+            Value<double?> orientationScore = const Value.absent(),
+            Value<double?> sharpnessScore = const Value.absent(),
+            Value<double?> lightingScore = const Value.absent(),
+            Value<double?> overallScore = const Value.absent(),
+            Value<String?> qualityVerdict = const Value.absent(),
+            Value<String?> rejectionReason = const Value.absent(),
+            Value<String?> qualityThresholdVersion = const Value.absent(),
+            Value<int?> imageWidth = const Value.absent(),
+            Value<int?> imageHeight = const Value.absent(),
+            Value<int?> exifOrientation = const Value.absent(),
+            Value<int?> displayOrientation = const Value.absent(),
+            Value<String?> deviceCameraMetadataJson = const Value.absent(),
+            Value<String> syncState = const Value.absent(),
+            Value<DateTime?> serverAcknowledgedAt = const Value.absent(),
+          }) =>
+              CaptureAssetsCompanion.insert(
+            id: id,
+            assetUuid: assetUuid,
+            visitId: visitId,
+            role: role,
+            localPath: localPath,
+            serverObjectId: serverObjectId,
+            capturedAt: capturedAt,
+            selectedRank: selectedRank,
+            poseScore: poseScore,
+            coverageScore: coverageScore,
+            orientationScore: orientationScore,
+            sharpnessScore: sharpnessScore,
+            lightingScore: lightingScore,
+            overallScore: overallScore,
+            qualityVerdict: qualityVerdict,
+            rejectionReason: rejectionReason,
+            qualityThresholdVersion: qualityThresholdVersion,
+            imageWidth: imageWidth,
+            imageHeight: imageHeight,
+            exifOrientation: exifOrientation,
+            displayOrientation: displayOrientation,
+            deviceCameraMetadataJson: deviceCameraMetadataJson,
+            syncState: syncState,
+            serverAcknowledgedAt: serverAcknowledgedAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$CaptureAssetsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({visitId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (visitId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.visitId,
+                    referencedTable:
+                        $$CaptureAssetsTableReferences._visitIdTable(db),
+                    referencedColumn:
+                        $$CaptureAssetsTableReferences._visitIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$CaptureAssetsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $CaptureAssetsTable,
+    CaptureAsset,
+    $$CaptureAssetsTableFilterComposer,
+    $$CaptureAssetsTableOrderingComposer,
+    $$CaptureAssetsTableAnnotationComposer,
+    $$CaptureAssetsTableCreateCompanionBuilder,
+    $$CaptureAssetsTableUpdateCompanionBuilder,
+    (CaptureAsset, $$CaptureAssetsTableReferences),
+    CaptureAsset,
+    PrefetchHooks Function({bool visitId})>;
+typedef $$CameraResultsTableCreateCompanionBuilder = CameraResultsCompanion
+    Function({
+  Value<int> id,
+  required String resultUuid,
+  required int visitId,
+  required int version,
+  Value<String?> supersedesResultUuid,
+  Value<double?> estimatedHeightCm,
+  Value<double?> estimatedWeightKg,
+  Value<String?> heightSource,
+  Value<String?> weightSource,
+  Value<double?> estimatedHaz,
+  Value<double?> estimatedWhz,
+  Value<String?> estimatedStuntingStatus,
+  Value<String?> estimatedWastingStatus,
+  Value<String?> experimentalOverallCategory,
+  Value<String?> componentProbabilitiesJson,
+  Value<String?> bodyProportionFeaturesJson,
+  Value<String?> captureQualitySummaryJson,
+  required String method,
+  required String modelVersion,
+  required String manifestChecksum,
+  required String trainingDataLabel,
+  Value<bool> nonClinical,
+  Value<DateTime> createdAt,
+});
+typedef $$CameraResultsTableUpdateCompanionBuilder = CameraResultsCompanion
+    Function({
+  Value<int> id,
+  Value<String> resultUuid,
+  Value<int> visitId,
+  Value<int> version,
+  Value<String?> supersedesResultUuid,
+  Value<double?> estimatedHeightCm,
+  Value<double?> estimatedWeightKg,
+  Value<String?> heightSource,
+  Value<String?> weightSource,
+  Value<double?> estimatedHaz,
+  Value<double?> estimatedWhz,
+  Value<String?> estimatedStuntingStatus,
+  Value<String?> estimatedWastingStatus,
+  Value<String?> experimentalOverallCategory,
+  Value<String?> componentProbabilitiesJson,
+  Value<String?> bodyProportionFeaturesJson,
+  Value<String?> captureQualitySummaryJson,
+  Value<String> method,
+  Value<String> modelVersion,
+  Value<String> manifestChecksum,
+  Value<String> trainingDataLabel,
+  Value<bool> nonClinical,
+  Value<DateTime> createdAt,
+});
+
+final class $$CameraResultsTableReferences
+    extends BaseReferences<_$AppDatabase, $CameraResultsTable, CameraResult> {
+  $$CameraResultsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $VisitsTable _visitIdTable(_$AppDatabase db) => db.visits.createAlias(
+      $_aliasNameGenerator(db.cameraResults.visitId, db.visits.id));
+
+  $$VisitsTableProcessedTableManager get visitId {
+    final $_column = $_itemColumn<int>('visit_id')!;
+
+    final manager = $$VisitsTableTableManager($_db, $_db.visits)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_visitIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$CameraResultsTableFilterComposer
+    extends Composer<_$AppDatabase, $CameraResultsTable> {
+  $$CameraResultsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get resultUuid => $composableBuilder(
+      column: $table.resultUuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get version => $composableBuilder(
+      column: $table.version, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get supersedesResultUuid => $composableBuilder(
+      column: $table.supersedesResultUuid,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get estimatedHeightCm => $composableBuilder(
+      column: $table.estimatedHeightCm,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get estimatedWeightKg => $composableBuilder(
+      column: $table.estimatedWeightKg,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get heightSource => $composableBuilder(
+      column: $table.heightSource, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get weightSource => $composableBuilder(
+      column: $table.weightSource, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get estimatedHaz => $composableBuilder(
+      column: $table.estimatedHaz, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get estimatedWhz => $composableBuilder(
+      column: $table.estimatedWhz, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get estimatedStuntingStatus => $composableBuilder(
+      column: $table.estimatedStuntingStatus,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get estimatedWastingStatus => $composableBuilder(
+      column: $table.estimatedWastingStatus,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get experimentalOverallCategory => $composableBuilder(
+      column: $table.experimentalOverallCategory,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get componentProbabilitiesJson => $composableBuilder(
+      column: $table.componentProbabilitiesJson,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get bodyProportionFeaturesJson => $composableBuilder(
+      column: $table.bodyProportionFeaturesJson,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get captureQualitySummaryJson => $composableBuilder(
+      column: $table.captureQualitySummaryJson,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get method => $composableBuilder(
+      column: $table.method, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get modelVersion => $composableBuilder(
+      column: $table.modelVersion, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get manifestChecksum => $composableBuilder(
+      column: $table.manifestChecksum,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get trainingDataLabel => $composableBuilder(
+      column: $table.trainingDataLabel,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get nonClinical => $composableBuilder(
+      column: $table.nonClinical, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  $$VisitsTableFilterComposer get visitId {
+    final $$VisitsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.visitId,
+        referencedTable: $db.visits,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$VisitsTableFilterComposer(
+              $db: $db,
+              $table: $db.visits,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$CameraResultsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CameraResultsTable> {
+  $$CameraResultsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get resultUuid => $composableBuilder(
+      column: $table.resultUuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get version => $composableBuilder(
+      column: $table.version, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get supersedesResultUuid => $composableBuilder(
+      column: $table.supersedesResultUuid,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get estimatedHeightCm => $composableBuilder(
+      column: $table.estimatedHeightCm,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get estimatedWeightKg => $composableBuilder(
+      column: $table.estimatedWeightKg,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get heightSource => $composableBuilder(
+      column: $table.heightSource,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get weightSource => $composableBuilder(
+      column: $table.weightSource,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get estimatedHaz => $composableBuilder(
+      column: $table.estimatedHaz,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get estimatedWhz => $composableBuilder(
+      column: $table.estimatedWhz,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get estimatedStuntingStatus => $composableBuilder(
+      column: $table.estimatedStuntingStatus,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get estimatedWastingStatus => $composableBuilder(
+      column: $table.estimatedWastingStatus,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get experimentalOverallCategory => $composableBuilder(
+      column: $table.experimentalOverallCategory,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get componentProbabilitiesJson => $composableBuilder(
+      column: $table.componentProbabilitiesJson,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get bodyProportionFeaturesJson => $composableBuilder(
+      column: $table.bodyProportionFeaturesJson,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get captureQualitySummaryJson => $composableBuilder(
+      column: $table.captureQualitySummaryJson,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get method => $composableBuilder(
+      column: $table.method, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get modelVersion => $composableBuilder(
+      column: $table.modelVersion,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get manifestChecksum => $composableBuilder(
+      column: $table.manifestChecksum,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get trainingDataLabel => $composableBuilder(
+      column: $table.trainingDataLabel,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get nonClinical => $composableBuilder(
+      column: $table.nonClinical, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  $$VisitsTableOrderingComposer get visitId {
+    final $$VisitsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.visitId,
+        referencedTable: $db.visits,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$VisitsTableOrderingComposer(
+              $db: $db,
+              $table: $db.visits,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$CameraResultsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CameraResultsTable> {
+  $$CameraResultsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get resultUuid => $composableBuilder(
+      column: $table.resultUuid, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get supersedesResultUuid => $composableBuilder(
+      column: $table.supersedesResultUuid, builder: (column) => column);
+
+  GeneratedColumn<double> get estimatedHeightCm => $composableBuilder(
+      column: $table.estimatedHeightCm, builder: (column) => column);
+
+  GeneratedColumn<double> get estimatedWeightKg => $composableBuilder(
+      column: $table.estimatedWeightKg, builder: (column) => column);
+
+  GeneratedColumn<String> get heightSource => $composableBuilder(
+      column: $table.heightSource, builder: (column) => column);
+
+  GeneratedColumn<String> get weightSource => $composableBuilder(
+      column: $table.weightSource, builder: (column) => column);
+
+  GeneratedColumn<double> get estimatedHaz => $composableBuilder(
+      column: $table.estimatedHaz, builder: (column) => column);
+
+  GeneratedColumn<double> get estimatedWhz => $composableBuilder(
+      column: $table.estimatedWhz, builder: (column) => column);
+
+  GeneratedColumn<String> get estimatedStuntingStatus => $composableBuilder(
+      column: $table.estimatedStuntingStatus, builder: (column) => column);
+
+  GeneratedColumn<String> get estimatedWastingStatus => $composableBuilder(
+      column: $table.estimatedWastingStatus, builder: (column) => column);
+
+  GeneratedColumn<String> get experimentalOverallCategory => $composableBuilder(
+      column: $table.experimentalOverallCategory, builder: (column) => column);
+
+  GeneratedColumn<String> get componentProbabilitiesJson => $composableBuilder(
+      column: $table.componentProbabilitiesJson, builder: (column) => column);
+
+  GeneratedColumn<String> get bodyProportionFeaturesJson => $composableBuilder(
+      column: $table.bodyProportionFeaturesJson, builder: (column) => column);
+
+  GeneratedColumn<String> get captureQualitySummaryJson => $composableBuilder(
+      column: $table.captureQualitySummaryJson, builder: (column) => column);
+
+  GeneratedColumn<String> get method =>
+      $composableBuilder(column: $table.method, builder: (column) => column);
+
+  GeneratedColumn<String> get modelVersion => $composableBuilder(
+      column: $table.modelVersion, builder: (column) => column);
+
+  GeneratedColumn<String> get manifestChecksum => $composableBuilder(
+      column: $table.manifestChecksum, builder: (column) => column);
+
+  GeneratedColumn<String> get trainingDataLabel => $composableBuilder(
+      column: $table.trainingDataLabel, builder: (column) => column);
+
+  GeneratedColumn<bool> get nonClinical => $composableBuilder(
+      column: $table.nonClinical, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$VisitsTableAnnotationComposer get visitId {
+    final $$VisitsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.visitId,
+        referencedTable: $db.visits,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$VisitsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.visits,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$CameraResultsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $CameraResultsTable,
+    CameraResult,
+    $$CameraResultsTableFilterComposer,
+    $$CameraResultsTableOrderingComposer,
+    $$CameraResultsTableAnnotationComposer,
+    $$CameraResultsTableCreateCompanionBuilder,
+    $$CameraResultsTableUpdateCompanionBuilder,
+    (CameraResult, $$CameraResultsTableReferences),
+    CameraResult,
+    PrefetchHooks Function({bool visitId})> {
+  $$CameraResultsTableTableManager(_$AppDatabase db, $CameraResultsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CameraResultsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CameraResultsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CameraResultsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> resultUuid = const Value.absent(),
+            Value<int> visitId = const Value.absent(),
+            Value<int> version = const Value.absent(),
+            Value<String?> supersedesResultUuid = const Value.absent(),
+            Value<double?> estimatedHeightCm = const Value.absent(),
+            Value<double?> estimatedWeightKg = const Value.absent(),
+            Value<String?> heightSource = const Value.absent(),
+            Value<String?> weightSource = const Value.absent(),
+            Value<double?> estimatedHaz = const Value.absent(),
+            Value<double?> estimatedWhz = const Value.absent(),
+            Value<String?> estimatedStuntingStatus = const Value.absent(),
+            Value<String?> estimatedWastingStatus = const Value.absent(),
+            Value<String?> experimentalOverallCategory = const Value.absent(),
+            Value<String?> componentProbabilitiesJson = const Value.absent(),
+            Value<String?> bodyProportionFeaturesJson = const Value.absent(),
+            Value<String?> captureQualitySummaryJson = const Value.absent(),
+            Value<String> method = const Value.absent(),
+            Value<String> modelVersion = const Value.absent(),
+            Value<String> manifestChecksum = const Value.absent(),
+            Value<String> trainingDataLabel = const Value.absent(),
+            Value<bool> nonClinical = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+          }) =>
+              CameraResultsCompanion(
+            id: id,
+            resultUuid: resultUuid,
+            visitId: visitId,
+            version: version,
+            supersedesResultUuid: supersedesResultUuid,
+            estimatedHeightCm: estimatedHeightCm,
+            estimatedWeightKg: estimatedWeightKg,
+            heightSource: heightSource,
+            weightSource: weightSource,
+            estimatedHaz: estimatedHaz,
+            estimatedWhz: estimatedWhz,
+            estimatedStuntingStatus: estimatedStuntingStatus,
+            estimatedWastingStatus: estimatedWastingStatus,
+            experimentalOverallCategory: experimentalOverallCategory,
+            componentProbabilitiesJson: componentProbabilitiesJson,
+            bodyProportionFeaturesJson: bodyProportionFeaturesJson,
+            captureQualitySummaryJson: captureQualitySummaryJson,
+            method: method,
+            modelVersion: modelVersion,
+            manifestChecksum: manifestChecksum,
+            trainingDataLabel: trainingDataLabel,
+            nonClinical: nonClinical,
+            createdAt: createdAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String resultUuid,
+            required int visitId,
+            required int version,
+            Value<String?> supersedesResultUuid = const Value.absent(),
+            Value<double?> estimatedHeightCm = const Value.absent(),
+            Value<double?> estimatedWeightKg = const Value.absent(),
+            Value<String?> heightSource = const Value.absent(),
+            Value<String?> weightSource = const Value.absent(),
+            Value<double?> estimatedHaz = const Value.absent(),
+            Value<double?> estimatedWhz = const Value.absent(),
+            Value<String?> estimatedStuntingStatus = const Value.absent(),
+            Value<String?> estimatedWastingStatus = const Value.absent(),
+            Value<String?> experimentalOverallCategory = const Value.absent(),
+            Value<String?> componentProbabilitiesJson = const Value.absent(),
+            Value<String?> bodyProportionFeaturesJson = const Value.absent(),
+            Value<String?> captureQualitySummaryJson = const Value.absent(),
+            required String method,
+            required String modelVersion,
+            required String manifestChecksum,
+            required String trainingDataLabel,
+            Value<bool> nonClinical = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+          }) =>
+              CameraResultsCompanion.insert(
+            id: id,
+            resultUuid: resultUuid,
+            visitId: visitId,
+            version: version,
+            supersedesResultUuid: supersedesResultUuid,
+            estimatedHeightCm: estimatedHeightCm,
+            estimatedWeightKg: estimatedWeightKg,
+            heightSource: heightSource,
+            weightSource: weightSource,
+            estimatedHaz: estimatedHaz,
+            estimatedWhz: estimatedWhz,
+            estimatedStuntingStatus: estimatedStuntingStatus,
+            estimatedWastingStatus: estimatedWastingStatus,
+            experimentalOverallCategory: experimentalOverallCategory,
+            componentProbabilitiesJson: componentProbabilitiesJson,
+            bodyProportionFeaturesJson: bodyProportionFeaturesJson,
+            captureQualitySummaryJson: captureQualitySummaryJson,
+            method: method,
+            modelVersion: modelVersion,
+            manifestChecksum: manifestChecksum,
+            trainingDataLabel: trainingDataLabel,
+            nonClinical: nonClinical,
+            createdAt: createdAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$CameraResultsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({visitId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (visitId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.visitId,
+                    referencedTable:
+                        $$CameraResultsTableReferences._visitIdTable(db),
+                    referencedColumn:
+                        $$CameraResultsTableReferences._visitIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$CameraResultsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $CameraResultsTable,
+    CameraResult,
+    $$CameraResultsTableFilterComposer,
+    $$CameraResultsTableOrderingComposer,
+    $$CameraResultsTableAnnotationComposer,
+    $$CameraResultsTableCreateCompanionBuilder,
+    $$CameraResultsTableUpdateCompanionBuilder,
+    (CameraResult, $$CameraResultsTableReferences),
+    CameraResult,
+    PrefetchHooks Function({bool visitId})>;
+typedef $$MeasuredDetailRevisionsTableCreateCompanionBuilder
+    = MeasuredDetailRevisionsCompanion Function({
+  Value<int> id,
+  required String revisionUuid,
+  required int visitId,
+  required int revisionNumber,
+  required String beforeJson,
+  required String afterJson,
+  Value<int?> editorUserId,
+  Value<DateTime> createdAt,
+  Value<String?> reason,
+});
+typedef $$MeasuredDetailRevisionsTableUpdateCompanionBuilder
+    = MeasuredDetailRevisionsCompanion Function({
+  Value<int> id,
+  Value<String> revisionUuid,
+  Value<int> visitId,
+  Value<int> revisionNumber,
+  Value<String> beforeJson,
+  Value<String> afterJson,
+  Value<int?> editorUserId,
+  Value<DateTime> createdAt,
+  Value<String?> reason,
+});
+
+final class $$MeasuredDetailRevisionsTableReferences extends BaseReferences<
+    _$AppDatabase, $MeasuredDetailRevisionsTable, MeasuredDetailRevision> {
+  $$MeasuredDetailRevisionsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $VisitsTable _visitIdTable(_$AppDatabase db) => db.visits.createAlias(
+      $_aliasNameGenerator(db.measuredDetailRevisions.visitId, db.visits.id));
+
+  $$VisitsTableProcessedTableManager get visitId {
+    final $_column = $_itemColumn<int>('visit_id')!;
+
+    final manager = $$VisitsTableTableManager($_db, $_db.visits)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_visitIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$MeasuredDetailRevisionsTableFilterComposer
+    extends Composer<_$AppDatabase, $MeasuredDetailRevisionsTable> {
+  $$MeasuredDetailRevisionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get revisionUuid => $composableBuilder(
+      column: $table.revisionUuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get revisionNumber => $composableBuilder(
+      column: $table.revisionNumber,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get beforeJson => $composableBuilder(
+      column: $table.beforeJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get afterJson => $composableBuilder(
+      column: $table.afterJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get editorUserId => $composableBuilder(
+      column: $table.editorUserId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get reason => $composableBuilder(
+      column: $table.reason, builder: (column) => ColumnFilters(column));
+
+  $$VisitsTableFilterComposer get visitId {
+    final $$VisitsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.visitId,
+        referencedTable: $db.visits,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$VisitsTableFilterComposer(
+              $db: $db,
+              $table: $db.visits,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$MeasuredDetailRevisionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $MeasuredDetailRevisionsTable> {
+  $$MeasuredDetailRevisionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get revisionUuid => $composableBuilder(
+      column: $table.revisionUuid,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get revisionNumber => $composableBuilder(
+      column: $table.revisionNumber,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get beforeJson => $composableBuilder(
+      column: $table.beforeJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get afterJson => $composableBuilder(
+      column: $table.afterJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get editorUserId => $composableBuilder(
+      column: $table.editorUserId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get reason => $composableBuilder(
+      column: $table.reason, builder: (column) => ColumnOrderings(column));
+
+  $$VisitsTableOrderingComposer get visitId {
+    final $$VisitsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.visitId,
+        referencedTable: $db.visits,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$VisitsTableOrderingComposer(
+              $db: $db,
+              $table: $db.visits,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$MeasuredDetailRevisionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MeasuredDetailRevisionsTable> {
+  $$MeasuredDetailRevisionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get revisionUuid => $composableBuilder(
+      column: $table.revisionUuid, builder: (column) => column);
+
+  GeneratedColumn<int> get revisionNumber => $composableBuilder(
+      column: $table.revisionNumber, builder: (column) => column);
+
+  GeneratedColumn<String> get beforeJson => $composableBuilder(
+      column: $table.beforeJson, builder: (column) => column);
+
+  GeneratedColumn<String> get afterJson =>
+      $composableBuilder(column: $table.afterJson, builder: (column) => column);
+
+  GeneratedColumn<int> get editorUserId => $composableBuilder(
+      column: $table.editorUserId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get reason =>
+      $composableBuilder(column: $table.reason, builder: (column) => column);
+
+  $$VisitsTableAnnotationComposer get visitId {
+    final $$VisitsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.visitId,
+        referencedTable: $db.visits,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$VisitsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.visits,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$MeasuredDetailRevisionsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $MeasuredDetailRevisionsTable,
+    MeasuredDetailRevision,
+    $$MeasuredDetailRevisionsTableFilterComposer,
+    $$MeasuredDetailRevisionsTableOrderingComposer,
+    $$MeasuredDetailRevisionsTableAnnotationComposer,
+    $$MeasuredDetailRevisionsTableCreateCompanionBuilder,
+    $$MeasuredDetailRevisionsTableUpdateCompanionBuilder,
+    (MeasuredDetailRevision, $$MeasuredDetailRevisionsTableReferences),
+    MeasuredDetailRevision,
+    PrefetchHooks Function({bool visitId})> {
+  $$MeasuredDetailRevisionsTableTableManager(
+      _$AppDatabase db, $MeasuredDetailRevisionsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MeasuredDetailRevisionsTableFilterComposer(
+                  $db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MeasuredDetailRevisionsTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MeasuredDetailRevisionsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> revisionUuid = const Value.absent(),
+            Value<int> visitId = const Value.absent(),
+            Value<int> revisionNumber = const Value.absent(),
+            Value<String> beforeJson = const Value.absent(),
+            Value<String> afterJson = const Value.absent(),
+            Value<int?> editorUserId = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<String?> reason = const Value.absent(),
+          }) =>
+              MeasuredDetailRevisionsCompanion(
+            id: id,
+            revisionUuid: revisionUuid,
+            visitId: visitId,
+            revisionNumber: revisionNumber,
+            beforeJson: beforeJson,
+            afterJson: afterJson,
+            editorUserId: editorUserId,
+            createdAt: createdAt,
+            reason: reason,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String revisionUuid,
+            required int visitId,
+            required int revisionNumber,
+            required String beforeJson,
+            required String afterJson,
+            Value<int?> editorUserId = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<String?> reason = const Value.absent(),
+          }) =>
+              MeasuredDetailRevisionsCompanion.insert(
+            id: id,
+            revisionUuid: revisionUuid,
+            visitId: visitId,
+            revisionNumber: revisionNumber,
+            beforeJson: beforeJson,
+            afterJson: afterJson,
+            editorUserId: editorUserId,
+            createdAt: createdAt,
+            reason: reason,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$MeasuredDetailRevisionsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({visitId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (visitId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.visitId,
+                    referencedTable: $$MeasuredDetailRevisionsTableReferences
+                        ._visitIdTable(db),
+                    referencedColumn: $$MeasuredDetailRevisionsTableReferences
+                        ._visitIdTable(db)
+                        .id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$MeasuredDetailRevisionsTableProcessedTableManager
+    = ProcessedTableManager<
+        _$AppDatabase,
+        $MeasuredDetailRevisionsTable,
+        MeasuredDetailRevision,
+        $$MeasuredDetailRevisionsTableFilterComposer,
+        $$MeasuredDetailRevisionsTableOrderingComposer,
+        $$MeasuredDetailRevisionsTableAnnotationComposer,
+        $$MeasuredDetailRevisionsTableCreateCompanionBuilder,
+        $$MeasuredDetailRevisionsTableUpdateCompanionBuilder,
+        (MeasuredDetailRevision, $$MeasuredDetailRevisionsTableReferences),
+        MeasuredDetailRevision,
+        PrefetchHooks Function({bool visitId})>;
+typedef $$SyncOutboxTableCreateCompanionBuilder = SyncOutboxCompanion Function({
+  Value<int> id,
+  required int ownerUserId,
+  required String visitUuid,
+  required String entityType,
+  required String entityUuid,
+  Value<String> operation,
+  Value<String?> dependencyEntityUuid,
+  required String payloadJson,
+  required String payloadChecksum,
+  Value<String> status,
+  Value<int> retryCount,
+  Value<DateTime> createdAt,
+  Value<DateTime?> lastAttemptAt,
+  Value<DateTime?> acknowledgedAt,
+  Value<String?> acknowledgementPayloadJson,
+  Value<String?> errorMessage,
+});
+typedef $$SyncOutboxTableUpdateCompanionBuilder = SyncOutboxCompanion Function({
+  Value<int> id,
+  Value<int> ownerUserId,
+  Value<String> visitUuid,
+  Value<String> entityType,
+  Value<String> entityUuid,
+  Value<String> operation,
+  Value<String?> dependencyEntityUuid,
+  Value<String> payloadJson,
+  Value<String> payloadChecksum,
+  Value<String> status,
+  Value<int> retryCount,
+  Value<DateTime> createdAt,
+  Value<DateTime?> lastAttemptAt,
+  Value<DateTime?> acknowledgedAt,
+  Value<String?> acknowledgementPayloadJson,
+  Value<String?> errorMessage,
+});
+
+class $$SyncOutboxTableFilterComposer
+    extends Composer<_$AppDatabase, $SyncOutboxTable> {
+  $$SyncOutboxTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get ownerUserId => $composableBuilder(
+      column: $table.ownerUserId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get visitUuid => $composableBuilder(
+      column: $table.visitUuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get entityType => $composableBuilder(
+      column: $table.entityType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get entityUuid => $composableBuilder(
+      column: $table.entityUuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get operation => $composableBuilder(
+      column: $table.operation, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get dependencyEntityUuid => $composableBuilder(
+      column: $table.dependencyEntityUuid,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get payloadJson => $composableBuilder(
+      column: $table.payloadJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get payloadChecksum => $composableBuilder(
+      column: $table.payloadChecksum,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get retryCount => $composableBuilder(
+      column: $table.retryCount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastAttemptAt => $composableBuilder(
+      column: $table.lastAttemptAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get acknowledgedAt => $composableBuilder(
+      column: $table.acknowledgedAt,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get acknowledgementPayloadJson => $composableBuilder(
+      column: $table.acknowledgementPayloadJson,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get errorMessage => $composableBuilder(
+      column: $table.errorMessage, builder: (column) => ColumnFilters(column));
+}
+
+class $$SyncOutboxTableOrderingComposer
+    extends Composer<_$AppDatabase, $SyncOutboxTable> {
+  $$SyncOutboxTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get ownerUserId => $composableBuilder(
+      column: $table.ownerUserId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get visitUuid => $composableBuilder(
+      column: $table.visitUuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get entityType => $composableBuilder(
+      column: $table.entityType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get entityUuid => $composableBuilder(
+      column: $table.entityUuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get operation => $composableBuilder(
+      column: $table.operation, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get dependencyEntityUuid => $composableBuilder(
+      column: $table.dependencyEntityUuid,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get payloadJson => $composableBuilder(
+      column: $table.payloadJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get payloadChecksum => $composableBuilder(
+      column: $table.payloadChecksum,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get retryCount => $composableBuilder(
+      column: $table.retryCount, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastAttemptAt => $composableBuilder(
+      column: $table.lastAttemptAt,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get acknowledgedAt => $composableBuilder(
+      column: $table.acknowledgedAt,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get acknowledgementPayloadJson => $composableBuilder(
+      column: $table.acknowledgementPayloadJson,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get errorMessage => $composableBuilder(
+      column: $table.errorMessage,
+      builder: (column) => ColumnOrderings(column));
+}
+
+class $$SyncOutboxTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SyncOutboxTable> {
+  $$SyncOutboxTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get ownerUserId => $composableBuilder(
+      column: $table.ownerUserId, builder: (column) => column);
+
+  GeneratedColumn<String> get visitUuid =>
+      $composableBuilder(column: $table.visitUuid, builder: (column) => column);
+
+  GeneratedColumn<String> get entityType => $composableBuilder(
+      column: $table.entityType, builder: (column) => column);
+
+  GeneratedColumn<String> get entityUuid => $composableBuilder(
+      column: $table.entityUuid, builder: (column) => column);
+
+  GeneratedColumn<String> get operation =>
+      $composableBuilder(column: $table.operation, builder: (column) => column);
+
+  GeneratedColumn<String> get dependencyEntityUuid => $composableBuilder(
+      column: $table.dependencyEntityUuid, builder: (column) => column);
+
+  GeneratedColumn<String> get payloadJson => $composableBuilder(
+      column: $table.payloadJson, builder: (column) => column);
+
+  GeneratedColumn<String> get payloadChecksum => $composableBuilder(
+      column: $table.payloadChecksum, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get retryCount => $composableBuilder(
+      column: $table.retryCount, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastAttemptAt => $composableBuilder(
+      column: $table.lastAttemptAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get acknowledgedAt => $composableBuilder(
+      column: $table.acknowledgedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get acknowledgementPayloadJson => $composableBuilder(
+      column: $table.acknowledgementPayloadJson, builder: (column) => column);
+
+  GeneratedColumn<String> get errorMessage => $composableBuilder(
+      column: $table.errorMessage, builder: (column) => column);
+}
+
+class $$SyncOutboxTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $SyncOutboxTable,
+    SyncOutboxData,
+    $$SyncOutboxTableFilterComposer,
+    $$SyncOutboxTableOrderingComposer,
+    $$SyncOutboxTableAnnotationComposer,
+    $$SyncOutboxTableCreateCompanionBuilder,
+    $$SyncOutboxTableUpdateCompanionBuilder,
+    (
+      SyncOutboxData,
+      BaseReferences<_$AppDatabase, $SyncOutboxTable, SyncOutboxData>
+    ),
+    SyncOutboxData,
+    PrefetchHooks Function()> {
+  $$SyncOutboxTableTableManager(_$AppDatabase db, $SyncOutboxTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyncOutboxTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyncOutboxTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyncOutboxTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> ownerUserId = const Value.absent(),
+            Value<String> visitUuid = const Value.absent(),
+            Value<String> entityType = const Value.absent(),
+            Value<String> entityUuid = const Value.absent(),
+            Value<String> operation = const Value.absent(),
+            Value<String?> dependencyEntityUuid = const Value.absent(),
+            Value<String> payloadJson = const Value.absent(),
+            Value<String> payloadChecksum = const Value.absent(),
+            Value<String> status = const Value.absent(),
+            Value<int> retryCount = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime?> lastAttemptAt = const Value.absent(),
+            Value<DateTime?> acknowledgedAt = const Value.absent(),
+            Value<String?> acknowledgementPayloadJson = const Value.absent(),
+            Value<String?> errorMessage = const Value.absent(),
+          }) =>
+              SyncOutboxCompanion(
+            id: id,
+            ownerUserId: ownerUserId,
+            visitUuid: visitUuid,
+            entityType: entityType,
+            entityUuid: entityUuid,
+            operation: operation,
+            dependencyEntityUuid: dependencyEntityUuid,
+            payloadJson: payloadJson,
+            payloadChecksum: payloadChecksum,
+            status: status,
+            retryCount: retryCount,
+            createdAt: createdAt,
+            lastAttemptAt: lastAttemptAt,
+            acknowledgedAt: acknowledgedAt,
+            acknowledgementPayloadJson: acknowledgementPayloadJson,
+            errorMessage: errorMessage,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required int ownerUserId,
+            required String visitUuid,
+            required String entityType,
+            required String entityUuid,
+            Value<String> operation = const Value.absent(),
+            Value<String?> dependencyEntityUuid = const Value.absent(),
+            required String payloadJson,
+            required String payloadChecksum,
+            Value<String> status = const Value.absent(),
+            Value<int> retryCount = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime?> lastAttemptAt = const Value.absent(),
+            Value<DateTime?> acknowledgedAt = const Value.absent(),
+            Value<String?> acknowledgementPayloadJson = const Value.absent(),
+            Value<String?> errorMessage = const Value.absent(),
+          }) =>
+              SyncOutboxCompanion.insert(
+            id: id,
+            ownerUserId: ownerUserId,
+            visitUuid: visitUuid,
+            entityType: entityType,
+            entityUuid: entityUuid,
+            operation: operation,
+            dependencyEntityUuid: dependencyEntityUuid,
+            payloadJson: payloadJson,
+            payloadChecksum: payloadChecksum,
+            status: status,
+            retryCount: retryCount,
+            createdAt: createdAt,
+            lastAttemptAt: lastAttemptAt,
+            acknowledgedAt: acknowledgedAt,
+            acknowledgementPayloadJson: acknowledgementPayloadJson,
+            errorMessage: errorMessage,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$SyncOutboxTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $SyncOutboxTable,
+    SyncOutboxData,
+    $$SyncOutboxTableFilterComposer,
+    $$SyncOutboxTableOrderingComposer,
+    $$SyncOutboxTableAnnotationComposer,
+    $$SyncOutboxTableCreateCompanionBuilder,
+    $$SyncOutboxTableUpdateCompanionBuilder,
+    (
+      SyncOutboxData,
+      BaseReferences<_$AppDatabase, $SyncOutboxTable, SyncOutboxData>
+    ),
+    SyncOutboxData,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6556,4 +13340,13 @@ class $AppDatabaseManager {
       $$MeasurementsTableTableManager(_db, _db.measurements);
   $$SyncQueueTableTableManager get syncQueue =>
       $$SyncQueueTableTableManager(_db, _db.syncQueue);
+  $$CaptureAssetsTableTableManager get captureAssets =>
+      $$CaptureAssetsTableTableManager(_db, _db.captureAssets);
+  $$CameraResultsTableTableManager get cameraResults =>
+      $$CameraResultsTableTableManager(_db, _db.cameraResults);
+  $$MeasuredDetailRevisionsTableTableManager get measuredDetailRevisions =>
+      $$MeasuredDetailRevisionsTableTableManager(
+          _db, _db.measuredDetailRevisions);
+  $$SyncOutboxTableTableManager get syncOutbox =>
+      $$SyncOutboxTableTableManager(_db, _db.syncOutbox);
 }
