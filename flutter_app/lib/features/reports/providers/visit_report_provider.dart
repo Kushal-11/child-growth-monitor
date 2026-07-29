@@ -16,6 +16,7 @@ class VisitReportSnapshot {
     required this.captureState,
     required this.latestCameraResult,
     required this.acceptedAssetCount,
+    this.measuredReport,
   });
 
   final String visitUuid;
@@ -23,6 +24,51 @@ class VisitReportSnapshot {
   final CaptureState captureState;
   final CameraScreeningResult? latestCameraResult;
   final int acceptedAssetCount;
+  final MeasuredReportSnapshot? measuredReport;
+}
+
+class MeasuredReportSnapshot {
+  const MeasuredReportSnapshot({
+    this.heightCm,
+    this.weightKg,
+    this.muacCm,
+    this.hazZscore,
+    this.hazStatus,
+    this.whzZscore,
+    this.whzStatus,
+    this.muacStatus,
+    this.muacEligible,
+    this.oedema,
+    this.whoAcuteStatus,
+    this.whoAcuteTriggeredBy = const [],
+    this.whoAcuteRationale,
+    this.poshanStatus,
+    this.poshanTriggeredBy = const [],
+    this.poshanComplete,
+    this.classificationMethod,
+    this.classificationRationale,
+    this.measuredAt,
+  });
+
+  final double? heightCm;
+  final double? weightKg;
+  final double? muacCm;
+  final double? hazZscore;
+  final String? hazStatus;
+  final double? whzZscore;
+  final String? whzStatus;
+  final String? muacStatus;
+  final bool? muacEligible;
+  final String? oedema;
+  final String? whoAcuteStatus;
+  final List<String> whoAcuteTriggeredBy;
+  final String? whoAcuteRationale;
+  final String? poshanStatus;
+  final List<String> poshanTriggeredBy;
+  final bool? poshanComplete;
+  final String? classificationMethod;
+  final String? classificationRationale;
+  final DateTime? measuredAt;
 }
 
 class VisitReportRequest {
@@ -84,6 +130,9 @@ class DriftVisitReportRepository implements VisitReportRepository {
                 row.qualityVerdict.equals('accepted'),
           ))
         .get();
+    final measurement = await (_database.select(_database.measurements)
+          ..where((row) => row.visitId.equals(visit.id)))
+        .getSingleOrNull();
     return VisitReportSnapshot(
       visitUuid: visit.localUuid,
       visitDate: visit.visitDate,
@@ -91,6 +140,32 @@ class DriftVisitReportRepository implements VisitReportRepository {
       latestCameraResult:
           results.isEmpty ? null : _cameraResultFromRow(results.single),
       acceptedAssetCount: acceptedAssets.length,
+      measuredReport:
+          measurement == null ? null : _measuredReportFromRow(measurement),
+    );
+  }
+
+  MeasuredReportSnapshot _measuredReportFromRow(Measurement row) {
+    return MeasuredReportSnapshot(
+      heightCm: row.manualHeightCm,
+      weightKg: row.manualWeightKg,
+      muacCm: row.muacCm,
+      hazZscore: row.hazZscore,
+      hazStatus: row.hazStatus,
+      whzZscore: row.whzZscore,
+      whzStatus: row.whzStatus,
+      muacStatus: row.muacStatus,
+      muacEligible: row.muacAgeInRange,
+      oedema: row.oedema,
+      whoAcuteStatus: row.whoAcuteStatus,
+      whoAcuteTriggeredBy: _decodeStringList(row.whoAcuteTriggeredBy),
+      whoAcuteRationale: row.whoAcuteRationale,
+      poshanStatus: row.poshanStatus,
+      poshanTriggeredBy: _decodeStringList(row.poshanTriggeredBy),
+      poshanComplete: row.poshanComplete,
+      classificationMethod: row.classificationMethod,
+      classificationRationale: row.classificationRationale,
+      measuredAt: row.measuredAt,
     );
   }
 
@@ -140,6 +215,13 @@ class DriftVisitReportRepository implements VisitReportRepository {
       for (final entry in values.entries)
         if (entry.value is num) entry.key: (entry.value as num).toDouble(),
     };
+  }
+
+  List<String> _decodeStringList(String? raw) {
+    if (raw == null) return const [];
+    final value = jsonDecode(raw);
+    if (value is! List) return const [];
+    return value.map((item) => item.toString()).toList(growable: false);
   }
 }
 

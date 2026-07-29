@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../providers/auth_provider.dart';
 import '../../guided_capture/domain/capture_models.dart';
 import '../providers/visit_report_provider.dart';
+import '../widgets/estimate_comparison_view.dart';
 import '../widgets/estimated_report_view.dart';
+import '../widgets/measured_report_view.dart';
 
 class VisitReportScreen extends ConsumerStatefulWidget {
   const VisitReportScreen({
@@ -105,6 +107,34 @@ class _VisitReportScreenState extends ConsumerState<VisitReportScreen> {
               retrying: _processing,
               error: _localError,
               onRetry: _process,
+            );
+          }
+          final measured = snapshot.measuredReport;
+          if (snapshot.captureState == CaptureState.measuredReport) {
+            if (measured == null) {
+              return _ErrorState(
+                message:
+                    'No saved measurement-based report was found for this visit.',
+                onRetry: () => ref.invalidate(visitReportProvider(request)),
+              );
+            }
+            return SingleChildScrollView(
+              child: Column(
+                children: [
+                  MeasuredReportView(
+                    report: measured,
+                    visitDate: snapshot.visitDate,
+                    onEditMeasuredDetails: () =>
+                        _addMeasuredDetails(snapshot.visitDate),
+                  ),
+                  if (snapshot.latestCameraResult case final estimate?)
+                    EstimateComparisonView(
+                      estimate: estimate,
+                      measured: measured,
+                      authorized: true,
+                    ),
+                ],
+              ),
             );
           }
           final result = snapshot.latestCameraResult;

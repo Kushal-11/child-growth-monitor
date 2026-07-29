@@ -60,6 +60,7 @@ class FakeCameraScreeningProcessor implements CameraScreeningProcessor {
 VisitReportSnapshot snapshot({
   CaptureState state = CaptureState.estimatedReport,
   CameraScreeningResult? result,
+  MeasuredReportSnapshot? measuredReport,
 }) =>
     VisitReportSnapshot(
       visitUuid: '10000000-0000-0000-0000-000000000001',
@@ -67,6 +68,7 @@ VisitReportSnapshot snapshot({
       captureState: state,
       latestCameraResult: result,
       acceptedAssetCount: 2,
+      measuredReport: measuredReport,
     );
 
 void main() {
@@ -188,5 +190,44 @@ void main() {
 
     expect(processor.calls, 1);
     expect(find.text('Estimated Growth Screening Report'), findsOneWidget);
+  });
+
+  testWidgets('measured report is primary and estimate remains comparable',
+      (tester) async {
+    final repository = FakeVisitReportRepository(
+      snapshot(
+        state: CaptureState.measuredReport,
+        result: cameraResult(),
+        measuredReport: const MeasuredReportSnapshot(
+          heightCm: 83.5,
+          hazZscore: -2.1,
+          hazStatus: 'Moderate Stunting',
+          oedema: 'not_checked',
+          whoAcuteStatus: 'UNKNOWN',
+          poshanStatus: 'Indeterminate',
+          poshanComplete: false,
+          classificationMethod: 'poshan_setu_v1',
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          visitReportRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(
+          home: VisitReportScreen(
+            visitUuid: '10000000-0000-0000-0000-000000000001',
+            ownerUserId: 7,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Measurement-based Growth Report'), findsOneWidget);
+    expect(find.text('Compare with estimate'), findsOneWidget);
+    expect(find.text('Estimated Growth Screening Report'), findsNothing);
   });
 }
