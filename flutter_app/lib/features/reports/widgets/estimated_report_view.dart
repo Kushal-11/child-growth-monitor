@@ -6,8 +6,9 @@ import 'estimate_provenance_card.dart';
 import 'report_metric_card.dart';
 
 const String estimatedReportNotice =
-    'Results are estimated from photos and may change after measured '
-    'details are added';
+    'The current camera model is research-only. Calibrated height, weight, '
+    'MUAC, and oedema details are required before WHO classifications can be '
+    'reported.';
 
 class EstimatedReportView extends StatelessWidget {
   const EstimatedReportView({
@@ -43,7 +44,7 @@ class EstimatedReportView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          if (result.estimatedHeightCm case final height?)
+          if (result.reportableHeightCm case final height?)
             ReportMetricCard(
               label: 'Estimated height',
               value: '${height.toStringAsFixed(1)} cm',
@@ -52,9 +53,9 @@ class EstimatedReportView extends StatelessWidget {
             )
           else
             const _UnavailableMetric(
-              message: 'Height could not be estimated from the captured views.',
+              message: 'A calibrated height or length measurement is required.',
             ),
-          if (result.estimatedWeightKg case final weight?)
+          if (result.reportableWeightKg case final weight?)
             ReportMetricCard(
               label: 'Estimated weight',
               value: '${weight.toStringAsFixed(1)} kg',
@@ -63,31 +64,31 @@ class EstimatedReportView extends StatelessWidget {
             )
           else
             const _UnavailableMetric(
-              message: 'Weight could not be estimated from the captured views.',
+              message: 'A calibrated weight measurement is required.',
             ),
-          if (result.estimatedStuntingStatus case final status?)
+          if (result.reportableStuntingStatus case final status?)
             ReportMetricCard(
               label: 'Estimated stunting status',
               value: status,
-              detail: result.estimatedHaz == null
+              detail: result.reportableHaz == null
                   ? null
-                  : 'Estimated HAZ ${result.estimatedHaz!.toStringAsFixed(2)}',
+                  : 'Estimated HAZ ${result.reportableHaz!.toStringAsFixed(2)}',
               icon: Icons.show_chart,
             ),
-          if (result.estimatedWastingStatus case final status?)
+          if (result.reportableWastingStatus case final status?)
             ReportMetricCard(
               label: 'Estimated wasting status',
               value: status,
-              detail: result.estimatedWhz == null
+              detail: result.reportableWhz == null
                   ? null
-                  : 'Estimated WHZ ${result.estimatedWhz!.toStringAsFixed(2)}',
+                  : 'Estimated WHZ ${result.reportableWhz!.toStringAsFixed(2)}',
               icon: Icons.analytics_outlined,
             ),
           if (result.experimentalOverallCategory case final category?)
             ReportMetricCard(
               label: 'Experimental camera screening category',
               value: category,
-              detail: 'Supplied by the active camera classifier',
+              detail: 'Synthetic research output; not a WHO diagnosis',
               icon: Icons.science_outlined,
             ),
           const SizedBox(height: 8),
@@ -105,11 +106,11 @@ class EstimatedReportView extends StatelessWidget {
 
   static String? _sourceLabel(String? source) {
     return switch (source) {
-      'who_height_for_age_median_v1' =>
-        'WHO height-for-age statistical estimate',
-      'ml_weight_estimator_v1' => 'On-device ML weight estimate',
-      'who_weight_for_height_median_body_build_v1' =>
-        'WHO median with body-build adjustment',
+      legacyWhoHeightSourceV1 => 'WHO height-for-age statistical estimate',
+      experimentalMlWeightSourceV1 =>
+        'Experimental on-device ML weight estimate',
+      'ml_weight_estimator_v1' => 'Legacy on-device ML weight estimate',
+      legacyWhoWeightSourceV1 => 'WHO median with body-build adjustment',
       _ => source,
     };
   }

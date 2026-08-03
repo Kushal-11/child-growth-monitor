@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:child_growth_monitor_app/models/wasting_features.dart';
 
@@ -42,5 +45,37 @@ void main() {
     final arr = f.toArray();
     expect(arr[10], closeTo(18.0 * 0.45, 0.01)); // chest = shoulder * 0.45
     expect(arr[11], closeTo(15.0 * 0.50, 0.01)); // abd = hip * 0.50
+  });
+
+  test('feature vector matches the shared Python/mobile parity fixture',
+      () async {
+    final fixture = jsonDecode(
+      await File('../tests/fixtures/wasting_features_parity.json')
+          .readAsString(),
+    ) as Map<String, dynamic>;
+    final input = fixture['input'] as Map<String, dynamic>;
+    final expected = (fixture['expected_vector'] as List<dynamic>)
+        .map((value) => (value as num).toDouble())
+        .toList(growable: false);
+    final actual = WastingFeatures(
+      ageMonths: (input['age_months'] as num).toDouble(),
+      sexBinary: input['sex_binary'] as int,
+      heightCm: (input['height_cm'] as num).toDouble(),
+      shoulderWidthCm: (input['shoulder_width_cm'] as num).toDouble(),
+      hipWidthCm: (input['hip_width_cm'] as num).toDouble(),
+      torsoLengthCm: (input['torso_length_cm'] as num).toDouble(),
+      upperArmLengthCm: (input['upper_arm_length_cm'] as num).toDouble(),
+      shoulderHeightRatio:
+          (input['shoulder_height_ratio'] as num).toDouble(),
+      hipHeightRatio: (input['hip_height_ratio'] as num).toDouble(),
+      bodyBuildScore: input['body_build_score'] as int,
+      chestDepthCm: (input['chest_depth_cm'] as num).toDouble(),
+      abdDepthCm: (input['abd_depth_cm'] as num).toDouble(),
+    ).toArray();
+
+    expect(actual, hasLength(expected.length));
+    for (var index = 0; index < expected.length; index++) {
+      expect(actual[index], closeTo(expected[index], 1e-6));
+    }
   });
 }
