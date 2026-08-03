@@ -354,7 +354,7 @@ void main() {
 
     expect(processor.calls, 1);
     expect(find.text('Estimated Growth Screening Report'), findsOneWidget);
-    expect(find.textContaining('estimated from photos'), findsOneWidget);
+    expect(find.textContaining('research-only'), findsOneWidget);
     await tester.ensureVisible(find.text('Add Measured Details'));
     await tester.tap(find.text('Add Measured Details'));
     await tester.pumpAndSettle();
@@ -372,8 +372,13 @@ void main() {
       find.text('Camera model widget-model-v1; result version 1'),
       findsOneWidget,
     );
-    expect(find.text('Estimated height: 88.0 cm'), findsOneWidget);
-    expect(find.text('Measured height: 83.6 cm'), findsOneWidget);
+    expect(find.text('Estimated height: 88.0 cm'), findsNothing);
+    expect(
+      find.text(
+        'No matching estimated and measured components are available to compare.',
+      ),
+      findsOneWidget,
+    );
     expect(
       reports.snapshot.latestCameraResult?.resultUuid,
       '30000000-0000-0000-0000-000000000001',
