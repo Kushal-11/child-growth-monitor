@@ -20,30 +20,37 @@ class EstimateComparisonView extends StatelessWidget {
     if (!authorized) return const SizedBox.shrink();
 
     final comparisons = <Widget>[
-      if (estimate.estimatedHeightCm != null && measured.heightCm != null)
+      if (estimate.reportableHeightCm != null && measured.heightCm != null)
         _NumericComparison(
           label: 'height',
-          estimated: estimate.estimatedHeightCm!,
+          estimated: estimate.reportableHeightCm!,
           measured: measured.heightCm!,
           unit: 'cm',
         ),
-      if (estimate.estimatedWeightKg != null && measured.weightKg != null)
+      if (estimate.reportableWeightKg != null && measured.weightKg != null)
         _NumericComparison(
           label: 'weight',
-          estimated: estimate.estimatedWeightKg!,
+          estimated: estimate.reportableWeightKg!,
           measured: measured.weightKg!,
           unit: 'kg',
         ),
-      if (estimate.estimatedStuntingStatus != null &&
+      if (estimate.reportableStuntingStatus != null &&
           measured.hazStatus != null)
         Text(
           'Stunting classification agreement: '
-          '${_agreement(estimate.estimatedStuntingStatus!, measured.hazStatus!)}',
+          '${_agreement(
+            estimate.reportableStuntingStatus!,
+            measured.hazStatus!,
+          )}',
         ),
-      if (estimate.estimatedWastingStatus != null && measured.whzStatus != null)
+      if (estimate.reportableWastingStatus != null &&
+          measured.whzStatus != null)
         Text(
           'Wasting classification agreement: '
-          '${_agreement(estimate.estimatedWastingStatus!, measured.whzStatus!)}',
+          '${_agreement(
+            estimate.reportableWastingStatus!,
+            measured.whzStatus!,
+          )}',
         ),
     ];
 

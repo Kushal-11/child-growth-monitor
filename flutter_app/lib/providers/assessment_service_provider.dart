@@ -63,7 +63,6 @@ final cameraScreeningRunnerProvider =
   return CameraScreeningService(
     pose: ref.watch(poseSourceProvider),
     measurement: MeasurementService(who),
-    nutrition: NutritionService(who),
     who: who,
     ml: MlCameraInferenceAdapter(ml),
   );

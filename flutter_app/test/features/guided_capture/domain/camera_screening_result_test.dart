@@ -86,4 +86,33 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  test('legacy population medians are never reportable child measurements',
+      () {
+    final result = CameraScreeningResult(
+      resultUuid: '30000000-0000-0000-0000-000000000003',
+      version: 1,
+      estimatedHeightCm: 90,
+      estimatedWeightKg: 12,
+      heightSource: legacyWhoHeightSourceV1,
+      weightSource: legacyWhoWeightSourceV1,
+      estimatedHaz: 0,
+      estimatedWhz: 0,
+      estimatedStuntingStatus: 'Normal',
+      estimatedWastingStatus: 'NORMAL',
+      captureQualitySummary: const {},
+      method: cameraScreeningMethodV1,
+      modelVersion: 'synthetic-who-v1',
+      manifestChecksum: 'c' * 64,
+      trainingDataLabel: 'synthetic_who_research_only',
+      createdAt: DateTime.utc(2026, 7, 29),
+    );
+
+    expect(result.reportableHeightCm, isNull);
+    expect(result.reportableWeightKg, isNull);
+    expect(result.reportableHaz, isNull);
+    expect(result.reportableWhz, isNull);
+    expect(result.reportableStuntingStatus, isNull);
+    expect(result.reportableWastingStatus, isNull);
+  });
 }

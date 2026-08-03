@@ -5,6 +5,13 @@ import 'package:crypto/crypto.dart';
 import 'capture_models.dart';
 
 const String cameraScreeningMethodV1 = 'camera_screening_v1';
+const String experimentalMlWeightSourceV1 =
+    'experimental_ml_weight_estimator_v1';
+const String legacyWhoHeightSourceV1 = 'who_height_for_age_median_v1';
+const String legacyWhoWeightSourceV1 =
+    'who_weight_for_height_median_body_build_v1';
+const String whoReferenceFeatureScalingV1 =
+    'who_population_reference_for_feature_scaling_v1';
 
 const Set<String> cameraClassifierCategories = {
   'SAM',
@@ -158,6 +165,33 @@ class CameraScreeningResult {
   final DateTime createdAt;
 
   bool get nonClinical => true;
+
+  bool get usesLegacyPopulationHeight =>
+      heightSource == legacyWhoHeightSourceV1;
+
+  bool get usesLegacyPopulationWeight =>
+      weightSource == legacyWhoWeightSourceV1;
+
+  double? get reportableHeightCm =>
+      usesLegacyPopulationHeight ? null : estimatedHeightCm;
+
+  double? get reportableWeightKg =>
+      usesLegacyPopulationWeight ? null : estimatedWeightKg;
+
+  double? get reportableHaz => usesLegacyPopulationHeight ? null : estimatedHaz;
+
+  double? get reportableWhz =>
+      usesLegacyPopulationHeight || usesLegacyPopulationWeight
+          ? null
+          : estimatedWhz;
+
+  String? get reportableStuntingStatus =>
+      usesLegacyPopulationHeight ? null : estimatedStuntingStatus;
+
+  String? get reportableWastingStatus =>
+      usesLegacyPopulationHeight || usesLegacyPopulationWeight
+          ? null
+          : estimatedWastingStatus;
 
   double? get classificationConfidence {
     final category = experimentalOverallCategory;

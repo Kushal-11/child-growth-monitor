@@ -14,7 +14,7 @@ CameraScreeningResult result({
     estimatedHeightCm: height,
     estimatedWeightKg: weight,
     heightSource: height == null ? null : 'who_height_for_age_median_v1',
-    weightSource: weight == null ? null : 'ml_weight_estimator_v1',
+    weightSource: weight == null ? null : experimentalMlWeightSourceV1,
     estimatedHaz: height == null ? null : -0.5,
     estimatedWhz: weight == null ? null : -2.4,
     estimatedStuntingStatus: height == null ? null : 'Normal',
@@ -66,8 +66,9 @@ void main() {
     expect(find.text('Estimated Growth Screening Report'), findsOneWidget);
     expect(
       find.text(
-        'Results are estimated from photos and may change after measured '
-        'details are added',
+        'The current camera model is research-only. Calibrated height, weight, '
+        'MUAC, and oedema details are required before WHO classifications can '
+        'be reported.',
       ),
       findsOneWidget,
     );
@@ -91,15 +92,28 @@ void main() {
     );
 
     expect(
-      find.text('Height could not be estimated from the captured views.'),
+      find.text('A calibrated height or length measurement is required.'),
       findsOneWidget,
     );
     expect(
-      find.text('Weight could not be estimated from the captured views.'),
+      find.text('A calibrated weight measurement is required.'),
       findsOneWidget,
     );
     expect(find.text('Normal'), findsNothing);
     expect(find.text('Indeterminate'), findsNothing);
+  });
+
+  testWidgets('legacy WHO population medians are not displayed as estimates',
+      (tester) async {
+    await pumpReport(tester, result());
+
+    expect(find.text('Estimated height'), findsNothing);
+    expect(find.text('Estimated stunting status'), findsNothing);
+    expect(find.text('Estimated wasting status'), findsNothing);
+    expect(
+      find.text('A calibrated height or length measurement is required.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Normal appears only when supplied by the camera result',

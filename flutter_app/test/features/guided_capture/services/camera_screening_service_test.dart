@@ -8,7 +8,6 @@ import 'package:child_growth_monitor_app/features/guided_capture/services/camera
 import 'package:child_growth_monitor_app/models/body_measurements.dart';
 import 'package:child_growth_monitor_app/models/wasting_features.dart';
 import 'package:child_growth_monitor_app/services/measurement_service.dart';
-import 'package:child_growth_monitor_app/services/nutrition_service.dart';
 import 'package:child_growth_monitor_app/services/pose_source.dart';
 import 'package:child_growth_monitor_app/services/who_data_service.dart';
 import 'package:drift/drift.dart' show Value;
@@ -145,7 +144,6 @@ CameraScreeningService service({
   return CameraScreeningService(
     pose: FakePoseSource(),
     measurement: MeasurementService(whoService),
-    nutrition: NutritionService(whoService),
     who: whoService,
     ml: ml ?? FakeCameraMlInference(),
     newUuid: () => '30000000-0000-0000-0000-000000000001',
@@ -176,17 +174,31 @@ void main() {
 
       expect(result.method, cameraScreeningMethodV1);
       expect(result.nonClinical, isTrue);
-      expect(result.heightSource, 'who_height_for_age_median_v1');
-      expect(result.weightSource, 'ml_weight_estimator_v1');
+      expect(result.estimatedHeightCm, isNull);
+      expect(result.heightSource, isNull);
+      expect(result.estimatedHaz, isNull);
+      expect(result.estimatedWhz, isNull);
+      expect(result.estimatedStuntingStatus, isNull);
+      expect(result.estimatedWastingStatus, isNull);
+      expect(result.weightSource, experimentalMlWeightSourceV1);
       expect(result.modelVersion, 'synthetic-who-v1');
       expect(result.manifestChecksum, hasLength(64));
       expect(result.trainingDataLabel, 'synthetic_who_research_only');
       expect(result.experimentalOverallCategory, 'MAM');
       expect(result.componentProbabilities, hasLength(5));
+      expect(
+        result.bodyProportionFeatures['feature_scaling_height_source'],
+        whoReferenceFeatureScalingV1,
+      );
+      expect(
+        result.bodyProportionFeatures['clinical_measurement_eligible'],
+        isFalse,
+      );
       expect(result.captureQualitySummary['used_views'], ['front', 'side']);
     });
 
-    test('keeps a height estimate when weight cannot be estimated', () async {
+    test('does not publish the WHO reference height as a measurement',
+        () async {
       final who = FakeWhoDataService(medianWeightKg: null);
       final ml = FakeCameraMlInference(
         prediction: const WastingPrediction(
@@ -206,9 +218,13 @@ void main() {
         version: 1,
       );
 
-      expect(result.estimatedHeightCm, 90);
+      expect(result.estimatedHeightCm, isNull);
+      expect(result.heightSource, isNull);
       expect(result.estimatedWeightKg, isNull);
+      expect(result.estimatedHaz, isNull);
       expect(result.estimatedWhz, isNull);
+      expect(result.estimatedStuntingStatus, isNull);
+      expect(result.estimatedWastingStatus, isNull);
       expect(result.experimentalOverallCategory, isNull);
     });
 
@@ -237,7 +253,7 @@ void main() {
       expect(result.componentProbabilities, isEmpty);
     });
 
-    test('labels WHO statistical weight fallback and fabricates no category',
+    test('model failure requires measured weight and fabricates no category',
         () async {
       final result = await service(
         ml: FakeCameraMlInference(error: StateError('model unavailable')),
@@ -247,15 +263,13 @@ void main() {
         version: 1,
       );
 
-      expect(result.estimatedWeightKg, 12);
-      expect(
-        result.weightSource,
-        'who_weight_for_height_median_body_build_v1',
-      );
+      expect(result.estimatedWeightKg, isNull);
+      expect(result.weightSource, isNull);
       expect(result.experimentalOverallCategory, isNull);
     });
 
-    test('non-finite model weight uses the explicit WHO fallback', () async {
+    test('non-finite model weight fails closed without a WHO fallback',
+        () async {
       final ml = FakeCameraMlInference(
         prediction: const WastingPrediction(
           estimatedWeightKg: double.infinity,
@@ -274,11 +288,8 @@ void main() {
         version: 1,
       );
 
-      expect(result.estimatedWeightKg, 12);
-      expect(
-        result.weightSource,
-        'who_weight_for_height_median_body_build_v1',
-      );
+      expect(result.estimatedWeightKg, isNull);
+      expect(result.weightSource, isNull);
     });
   });
 

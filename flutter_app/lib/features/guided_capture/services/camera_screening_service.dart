@@ -3,14 +3,12 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../constants/config.dart';
 import '../../../database/daos/camera_result_dao.dart';
 import '../../../database/daos/guided_visit_dao.dart';
 import '../../../database/database.dart';
 import '../../../models/wasting_features.dart';
 import '../../../services/measurement_service.dart';
 import '../../../services/ml_inference_service.dart';
-import '../../../services/nutrition_service.dart';
 import '../../../services/pose_source.dart';
 import '../../../services/who_data_service.dart';
 import '../domain/camera_screening_result.dart';
@@ -67,14 +65,12 @@ class CameraScreeningService implements CameraScreeningRunner {
   CameraScreeningService({
     required PoseSource pose,
     required MeasurementService measurement,
-    required NutritionService nutrition,
     required WhoDataService who,
     required CameraMlInference ml,
     String Function()? newUuid,
     DateTime Function()? now,
   })  : _pose = pose,
         _measurement = measurement,
-        _nutrition = nutrition,
         _who = who,
         _ml = ml,
         _newUuid = newUuid ?? const Uuid().v4,
@@ -82,7 +78,6 @@ class CameraScreeningService implements CameraScreeningRunner {
 
   final PoseSource _pose;
   final MeasurementService _measurement;
-  final NutritionService _nutrition;
   final WhoDataService _who;
   final CameraMlInference _ml;
   final String Function() _newUuid;
@@ -144,43 +139,26 @@ class CameraScreeningService implements CameraScreeningRunner {
     final (estimatedWeightKg, weightSource) = _resolveEstimatedWeight(
       prediction: prediction,
       whoMedianWeight: whoMedianWeight,
-      bodyBuild: measurements.bodyBuild,
     );
     final classifier = _validatedClassifier(prediction);
-
-    final estimatedHaz = _finiteOrNull(
-      _nutrition.computeHaz(
-        visit.sex,
-        visit.ageMonths.round(),
-        measurements.effectiveHeightCm,
-      ),
-    );
-    final estimatedWhz = estimatedWeightKg == null
-        ? null
-        : _finiteOrNull(
-            _nutrition.computeWhz(
-              visit.sex,
-              visit.ageMonths,
-              measurements.effectiveHeightCm,
-              estimatedWeightKg,
-            ),
-          );
     final metadata = _ml.metadata;
 
     return CameraScreeningResult(
       resultUuid: _newUuid(),
       version: version,
       supersedesResultUuid: supersedesResultUuid,
-      estimatedHeightCm: measurements.effectiveHeightCm,
+      // The current feature extractor uses a WHO population reference to
+      // convert pose ratios into the legacy 14-feature input. That value is
+      // not an image-derived measurement and must never be published as the
+      // child's height or used to derive HAZ/WHZ classifications.
+      estimatedHeightCm: null,
       estimatedWeightKg: estimatedWeightKg,
-      heightSource: measurements.estimationMethod,
+      heightSource: null,
       weightSource: weightSource,
-      estimatedHaz: estimatedHaz,
-      estimatedWhz: estimatedWhz,
-      estimatedStuntingStatus:
-          estimatedHaz == null ? null : classifyHaz(estimatedHaz),
-      estimatedWastingStatus:
-          estimatedWhz == null ? null : classifyWhz(estimatedWhz),
+      estimatedHaz: null,
+      estimatedWhz: null,
+      estimatedStuntingStatus: null,
+      estimatedWastingStatus: null,
       experimentalOverallCategory: classifier?.category,
       componentProbabilities: classifier?.probabilities ?? const {},
       bodyProportionFeatures: {
@@ -194,6 +172,8 @@ class CameraScreeningService implements CameraScreeningRunner {
             measurements.hipWidthCm / measurements.effectiveHeightCm,
         'body_build': measurements.bodyBuild,
         'side_view_used': measurements.sideViewUsed,
+        'feature_scaling_height_source': whoReferenceFeatureScalingV1,
+        'clinical_measurement_eligible': false,
         if (measurements.chestDepthCm != null)
           'chest_depth_cm': measurements.chestDepthCm,
         if (measurements.abdDepthCm != null)
@@ -224,7 +204,6 @@ class CameraScreeningService implements CameraScreeningRunner {
   (double?, String?) _resolveEstimatedWeight({
     required WastingPrediction? prediction,
     required double? whoMedianWeight,
-    required String bodyBuild,
   }) {
     final predicted = prediction?.estimatedWeightKg;
     final medianIsValid = whoMedianWeight != null &&
@@ -238,13 +217,11 @@ class CameraScreeningService implements CameraScreeningRunner {
           predictedKg: predicted,
           whoMedianKg: whoMedianWeight,
         )) {
-      return (predicted, 'ml_weight_estimator_v1');
+      return (predicted, experimentalMlWeightSourceV1);
     }
-    if (!medianIsValid) return (null, null);
-    return (
-      whoMedianWeight * bodyBuildWeightAdjustment(bodyBuild),
-      'who_weight_for_height_median_body_build_v1',
-    );
+    // A WHO population median is a reference value, not a measurement of this
+    // child. Invalid or unavailable ML output therefore fails closed.
+    return (null, null);
   }
 
   _ValidatedClassifier? _validatedClassifier(WastingPrediction? prediction) {
@@ -306,9 +283,6 @@ class CameraScreeningService implements CameraScreeningRunner {
           used.map((asset) => asset.role.wireValue).toList(growable: false),
     };
   }
-
-  double? _finiteOrNull(double? value) =>
-      value != null && value.isFinite ? value : null;
 }
 
 class CameraScreeningWorkflow {
