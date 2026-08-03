@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../../../database/daos/capture_asset_dao.dart';
 import '../../../database/daos/guided_visit_dao.dart';
 import '../../../database/database.dart';
+import '../../../services/age_service.dart';
 import '../domain/capture_models.dart';
 import '../services/guided_camera_controller.dart';
 
@@ -116,8 +117,10 @@ class DriftGuidedCaptureRepository implements GuidedCaptureRepository {
     required String consentOperatorIdentifier,
   }) async {
     final dateOfBirth = DateTime.parse(child.dateOfBirth);
-    final ageMonths = visitDate.difference(dateOfBirth).inDays / 30.4375;
-    if (ageMonths < 0) {
+    late final double ageMonths;
+    try {
+      ageMonths = AgeService.ageMonthsAt(dateOfBirth, visitDate);
+    } on ArgumentError {
       throw StateError('Visit date cannot be before date of birth');
     }
     await _visitDao.createDraft(

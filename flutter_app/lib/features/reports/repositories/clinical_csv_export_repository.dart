@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:intl/intl.dart';
 
 import '../../../database/database.dart';
+import '../../guided_capture/domain/camera_screening_result.dart';
 import '../domain/clinical_csv_record.dart';
 
 abstract interface class ClinicalCsvExportRepository {
@@ -95,6 +96,21 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
     required CameraResult? cameraResult,
   }) {
     final hasDirectMuac = _hasDirectMuac(measurement);
+    final cameraUsesPopulationHeight =
+        cameraResult?.heightSource == legacyWhoHeightSourceV1;
+    final cameraUsesPopulationWeight =
+        cameraResult?.weightSource == legacyWhoWeightSourceV1;
+    final cameraHeightCm =
+        cameraUsesPopulationHeight ? null : cameraResult?.estimatedHeightCm;
+    final cameraWeightKg =
+        cameraUsesPopulationWeight ? null : cameraResult?.estimatedWeightKg;
+    final cameraStuntingStatus = cameraUsesPopulationHeight
+        ? null
+        : cameraResult?.estimatedStuntingStatus;
+    final cameraWastingStatus =
+        cameraUsesPopulationHeight || cameraUsesPopulationWeight
+            ? null
+            : cameraResult?.estimatedWastingStatus;
     final predictedCategory = measurement?.poshanComplete == true
         ? measurement?.poshanStatus
         : cameraResult?.experimentalOverallCategory ??
@@ -109,13 +125,13 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
       dateOfBirth: _formatStoredDate(child.dateOfBirth),
       measurementDate: DateFormat('yyyy-MM-dd').format(visit.visitDate),
       actualHeightCm: measurement?.manualHeightCm,
-      calculatedHeightCm: cameraResult?.estimatedHeightCm ??
+      calculatedHeightCm: cameraHeightCm ??
           (_isManualMethod(measurement?.heightMethod)
               ? null
               : measurement?.predictedHeightCm ??
                   measurement?.effectiveHeightCm),
       actualWeightKg: measurement?.manualWeightKg,
-      calculatedWeightKg: cameraResult?.estimatedWeightKg ??
+      calculatedWeightKg: cameraWeightKg ??
           (_isManualMethod(measurement?.weightMethod)
               ? null
               : measurement?.weightMethod?.toLowerCase() == 'ml_estimated'
@@ -131,11 +147,11 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
       fieldCategory: null,
       predictedFieldCategory: _normaliseCategory(predictedCategory),
       stuntingPrediction: _normaliseCategory(
-        measurement?.hazStatus ?? cameraResult?.estimatedStuntingStatus,
+        measurement?.hazStatus ?? cameraStuntingStatus,
       ),
       wastingPrediction: _normaliseCategory(
         measurement?.whzStatus ??
-            cameraResult?.estimatedWastingStatus ??
+            cameraWastingStatus ??
             measurement?.wastingStatus,
       ),
       notes: _buildNotes(

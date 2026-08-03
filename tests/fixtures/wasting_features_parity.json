@@ -1,0 +1,32 @@
+{
+  "input": {
+    "age_months": 24.0,
+    "sex_binary": 1,
+    "height_cm": 85.0,
+    "shoulder_width_cm": 18.0,
+    "hip_width_cm": 15.0,
+    "torso_length_cm": 25.5,
+    "upper_arm_length_cm": 13.0,
+    "shoulder_height_ratio": 0.21176470588235294,
+    "hip_height_ratio": 0.17647058823529413,
+    "body_build_score": 0,
+    "chest_depth_cm": 10.0,
+    "abd_depth_cm": 8.0
+  },
+  "expected_vector": [
+    24.0,
+    1.0,
+    85.0,
+    18.0,
+    15.0,
+    25.5,
+    13.0,
+    0.21176470588235294,
+    0.17647058823529413,
+    0.0,
+    10.0,
+    8.0,
+    0.11764705882352941,
+    0.09411764705882353
+  ]
+}

@@ -1,4 +1,5 @@
 import 'package:child_growth_monitor_app/database/database.dart';
+import 'package:child_growth_monitor_app/features/guided_capture/domain/camera_screening_result.dart';
 import 'package:child_growth_monitor_app/features/reports/repositories/clinical_csv_export_repository.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
@@ -75,6 +76,8 @@ void main() {
             version: 1,
             estimatedHeightCm: const Value(105.6),
             estimatedWeightKg: const Value(20.61),
+            heightSource: const Value(legacyWhoHeightSourceV1),
+            weightSource: const Value(legacyWhoWeightSourceV1),
             estimatedStuntingStatus: const Value('Normal'),
             estimatedWastingStatus: const Value('Overweight'),
             experimentalOverallCategory: const Value('Normal'),
@@ -139,11 +142,11 @@ void main() {
     expect(measured.notes, contains('visit_uuid='));
 
     final estimated = records.last;
-    expect(estimated.calculatedHeightCm, 105.6);
-    expect(estimated.calculatedWeightKg, 20.61);
+    expect(estimated.calculatedHeightCm, isNull);
+    expect(estimated.calculatedWeightKg, isNull);
     expect(estimated.predictedFieldCategory, 'Normal');
-    expect(estimated.stuntingPrediction, 'Normal');
-    expect(estimated.wastingPrediction, 'Overweight');
+    expect(estimated.stuntingPrediction, isNull);
+    expect(estimated.wastingPrediction, isNull);
     expect(estimated.notes, contains('non_clinical=true'));
   });
 }
