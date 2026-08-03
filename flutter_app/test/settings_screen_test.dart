@@ -1,4 +1,6 @@
 import 'package:child_growth_monitor_app/features/guided_capture/services/guided_sync_service.dart';
+import 'package:child_growth_monitor_app/features/reports/providers/clinical_csv_export_provider.dart';
+import 'package:child_growth_monitor_app/features/reports/services/clinical_csv_export_service.dart';
 import 'package:child_growth_monitor_app/providers/sync_provider.dart';
 import 'package:child_growth_monitor_app/screens/settings/settings_screen.dart';
 import 'package:child_growth_monitor_app/services/image_storage_service.dart';
@@ -55,6 +57,23 @@ class _FakeGuidedSyncGateway implements GuidedSyncGateway {
   Future<void> runOnce(int ownerUserId) async {}
 }
 
+class _FakeClinicalCsvExporter implements ClinicalCsvExportGateway {
+  int? ownerUserId;
+
+  @override
+  Future<ClinicalCsvExportFile> exportAndShare({
+    required int ownerUserId,
+    Rect? sharePositionOrigin,
+  }) async {
+    this.ownerUserId = ownerUserId;
+    return const ClinicalCsvExportFile(
+      path: '/tmp/clinical_predictions.csv',
+      fileName: 'clinical_predictions.csv',
+      recordCount: 4,
+    );
+  }
+}
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
@@ -65,14 +84,14 @@ void main() {
   ) async {
     final storage = _FakeImageStorageService();
     final guidedSync = _FakeGuidedSyncGateway(storage);
-    await _pumpSettings(tester, storage, guidedSync);
+    final csvExporter = _FakeClinicalCsvExporter();
+    await _pumpSettings(tester, storage, guidedSync, csvExporter);
 
     expect(
       find.text('Keep the app ready for offline field work.'),
       findsOneWidget,
     );
     expect(find.text('Server Connection'), findsOneWidget);
-    expect(find.text('Pending: 3'), findsOneWidget);
 
     await tester.enterText(
       find.byKey(const Key('settings_base_url')),
@@ -86,8 +105,10 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.drag(find.byType(ListView), const Offset(0, -600));
-    await tester.pumpAndSettle();
+    await _scrollTo(tester, find.text('Pending: 3'));
+    expect(find.text('Pending: 3'), findsOneWidget);
+
+    await _scrollTo(tester, find.byKey(const Key('settings_clear_images')));
     expect(find.text('Used: 2.0 KB'), findsOneWidget);
     expect(find.text('Acknowledged media: 1'), findsOneWidget);
     expect(find.text('Pending media: 2'), findsOneWidget);
@@ -100,7 +121,8 @@ void main() {
   ) async {
     final storage = _FakeImageStorageService();
     final guidedSync = _FakeGuidedSyncGateway(storage);
-    await _pumpSettings(tester, storage, guidedSync);
+    final csvExporter = _FakeClinicalCsvExporter();
+    await _pumpSettings(tester, storage, guidedSync, csvExporter);
 
     await tester.enterText(
       find.byKey(const Key('settings_base_url')),
@@ -113,14 +135,29 @@ void main() {
     );
     expect(urlField.controller?.text, 'http://10.0.2.2:8000');
 
-    await tester.drag(find.byType(ListView), const Offset(0, -600));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('settings_clear_images')));
+    final clearImages = find.byKey(const Key('settings_clear_images'));
+    await _scrollTo(tester, clearImages);
+    await tester.tap(clearImages);
     await tester.pumpAndSettle();
 
     expect(guidedSync.cleaned, isTrue);
     expect(find.text('Used: 0 B'), findsOneWidget);
     expect(find.text('Acknowledged media: 0'), findsOneWidget);
+  });
+
+  testWidgets('exports every saved record from settings', (tester) async {
+    final storage = _FakeImageStorageService();
+    final guidedSync = _FakeGuidedSyncGateway(storage);
+    final csvExporter = _FakeClinicalCsvExporter();
+    await _pumpSettings(tester, storage, guidedSync, csvExporter);
+
+    final exportCsv = find.byKey(const Key('settings_export_clinical_csv'));
+    await _scrollTo(tester, exportCsv);
+    await tester.tap(exportCsv);
+    await tester.pumpAndSettle();
+
+    expect(csvExporter.ownerUserId, 7);
+    expect(find.text('CSV created. Records: 4'), findsOneWidget);
   });
 }
 
@@ -128,6 +165,7 @@ Future<void> _pumpSettings(
   WidgetTester tester,
   ImageStorageService storage,
   GuidedSyncGateway guidedSync,
+  ClinicalCsvExportGateway csvExporter,
 ) async {
   await tester.binding.setSurfaceSize(const Size(390, 844));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -141,10 +179,21 @@ Future<void> _pumpSettings(
         home: SettingsScreen(
           imageStorageService: storage,
           guidedSyncGateway: guidedSync,
+          clinicalCsvExporter: csvExporter,
           ownerUserId: 7,
         ),
       ),
     ),
   );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
+  await tester.scrollUntilVisible(
+    finder,
+    200,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
   await tester.pumpAndSettle();
 }

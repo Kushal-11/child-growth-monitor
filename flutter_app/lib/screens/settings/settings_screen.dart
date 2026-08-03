@@ -10,6 +10,7 @@ import '../../theme/app_spacing.dart';
 import '../../providers/sync_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../features/guided_capture/services/guided_sync_service.dart';
+import '../../features/reports/providers/clinical_csv_export_provider.dart';
 import '../../services/image_storage_service.dart';
 import '../shared/app_scaffold.dart';
 
@@ -18,11 +19,13 @@ class SettingsScreen extends ConsumerStatefulWidget {
     super.key,
     this.imageStorageService,
     this.guidedSyncGateway,
+    this.clinicalCsvExporter,
     this.ownerUserId,
   });
 
   final ImageStorageService? imageStorageService;
   final GuidedSyncGateway? guidedSyncGateway;
+  final ClinicalCsvExportGateway? clinicalCsvExporter;
   final int? ownerUserId;
 
   @override
@@ -33,10 +36,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _urlController = TextEditingController();
   late final ImageStorageService _imageStorageService;
   late final GuidedSyncGateway _guidedSyncGateway;
+  late final ClinicalCsvExportGateway _clinicalCsvExporter;
   bool _loading = false;
   bool? _healthy;
   String? _error;
   bool _syncing = false;
+  bool _exportingCsv = false;
   int? _bytesUsed;
   GuidedMediaStatus? _mediaStatus;
 
@@ -46,6 +51,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _imageStorageService = widget.imageStorageService ?? ImageStorageService();
     _guidedSyncGateway =
         widget.guidedSyncGateway ?? ref.read(guidedSyncServiceProvider);
+    _clinicalCsvExporter = widget.clinicalCsvExporter ??
+        ref.read(clinicalCsvExportGatewayProvider);
     _loadUrl();
     _refreshStorage();
     _refreshMediaStatus();
@@ -137,6 +144,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await _guidedSyncGateway.cleanupAcknowledgedMedia(owner);
     await _refreshStorage();
     await _refreshMediaStatus();
+  }
+
+  Future<void> _exportClinicalCsv(BuildContext originContext) async {
+    final owner = _ownerUserId;
+    if (owner == null) return;
+    setState(() => _exportingCsv = true);
+    try {
+      final box = originContext.findRenderObject() as RenderBox?;
+      final origin =
+          box == null ? null : box.localToGlobal(Offset.zero) & box.size;
+      final export = await _clinicalCsvExporter.exportAndShare(
+        ownerUserId: owner,
+        sharePositionOrigin: origin,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${t('clinical_csv_export_ready', ref)}: '
+            '${export.recordCount}',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(t('clinical_csv_export_failed', ref))),
+      );
+    } finally {
+      if (mounted) setState(() => _exportingCsv = false);
+    }
   }
 
   String _formatBytes(int bytes) {
@@ -239,6 +277,41 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         child: Text(t('reset_default', ref)),
                       ),
                     ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: AppSpacing.lg),
+
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SettingsSectionHeader(
+                    icon: Icons.table_view_outlined,
+                    title: t('clinical_csv_export_title', ref),
+                    subtitle: t('clinical_csv_export_help', ref),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Builder(
+                    builder: (buttonContext) => FilledButton.icon(
+                      key: const Key('settings_export_clinical_csv'),
+                      onPressed: _ownerUserId == null || _exportingCsv
+                          ? null
+                          : () => _exportClinicalCsv(buttonContext),
+                      icon: _exportingCsv
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.ios_share_outlined),
+                      label: Text(t('clinical_csv_export_action', ref)),
+                    ),
                   ),
                 ],
               ),

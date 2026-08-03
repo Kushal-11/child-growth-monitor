@@ -17,6 +17,9 @@ class VisitDao {
     required MeasurementsCompanion measurement,
   }) async {
     return _db.transaction(() async {
+      final child = await (_db.select(_db.children)
+            ..where((row) => row.id.equals(childId)))
+          .getSingle();
       final visitId = await _db.into(_db.visits).insert(
             VisitsCompanion.insert(
               childId: childId,
@@ -25,6 +28,7 @@ class VisitDao {
               imagePath: Value(imagePath),
               sideImagePath: Value(sideImagePath),
               backImagePath: Value(backImagePath),
+              ownerUserId: Value(child.ownerUserId),
             ),
           );
       await _db.into(_db.measurements).insert(

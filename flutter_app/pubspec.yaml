@@ -24,6 +24,7 @@ dependencies:
   tflite_flutter: ^0.12.1
   excel: ^4.0.6
   csv: ^6.0.0
+  share_plus: ^11.1.0
   crypto: ^3.0.7
   image: ^4.3.0
   sensors_plus: ^6.1.2

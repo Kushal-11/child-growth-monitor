@@ -58,4 +58,25 @@ void main() {
     final r2 = await visitDao.getById(v2);
     expect(r1!.visit.localUuid, isNot(equals(r2!.visit.localUuid)));
   });
+
+  test('assessment visit inherits the child owner for durable export',
+      () async {
+    final childId = await childDao.createChild(
+      name: 'Owned child',
+      dateOfBirth: '2024-01-01',
+      sex: 'F',
+      ownerUserId: 7,
+    );
+    final visitId = await visitDao.createWithMeasurement(
+      childId: childId,
+      ageMonths: 16,
+      imagePath: '/tmp/front.jpg',
+      measurement: const MeasurementsCompanion(),
+    );
+
+    final visit = await (db.select(db.visits)
+          ..where((row) => row.id.equals(visitId)))
+        .getSingle();
+    expect(visit.ownerUserId, 7);
+  });
 }

@@ -525,6 +525,28 @@ const Map<String, Map<String, String>> translations = {
   'sync_now': {'en': 'Sync now', 'mr': 'आता सिंक करा'},
   'sync_pending': {'en': 'Pending', 'mr': 'प्रलंबित'},
   'sync_all_synced': {'en': 'All synced', 'mr': 'सर्व सिंक केले'},
+  'clinical_csv_export_title': {
+    'en': 'Clinical records CSV',
+    'mr': 'वैद्यकीय नोंदी CSV',
+  },
+  'clinical_csv_export_help': {
+    'en': 'Export every saved assessment and report as one row per visit, '
+        'using the clinical predictions CSV columns.',
+    'mr': 'वैद्यकीय अंदाज CSV स्तंभ वापरून प्रत्येक जतन केलेले मूल्यांकन '
+        'आणि अहवाल प्रति भेट एका ओळीत निर्यात करा.',
+  },
+  'clinical_csv_export_action': {
+    'en': 'Export all records (.csv)',
+    'mr': 'सर्व नोंदी निर्यात करा (.csv)',
+  },
+  'clinical_csv_export_ready': {
+    'en': 'CSV created. Records',
+    'mr': 'CSV तयार झाली. नोंदी',
+  },
+  'clinical_csv_export_failed': {
+    'en': 'Could not export the saved records. Please try again.',
+    'mr': 'जतन केलेल्या नोंदी निर्यात करता आल्या नाहीत. पुन्हा प्रयत्न करा.',
+  },
   'storage_title': {'en': 'Storage', 'mr': 'स्टोरेज'},
   'storage_used': {'en': 'Used', 'mr': 'वापरले'},
   'storage_clear': {'en': 'Clear all images', 'mr': 'सर्व प्रतिमा हटवा'},
