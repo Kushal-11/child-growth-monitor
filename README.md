@@ -867,6 +867,11 @@ Key settings in `config.py`:
 
 ## Limitations
 
+The camera models are experimental screening tools. Only provenance-eligible
+manual/reference-calibrated measurements drive WHO classifications and growth
+history; see [Phase 0 model safety and baseline](docs/phase_0_model_safety_and_baseline.md)
+for the exact boundary and reproducible shipped-TFLite evaluation contract.
+
 - **Camera-only accuracy**: Without a weighing scale, weight is estimated from body widths. The ML model is trained on synthetic data — real-world accuracy improves with labeled clinical data (see Fine-tuning section).
 - **MUAC is estimated, not measured**: When no tape measurement is provided, MUAC is estimated from WHZ using WHO MUAC-for-age medians. This is clearly labeled in the UI. Always confirm SAM/MAM with a physical tape measurement for clinical decisions.
 - **2D pose only**: MediaPipe gives 2D landmarks from a single camera. Body widths assume a frontal view with no perspective distortion.

@@ -16,6 +16,7 @@ train.py in the same repo. Inputs are never untrusted.
 
 Run:  python ml/evaluate.py
 """
+
 import pickle  # noqa: S403  trusted artifacts produced by train.py
 import sys
 from pathlib import Path
@@ -23,18 +24,21 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-BASE_DIR   = Path(__file__).resolve().parent.parent
-DATA_DIR   = BASE_DIR / "data"
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data"
 MODELS_DIR = DATA_DIR / "models"
-DATA_CSV   = DATA_DIR / "training_data" / "synthetic_dataset.csv"
+DATA_CSV = DATA_DIR / "training_data" / "synthetic_dataset.csv"
+SPLIT_MANIFEST = DATA_DIR / "training_data" / "synthetic_split_manifest.json"
 
 from ml.models import FEATURE_NAMES, WASTING_LABELS
+from ml.splits import load_split_manifest, rows_for_split
 
 AGE_BINS = [(0, 6, "0-5mo"), (6, 24, "6-23mo"), (24, 60, "24-59mo")]
 
 
 def _load_artifacts():
     import tensorflow as tf
+
     we_model = tf.keras.models.load_model(MODELS_DIR / "weight_estimator.keras")
     wc_model = tf.keras.models.load_model(MODELS_DIR / "wasting_classifier.keras")
     with open(MODELS_DIR / "feature_scaler.pkl", "rb") as f:
@@ -77,11 +81,13 @@ def _bin_metrics(true_labels, pred_labels):
     )
     mam_precision = (
         (true_labels[pred_mam_mask] == "MAM").mean()
-        if pred_mam_mask.any() else float("nan")
+        if pred_mam_mask.any()
+        else float("nan")
     )
     sam_precision = (
         (true_labels[pred_sam_mask] == "SAM").mean()
-        if pred_sam_mask.any() else float("nan")
+        if pred_sam_mask.any()
+        else float("nan")
     )
 
     # Clinical "wasted recall" — predicting SAM or MAM when truth is SAM or MAM
@@ -95,9 +101,9 @@ def _bin_metrics(true_labels, pred_labels):
         "n": len(true_labels),
         "n_sam": int(sam_mask.sum()),
         "n_mam": int(mam_mask.sum()),
-        "sam_recall":    sam_recall,
+        "sam_recall": sam_recall,
         "sam_precision": sam_precision,
-        "mam_recall":    mam_recall,
+        "mam_recall": mam_recall,
         "mam_precision": mam_precision,
         "wasted_recall": wasted_recall,
     }
@@ -106,6 +112,7 @@ def _bin_metrics(true_labels, pred_labels):
 def _print_metric_row(label: str, m: dict):
     def f(v):
         return "  N/A " if np.isnan(v) else f"{v:.3f}"
+
     print(
         f"  {label:14s}  n={m['n']:>5}  sam={m['n_sam']:>3}  mam={m['n_mam']:>4}  "
         f"SAM_rec={f(m['sam_recall'])}  SAM_prec={f(m['sam_precision'])}  "
@@ -115,23 +122,27 @@ def _print_metric_row(label: str, m: dict):
 
 
 def main():
-    from sklearn.model_selection import train_test_split
-    from sklearn.metrics import classification_report, confusion_matrix, mean_absolute_error
+    from sklearn.metrics import (
+        classification_report,
+        confusion_matrix,
+        mean_absolute_error,
+    )
 
     df = pd.read_csv(DATA_CSV)
-    X  = df[FEATURE_NAMES].values.astype("float32")
+    X = df[FEATURE_NAMES].values.astype("float32")
     y_weight = df["weight_kg"].values.astype("float32")
 
     we_model, wc_model, scaler, le = _load_artifacts()
     y_class = le.transform(df["label"]).astype("int32")
 
-    age_arr = df["age_months"].values.astype("float32")
-    sex_arr = df["sex"].values
-
-    _, X_val, _, yw_val, _, yc_val, _, age_val, _, sex_val = train_test_split(
-        X, y_weight, y_class, age_arr, sex_arr,
-        test_size=0.2, random_state=42, stratify=y_class,
-    )
+    manifest = load_split_manifest(df, SPLIT_MANIFEST)
+    test_rows = rows_for_split(df, manifest, "test")
+    test_idx = test_rows.index.to_numpy()
+    X_val = X[test_idx]
+    yw_val = y_weight[test_idx]
+    yc_val = y_class[test_idx]
+    age_val = df.loc[test_idx, "age_months"].to_numpy(dtype="float32")
+    sex_val = df.loc[test_idx, "sex"].to_numpy()
     X_val_s = scaler.transform(X_val).astype("float32")
 
     # ── Weight estimator ──────────────────────────────────────────────────────
@@ -151,11 +162,16 @@ def main():
     pred_labels = le.inverse_transform(pred_cls)
 
     print("\n--- Classification Report ---")
-    print(classification_report(val_labels, pred_labels,
-                                 target_names=sorted(set(val_labels))))
+    print(
+        classification_report(
+            val_labels, pred_labels, target_names=sorted(set(val_labels))
+        )
+    )
 
     cm = confusion_matrix(val_labels, pred_labels, labels=sorted(WASTING_LABELS))
-    cm_df = pd.DataFrame(cm, index=sorted(WASTING_LABELS), columns=sorted(WASTING_LABELS))
+    cm_df = pd.DataFrame(
+        cm, index=sorted(WASTING_LABELS), columns=sorted(WASTING_LABELS)
+    )
     print("Confusion matrix (rows=actual, cols=predicted):")
     print(cm_df.to_string())
 
@@ -180,8 +196,10 @@ def main():
     # ── SAM-threshold sweep ───────────────────────────────────────────────────
     sam_idx = list(le.classes_).index("SAM")
     sam_probs = probs[:, sam_idx]
-    sam_truth = (val_labels == "SAM")
-    print("\n--- SAM-threshold sweep (raise threshold = higher precision, lower recall) ---")
+    sam_truth = val_labels == "SAM"
+    print(
+        "\n--- SAM-threshold sweep (raise threshold = higher precision, lower recall) ---"
+    )
     print("  thr   SAM_recall  SAM_prec  predicted_SAM  predicted_MAM  MAM_prec")
     for thr in [0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80]:
         new_pred = pred_labels.copy()
@@ -201,10 +219,13 @@ def main():
         mam_pred_mask = new_pred == "MAM"
         mam_prec = (
             (val_labels[mam_pred_mask] == "MAM").mean()
-            if mam_pred_mask.any() else float("nan")
+            if mam_pred_mask.any()
+            else float("nan")
         )
-        print(f"  {thr:.2f}    {sam_rec:.3f}      {sam_prec:.3f}    "
-              f"{int(sam_pred_mask.sum()):>5}          {int(mam_pred_mask.sum()):>5}        {mam_prec:.3f}")
+        print(
+            f"  {thr:.2f}    {sam_rec:.3f}      {sam_prec:.3f}    "
+            f"{int(sam_pred_mask.sum()):>5}          {int(mam_pred_mask.sum()):>5}        {mam_prec:.3f}"
+        )
 
     # ── Headline SAM recall (existing behaviour) ──────────────────────────────
     sam_mask = val_labels == "SAM"
@@ -212,8 +233,10 @@ def main():
         sam_recall = (pred_labels[sam_mask] == "SAM").mean()
         print(f"\n*** SAM recall: {sam_recall:.3f} (target ≥ 0.80) ***")
         if sam_recall < 0.80:
-            print("    WARNING: SAM recall is below 0.80 — consider adjusting"
-                  " class weights or resampling in train.py")
+            print(
+                "    WARNING: SAM recall is below 0.80 — consider adjusting"
+                " class weights or resampling in train.py"
+            )
     else:
         print("No SAM samples in validation set.")
 

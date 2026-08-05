@@ -18,7 +18,8 @@
 **Description**: ML engineer focused on architecture exploration and model improvement for wasting detection.
 **Scope**: `ml/`, `data/`, `notebooks/`
 **Instructions**:
-- Current baseline: 70.2% accuracy (5-class), 0.886 SAM recall, 0.403 kg weight MAE
+- Exact shipped-TFLite baseline: 72.11% accuracy (5-class), 0.8835 SAM recall,
+  0.4019 kg weight MAE on 8,931 locked synthetic test children
 - SAM recall >= 0.80 is a hard safety floor — all experiments must report this metric
 - Explore: ensemble methods, feature engineering, augmentation, alternative architectures (XGBoost, LightGBM, deeper networks, attention mechanisms)
 - Always compare against baseline — never assume an architecture is better without evaluation
@@ -35,12 +36,14 @@
 **Instructions**:
 - Maintain service layer pattern: routes -> services -> models
 - WHO Excel LMS files are authoritative for z-score computation — never fall back to CSVs
-- Weight priority chain: manual -> ML estimate (if 45-180% of WHO median) -> WHO median with body build adjustment
+- Effective weight is manual/calibrated-scale only; ML and WHO estimates are
+  experimental evidence and must never drive diagnostic WHZ
 - Use Pydantic for all request/response schemas
 - SQLAlchemy ORM for database operations, SQLite for development
 - Keep assessment pipeline deterministic: same inputs must produce same outputs
 - Add proper error responses with HTTP status codes and descriptive messages
-- Reference object detection (yellow packet) is optional — gracefully degrade without it
+- Uncalibrated images may produce experimental screening estimates, but an
+  effective image height requires a validated reference object
 - Side-view processing is optional — impute depth from Snyder 1975 ratios when absent
 
 ## code-reviewer
@@ -50,7 +53,8 @@
 - Safety is paramount: check that SAM/MAM detection paths never silently fail
 - Verify WHO data usage: LMS method from Excel, not deprecated CSV files
 - Check that manual measurements always override estimated values
-- Ensure ML weight estimates are validated against WHO median bounds (45-180%)
+- Ensure ML weight estimates remain explicitly non-diagnostic and never become
+  effective measurements without an eligible scale source
 - Review for OWASP top 10 in API endpoints (input validation, SQL injection, file upload security)
 - Verify test coverage for new code — especially edge cases in z-score computation
 - Check cross-language consistency: Dart models must match Python schemas

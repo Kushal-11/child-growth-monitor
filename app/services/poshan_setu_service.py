@@ -1,4 +1,5 @@
 """Canonical, provenance-aware Poshan Setu v1 classification."""
+
 from dataclasses import dataclass
 import math
 from typing import Optional
@@ -14,12 +15,16 @@ from config import (
 
 CLASSIFICATION_METHOD = "poshan_setu_v1"
 INDETERMINATE = "Indeterminate"
-ELIGIBLE_BMI_SOURCES = frozenset({"manual", "reference_object"})
+ELIGIBLE_HEIGHT_SOURCES = frozenset({"manual", "reference_object"})
+ELIGIBLE_WEIGHT_SOURCES = frozenset({"manual", "calibrated_scale"})
+# Backwards-compatible export for callers that only need the union.
+ELIGIBLE_BMI_SOURCES = ELIGIBLE_HEIGHT_SOURCES | ELIGIBLE_WEIGHT_SOURCES
 ELIGIBLE_MUAC_METHODS = frozenset({"manual", "tape"})
 CANONICAL_SOURCES = frozenset(
     {
         "manual",
         "reference_object",
+        "calibrated_scale",
         "ml_estimated",
         "who_statistical",
         "whz_derived",
@@ -33,6 +38,8 @@ _SOURCE_ALIASES = {
     "who_median_estimated": "who_statistical",
     "estimated_from_whz": "whz_derived",
     "anthropometric": "landmark_estimated",
+    "scale": "calibrated_scale",
+    "digital_scale": "calibrated_scale",
 }
 _SEVERITY = {"Normal": 0, "MAM": 1, "SAM": 2}
 
@@ -103,8 +110,8 @@ def classify_poshan_setu(
         and float(weight_kg) > 0
     )
     bmi_sources_eligible = (
-        height_source_n in ELIGIBLE_BMI_SOURCES
-        and weight_source_n in ELIGIBLE_BMI_SOURCES
+        height_source_n in ELIGIBLE_HEIGHT_SOURCES
+        and weight_source_n in ELIGIBLE_WEIGHT_SOURCES
     )
     if normalized_sex not in ("M", "F"):
         bmi_reason = "BMI ineligible because sex is not M or F"
@@ -131,9 +138,7 @@ def classify_poshan_setu(
     muac_reason = "MUAC unavailable"
     age_eligible = (
         _is_finite_number(age_months)
-        and POSHAN_MUAC_MIN_AGE_MONTHS
-        <= float(age_months)
-        < POSHAN_MUAC_MAX_AGE_MONTHS
+        and POSHAN_MUAC_MIN_AGE_MONTHS <= float(age_months) < POSHAN_MUAC_MAX_AGE_MONTHS
     )
     muac_valid = _is_finite_number(muac_cm) and float(muac_cm) > 0
     muac_source_eligible = (

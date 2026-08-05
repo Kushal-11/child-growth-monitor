@@ -36,6 +36,7 @@ v1: simple cube-root width scaling, exponent-0.5 depth scaling, single
 
 Run:  python ml/generate_synthetic_data.py
 """
+
 import math
 import sys
 from pathlib import Path
@@ -45,12 +46,13 @@ import pandas as pd
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
-OUT_DIR  = DATA_DIR / "training_data"
+OUT_DIR = DATA_DIR / "training_data"
+SPLIT_MANIFEST = OUT_DIR / "synthetic_split_manifest.json"
 
-HAZ_CSV  = DATA_DIR / "who_haz_0_59m.csv"
-WFL_BOYS  = DATA_DIR / "wfl_boys_0-to-2-years_zscores.xlsx"
+HAZ_CSV = DATA_DIR / "who_haz_0_59m.csv"
+WFL_BOYS = DATA_DIR / "wfl_boys_0-to-2-years_zscores.xlsx"
 WFL_GIRLS = DATA_DIR / "wfl_girls_0-to-2-years_zscores.xlsx"
-WFH_BOYS  = DATA_DIR / "wfh_boys_2-to-5-years_zscores.xlsx"
+WFH_BOYS = DATA_DIR / "wfh_boys_2-to-5-years_zscores.xlsx"
 WFH_GIRLS = DATA_DIR / "wfh_girls_2-to-5-years_zscores.xlsx"
 
 N_SAMPLES = 60_000
@@ -61,11 +63,24 @@ RANDOM_SEED = 42
 # Fraction-of-stature values for typically nourished children.
 # Nodes: (age_months, ratio).
 # ---------------------------------------------------------------------------
-SHOULDER_RATIO_NODES = [(0, 0.191), (6, 0.193), (12, 0.198),
-                         (24, 0.207), (36, 0.211), (48, 0.214), (60, 0.218)]
-ARM_RATIO_NODES      = [(0, 0.145), (12, 0.150), (24, 0.155),
-                         (36, 0.158), (48, 0.162), (60, 0.165)]
-TORSO_RATIO_NODES    = [(0, 0.32), (12, 0.32), (24, 0.30), (48, 0.30), (60, 0.30)]
+SHOULDER_RATIO_NODES = [
+    (0, 0.191),
+    (6, 0.193),
+    (12, 0.198),
+    (24, 0.207),
+    (36, 0.211),
+    (48, 0.214),
+    (60, 0.218),
+]
+ARM_RATIO_NODES = [
+    (0, 0.145),
+    (12, 0.150),
+    (24, 0.155),
+    (36, 0.158),
+    (48, 0.162),
+    (60, 0.165),
+]
+TORSO_RATIO_NODES = [(0, 0.32), (12, 0.32), (24, 0.30), (48, 0.30), (60, 0.30)]
 
 
 # ---------------------------------------------------------------------------
@@ -77,12 +92,12 @@ TORSO_RATIO_NODES    = [(0, 0.32), (12, 0.32), (24, 0.30), (48, 0.30), (60, 0.30
 # dependence on any single population mean.
 # ---------------------------------------------------------------------------
 ETHNICITY_PROFILES = {
-    "baseline":    {"shoulder": 1.000, "torso": 1.000, "arm": 1.000},
-    "east_asian":  {"shoulder": 0.985, "torso": 1.020, "arm": 0.975},
+    "baseline": {"shoulder": 1.000, "torso": 1.000, "arm": 1.000},
+    "east_asian": {"shoulder": 0.985, "torso": 1.020, "arm": 0.975},
     "south_asian": {"shoulder": 0.975, "torso": 1.000, "arm": 0.985},
     "sub_saharan": {"shoulder": 1.005, "torso": 0.985, "arm": 1.030},
-    "european":    {"shoulder": 1.000, "torso": 1.000, "arm": 1.000},
-    "andean":      {"shoulder": 1.010, "torso": 1.020, "arm": 0.965},
+    "european": {"shoulder": 1.000, "torso": 1.000, "arm": 1.000},
+    "andean": {"shoulder": 1.010, "torso": 1.020, "arm": 0.965},
 }
 ETHNICITY_KEYS = list(ETHNICITY_PROFILES.keys())
 
@@ -99,11 +114,11 @@ ETHNICITY_KEYS = list(ETHNICITY_PROFILES.keys())
 # Fractions sum to ~1 per row; what matters is the relative weighting.
 COMPARTMENTS = {
     # level         fat   muscle  viscera
-    "shoulder":   (0.30, 0.65, 0.05),   # mostly muscle (deltoid, trapezius)
-    "hip":        (0.30, 0.55, 0.15),   # muscle + visceral hint
-    "arm":        (0.40, 0.55, 0.05),   # MUAC-equivalent — fat + muscle
-    "chest_ap":   (0.45, 0.30, 0.25),   # AP depth has more visceral component
-    "abdomen_ap": (0.55, 0.15, 0.30),   # AP abdomen dominated by fat + viscera
+    "shoulder": (0.30, 0.65, 0.05),  # mostly muscle (deltoid, trapezius)
+    "hip": (0.30, 0.55, 0.15),  # muscle + visceral hint
+    "arm": (0.40, 0.55, 0.05),  # MUAC-equivalent — fat + muscle
+    "chest_ap": (0.45, 0.30, 0.25),  # AP depth has more visceral component
+    "abdomen_ap": (0.55, 0.15, 0.30),  # AP abdomen dominated by fat + viscera
 }
 
 # Compartment shrinkage exponents under wasting (weight / median_weight)^exp.
@@ -112,15 +127,15 @@ COMPARTMENTS = {
 #   viscera: large exponent → relatively preserved
 # Empirically, fat mass scales roughly as W^0.6, muscle as W^0.85, viscera as W^1.0
 # in cross-sectional pediatric body composition data.
-EXP_FAT     = 0.60
-EXP_MUSCLE  = 0.85
+EXP_FAT = 0.60
+EXP_MUSCLE = 0.85
 EXP_VISCERA = 1.00
 
 
 def _interp_ratio(nodes, age_months):
     """Linear interpolation through (age, ratio) nodes."""
-    ages  = [n[0] for n in nodes]
-    vals  = [n[1] for n in nodes]
+    ages = [n[0] for n in nodes]
+    vals = [n[1] for n in nodes]
     return float(np.interp(age_months, ages, vals))
 
 
@@ -137,13 +152,13 @@ def _compartment_scale(weight_kg: float, median_weight: float, level: str) -> fl
     ratio = max(weight_kg / max(median_weight, 1e-3), 0.4)
 
     # Volume factor per compartment (then convert to linear dimension via cube root)
-    vol_fat     = ratio ** EXP_FAT
-    vol_muscle  = ratio ** EXP_MUSCLE
-    vol_viscera = ratio ** EXP_VISCERA
+    vol_fat = ratio**EXP_FAT
+    vol_muscle = ratio**EXP_MUSCLE
+    vol_viscera = ratio**EXP_VISCERA
 
-    weighted_vol = (fat_frac * vol_fat
-                    + muscle_frac * vol_muscle
-                    + viscera_frac * vol_viscera)
+    weighted_vol = (
+        fat_frac * vol_fat + muscle_frac * vol_muscle + viscera_frac * vol_viscera
+    )
 
     return max(weighted_vol ** (1.0 / 3.0), 0.45)
 
@@ -151,6 +166,7 @@ def _compartment_scale(weight_kg: float, median_weight: float, level: str) -> fl
 # ---------------------------------------------------------------------------
 # WHO data helpers (verified sources only)
 # ---------------------------------------------------------------------------
+
 
 def _load_haz() -> pd.DataFrame:
     df = pd.read_csv(HAZ_CSV)
@@ -161,7 +177,7 @@ def _load_lms() -> dict:
     """Load L/M/S tables keyed by ('M'|'F', 'wfl'|'wfh')."""
     result = {}
     for sex, wfl_path, wfh_path in [
-        ("M", WFL_BOYS,  WFH_BOYS),
+        ("M", WFL_BOYS, WFH_BOYS),
         ("F", WFL_GIRLS, WFH_GIRLS),
     ]:
         for key, path in [("wfl", wfl_path), ("wfh", wfh_path)]:
@@ -176,16 +192,27 @@ def _load_lms() -> dict:
     return result
 
 
-def _haz_to_height(haz_df: pd.DataFrame, sex: str, age_months: int, haz: float) -> float:
+def _haz_to_height(
+    haz_df: pd.DataFrame, sex: str, age_months: int, haz: float
+) -> float:
     measure = "length" if age_months < 24 else "height"
-    rows = haz_df[(haz_df["sex"] == sex) &
-                  (haz_df["measure"] == measure) &
-                  (haz_df["age_months"] == age_months)]
+    rows = haz_df[
+        (haz_df["sex"] == sex)
+        & (haz_df["measure"] == measure)
+        & (haz_df["age_months"] == age_months)
+    ]
     if rows.empty:
         return float("nan")
     r = rows.iloc[0]
-    z_points = [(-3, r.z_minus_3), (-2, r.z_minus_2), (-1, r.z_minus_1),
-                (0, r.z_0), (1, r.z_plus_1), (2, r.z_plus_2), (3, r.z_plus_3)]
+    z_points = [
+        (-3, r.z_minus_3),
+        (-2, r.z_minus_2),
+        (-1, r.z_minus_1),
+        (0, r.z_0),
+        (1, r.z_plus_1),
+        (2, r.z_plus_2),
+        (3, r.z_plus_3),
+    ]
     zs = [p[0] for p in z_points]
     hs = [p[1] for p in z_points]
     return float(np.interp(haz, zs, hs))
@@ -227,6 +254,7 @@ def _whz_to_weight(L: float, M: float, S: float, whz: float) -> float:
 # Noise model — MediaPipe-realistic
 # ---------------------------------------------------------------------------
 
+
 def _mediapipe_noise(
     rng: np.random.Generator,
     base_value: float,
@@ -247,7 +275,7 @@ def _mediapipe_noise(
     if rng.random() < occlusion_prob:
         val *= rng.uniform(0.85, 0.95)  # missing landmark = under-measured
     if foreshortening_bias > 0:
-        val *= (1.0 - rng.uniform(0.0, foreshortening_bias))
+        val *= 1.0 - rng.uniform(0.0, foreshortening_bias)
     return val
 
 
@@ -255,10 +283,15 @@ def _mediapipe_noise(
 # Body proportion model (NON-WHO)
 # ---------------------------------------------------------------------------
 
-def _body_widths(height_cm: float, age_months: float,
-                 weight_kg: float, median_weight: float,
-                 ethnicity: str,
-                 rng: np.random.Generator) -> dict:
+
+def _body_widths(
+    height_cm: float,
+    age_months: float,
+    weight_kg: float,
+    median_weight: float,
+    ethnicity: str,
+    rng: np.random.Generator,
+) -> dict:
     """
     Compute simulated body width and depth measurements as a camera would
     detect, using compartment-aware scaling and ethnicity perturbations.
@@ -268,37 +301,44 @@ def _body_widths(height_cm: float, age_months: float,
     eth = ETHNICITY_PROFILES[ethnicity]
 
     # Compartment-aware scaling factors (linear dimension)
-    s_shoulder   = _compartment_scale(weight_kg, median_weight, "shoulder")
-    s_hip        = _compartment_scale(weight_kg, median_weight, "hip")
-    s_arm        = _compartment_scale(weight_kg, median_weight, "arm")
-    s_chest_ap   = _compartment_scale(weight_kg, median_weight, "chest_ap")
+    s_shoulder = _compartment_scale(weight_kg, median_weight, "shoulder")
+    s_hip = _compartment_scale(weight_kg, median_weight, "hip")
+    s_arm = _compartment_scale(weight_kg, median_weight, "arm")
+    s_chest_ap = _compartment_scale(weight_kg, median_weight, "chest_ap")
     s_abdomen_ap = _compartment_scale(weight_kg, median_weight, "abdomen_ap")
 
     # Random foreshortening — small fraction of samples have the child at an angle
     fore = rng.uniform(0.0, 0.05) if rng.random() < 0.10 else 0.0
 
-    shoulder_ratio   = _interp_ratio(SHOULDER_RATIO_NODES, age_months) * eth["shoulder"]
+    shoulder_ratio = _interp_ratio(SHOULDER_RATIO_NODES, age_months) * eth["shoulder"]
     shoulder_expected = height_cm * shoulder_ratio
-    shoulder_actual   = _mediapipe_noise(
-        rng, shoulder_expected * s_shoulder,
-        base_sigma=0.03, foreshortening_bias=fore,
+    shoulder_actual = _mediapipe_noise(
+        rng,
+        shoulder_expected * s_shoulder,
+        base_sigma=0.03,
+        foreshortening_bias=fore,
     )
 
-    hip_expected = shoulder_expected * 0.88   # hip ≈ 88% of shoulder (Snyder 1975)
-    hip_actual   = _mediapipe_noise(
-        rng, hip_expected * s_hip,
-        base_sigma=0.035, foreshortening_bias=fore,
+    hip_expected = shoulder_expected * 0.88  # hip ≈ 88% of shoulder (Snyder 1975)
+    hip_actual = _mediapipe_noise(
+        rng,
+        hip_expected * s_hip,
+        base_sigma=0.035,
+        foreshortening_bias=fore,
     )
 
-    arm_ratio    = _interp_ratio(ARM_RATIO_NODES, age_months) * eth["arm"]
-    arm_actual   = _mediapipe_noise(
-        rng, height_cm * arm_ratio * s_arm,
-        base_sigma=0.04, occlusion_prob=0.07,
+    arm_ratio = _interp_ratio(ARM_RATIO_NODES, age_months) * eth["arm"]
+    arm_actual = _mediapipe_noise(
+        rng,
+        height_cm * arm_ratio * s_arm,
+        base_sigma=0.04,
+        occlusion_prob=0.07,
     )
 
-    torso_ratio  = _interp_ratio(TORSO_RATIO_NODES, age_months) * eth["torso"]
+    torso_ratio = _interp_ratio(TORSO_RATIO_NODES, age_months) * eth["torso"]
     torso_actual = _mediapipe_noise(
-        rng, height_cm * torso_ratio,
+        rng,
+        height_cm * torso_ratio,
         base_sigma=0.03,
     )
 
@@ -306,28 +346,35 @@ def _body_widths(height_cm: float, age_months: float,
     # abdomen depth ≈ 0.50 × hip lateral width. Compartment scaling drops the
     # AP much faster than lateral because the AP composition is fat-heavy.
     chest_depth_actual = _mediapipe_noise(
-        rng, shoulder_actual * 0.45 * s_chest_ap,
-        base_sigma=0.04, occlusion_prob=0.10, foreshortening_bias=fore,
+        rng,
+        shoulder_actual * 0.45 * s_chest_ap,
+        base_sigma=0.04,
+        occlusion_prob=0.10,
+        foreshortening_bias=fore,
     )
     abd_depth_actual = _mediapipe_noise(
-        rng, hip_actual * 0.50 * s_abdomen_ap,
-        base_sigma=0.04, occlusion_prob=0.10, foreshortening_bias=fore,
+        rng,
+        hip_actual * 0.50 * s_abdomen_ap,
+        base_sigma=0.04,
+        occlusion_prob=0.10,
+        foreshortening_bias=fore,
     )
 
     return {
-        "shoulder_width_cm":    max(shoulder_actual,     5.0),
-        "hip_width_cm":         max(hip_actual,          4.0),
-        "upper_arm_length_cm":  max(arm_actual,          3.0),
-        "torso_length_cm":      max(torso_actual,        8.0),
-        "chest_depth_cm":       max(chest_depth_actual,  2.0),
-        "abd_depth_cm":         max(abd_depth_actual,    2.0),
+        "shoulder_width_cm": max(shoulder_actual, 5.0),
+        "hip_width_cm": max(hip_actual, 4.0),
+        "upper_arm_length_cm": max(arm_actual, 3.0),
+        "torso_length_cm": max(torso_actual, 8.0),
+        "chest_depth_cm": max(chest_depth_actual, 2.0),
+        "abd_depth_cm": max(abd_depth_actual, 2.0),
     }
 
 
-def _body_build_score(shoulder_width_cm: float, height_cm: float,
-                      age_months: float) -> int:
+def _body_build_score(
+    shoulder_width_cm: float, height_cm: float, age_months: float
+) -> int:
     expected = _interp_ratio(SHOULDER_RATIO_NODES, age_months)
-    actual   = shoulder_width_cm / height_cm
+    actual = shoulder_width_cm / height_cm
     if actual < expected - 0.02:
         return -1
     if actual > expected + 0.02:
@@ -336,10 +383,14 @@ def _body_build_score(shoulder_width_cm: float, height_cm: float,
 
 
 def _label(whz: float) -> str:
-    if whz < -3:    return "SAM"
-    if whz < -2:    return "MAM"
-    if whz <= 1:    return "Normal"
-    if whz <= 2:    return "Risk_Overweight"
+    if whz < -3:
+        return "SAM"
+    if whz < -2:
+        return "MAM"
+    if whz <= 1:
+        return "Normal"
+    if whz <= 2:
+        return "Risk_Overweight"
     return "Overweight"
 
 
@@ -378,18 +429,19 @@ def _sample_whz(rng: np.random.Generator) -> float:
 # Main generation
 # ---------------------------------------------------------------------------
 
+
 def generate(n: int = N_SAMPLES, seed: int = RANDOM_SEED) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
 
-    haz_df     = _load_haz()
+    haz_df = _load_haz()
     lms_tables = _load_lms()
 
     sexes = ["M", "F"]
 
     records = []
-    for _ in range(n):
-        sex       = rng.choice(sexes)
-        age_mo    = int(rng.integers(0, 60))
+    for child_index in range(n):
+        sex = rng.choice(sexes)
+        age_mo = int(rng.integers(0, 60))
         ethnicity = str(rng.choice(ETHNICITY_KEYS))
 
         # Sample HAZ from a realistic global distribution
@@ -407,53 +459,63 @@ def generate(n: int = N_SAMPLES, seed: int = RANDOM_SEED) -> pd.DataFrame:
         except Exception:
             continue
 
-        weight_kg     = _whz_to_weight(L, M, S, whz)
+        weight_kg = _whz_to_weight(L, M, S, whz)
         median_weight = M
 
         if weight_kg <= 0 or median_weight <= 0:
             continue
 
         widths = _body_widths(
-            height_cm, age_mo, weight_kg, median_weight, ethnicity, rng,
+            height_cm,
+            age_mo,
+            weight_kg,
+            median_weight,
+            ethnicity,
+            rng,
         )
 
         shoulder_height_ratio = widths["shoulder_width_cm"] / height_cm
-        hip_height_ratio      = widths["hip_width_cm"]      / height_cm
-        chest_depth_ratio     = widths["chest_depth_cm"]    / height_cm
-        abd_depth_ratio       = widths["abd_depth_cm"]      / height_cm
+        hip_height_ratio = widths["hip_width_cm"] / height_cm
+        chest_depth_ratio = widths["chest_depth_cm"] / height_cm
+        abd_depth_ratio = widths["abd_depth_cm"] / height_cm
         bds = _body_build_score(widths["shoulder_width_cm"], height_cm, age_mo)
 
-        records.append({
-            # Features
-            "age_months":           float(age_mo),
-            "sex_binary":           1 if sex == "M" else 0,
-            "height_cm":            round(height_cm, 2),
-            "shoulder_width_cm":    round(widths["shoulder_width_cm"], 2),
-            "hip_width_cm":         round(widths["hip_width_cm"], 2),
-            "torso_length_cm":      round(widths["torso_length_cm"], 2),
-            "upper_arm_length_cm":  round(widths["upper_arm_length_cm"], 2),
-            "shoulder_height_ratio": round(shoulder_height_ratio, 4),
-            "hip_height_ratio":      round(hip_height_ratio, 4),
-            "body_build_score":      bds,
-            "chest_depth_cm":        round(widths["chest_depth_cm"], 2),
-            "abd_depth_cm":          round(widths["abd_depth_cm"], 2),
-            "chest_depth_ratio":     round(chest_depth_ratio, 4),
-            "abd_depth_ratio":       round(abd_depth_ratio, 4),
-            # Targets
-            "weight_kg":            round(weight_kg, 3),
-            "whz":                  round(whz, 3),
-            "haz":                  round(haz, 3),
-            "label":                _label(whz),
-            # Metadata
-            "sex":                  sex,
-            "ethnicity":            ethnicity,
-            "median_weight_kg":     round(median_weight, 3),
-        })
+        records.append(
+            {
+                "child_id": f"synthetic-{seed}-{child_index:06d}",
+                # Features
+                "age_months": float(age_mo),
+                "sex_binary": 1 if sex == "M" else 0,
+                "height_cm": round(height_cm, 2),
+                "shoulder_width_cm": round(widths["shoulder_width_cm"], 2),
+                "hip_width_cm": round(widths["hip_width_cm"], 2),
+                "torso_length_cm": round(widths["torso_length_cm"], 2),
+                "upper_arm_length_cm": round(widths["upper_arm_length_cm"], 2),
+                "shoulder_height_ratio": round(shoulder_height_ratio, 4),
+                "hip_height_ratio": round(hip_height_ratio, 4),
+                "body_build_score": bds,
+                "chest_depth_cm": round(widths["chest_depth_cm"], 2),
+                "abd_depth_cm": round(widths["abd_depth_cm"], 2),
+                "chest_depth_ratio": round(chest_depth_ratio, 4),
+                "abd_depth_ratio": round(abd_depth_ratio, 4),
+                # Targets
+                "weight_kg": round(weight_kg, 3),
+                "whz": round(whz, 3),
+                "haz": round(haz, 3),
+                "label": _label(whz),
+                # Metadata
+                "sex": sex,
+                "ethnicity": ethnicity,
+                "median_weight_kg": round(median_weight, 3),
+            }
+        )
 
     df = pd.DataFrame(records)
     print(f"Generated {len(df)} samples")
-    print("Label distribution:\n" + df["label"].value_counts(normalize=True)
-          .rename("fraction").to_string())
+    print(
+        "Label distribution:\n"
+        + df["label"].value_counts(normalize=True).rename("fraction").to_string()
+    )
     print("\nEthnicity distribution:")
     print(df["ethnicity"].value_counts(normalize=True).rename("fraction").to_string())
     return df
@@ -464,7 +526,15 @@ def main():
     df = generate()
     out = OUT_DIR / "synthetic_dataset.csv"
     df.to_csv(out, index=False)
+    from ml.splits import write_split_manifest
+
+    manifest = write_split_manifest(df, SPLIT_MANIFEST, seed=RANDOM_SEED)
     print(f"\nSaved → {out}")
+    print(
+        "Split manifest → "
+        f"{SPLIT_MANIFEST} "
+        + ", ".join(f"{name}={len(ids)}" for name, ids in manifest["splits"].items())
+    )
 
 
 if __name__ == "__main__":

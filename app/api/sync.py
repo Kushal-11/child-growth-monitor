@@ -1,4 +1,5 @@
 """POST /api/v1/sync — server-verified ingestion of mobile evidence."""
+
 import json
 import math
 import shutil
@@ -22,7 +23,8 @@ from app.services.auth_service import get_current_user
 from app.services.muac_service import MUACService
 from app.services.nutrition_service import NutritionService
 from app.services.poshan_setu_service import (
-    ELIGIBLE_BMI_SOURCES,
+    ELIGIBLE_HEIGHT_SOURCES,
+    ELIGIBLE_WEIGHT_SOURCES,
     classify_poshan_setu,
     normalize_muac_method,
     normalize_source,
@@ -235,12 +237,13 @@ async def sync_assessment(
         server_height = manual_height_cm
         server_height_source = "manual"
     else:
-        server_height = effective_height_cm or predicted_height_cm
+        candidate_height = effective_height_cm or predicted_height_cm
         validated_reference = (
-            server_height is not None
+            candidate_height is not None
             and normalize_source(estimation_method) == "reference_object"
             and _as_bool(reference_object_detected)
         )
+        server_height = candidate_height if validated_reference else None
         server_height_source = (
             "reference_object" if validated_reference else "unavailable"
         )
@@ -249,25 +252,21 @@ async def sync_assessment(
         server_weight = manual_weight_kg
         server_weight_source = "manual"
     else:
-        server_weight = (
-            effective_weight_kg
-            if effective_weight_kg is not None
-            else ml_estimated_weight_kg
-            if ml_estimated_weight_kg is not None
-            else predicted_weight_kg
-        )
         requested_weight_source = normalize_source(weight_method)
+        calibrated_weight = (
+            effective_weight_kg
+            if requested_weight_source == "calibrated_scale"
+            else None
+        )
+        server_weight = calibrated_weight
         server_weight_source = (
-            requested_weight_source
-            if requested_weight_source in {"ml_estimated", "who_statistical"}
-            else "unavailable"
+            "calibrated_scale" if calibrated_weight is not None else "unavailable"
         )
 
     server_muac_method = normalize_muac_method(muac_method)
     direct_muac = (
         muac_cm
-        if server_muac_method == "manual"
-        and _as_bool(muac_is_direct_measurement)
+        if server_muac_method == "manual" and _as_bool(muac_is_direct_measurement)
         else None
     )
     poshan = classify_poshan_setu(
@@ -285,13 +284,11 @@ async def sync_assessment(
     server_whz_z = None
     server_haz_status = None
     server_whz_status = None
-    reliable_height = server_height_source in ELIGIBLE_BMI_SOURCES
-    reliable_weight = server_weight_source in ELIGIBLE_BMI_SOURCES
+    reliable_height = server_height_source in ELIGIBLE_HEIGHT_SOURCES
+    reliable_weight = server_weight_source in ELIGIBLE_WEIGHT_SOURCES
     if reliable_height and server_height is not None:
         nutrition = _get_sync_nutrition_service()
-        server_haz_z = nutrition.compute_haz(
-            sex, age.completed_months, server_height
-        )
+        server_haz_z = nutrition.compute_haz(sex, age.completed_months, server_height)
         if server_haz_z is not None:
             server_haz_status = nutrition.classify_haz(server_haz_z)
         if reliable_weight and server_weight is not None:
@@ -410,9 +407,7 @@ async def sync_assessment(
         muac_status=poshan.muac_status,
         muac_method=server_muac_method,
         muac_age_in_range=(
-            POSHAN_MUAC_MIN_AGE_MONTHS
-            <= age.months
-            < POSHAN_MUAC_MAX_AGE_MONTHS
+            POSHAN_MUAC_MIN_AGE_MONTHS <= age.months < POSHAN_MUAC_MAX_AGE_MONTHS
         ),
         muac_confidence=muac_confidence if direct_muac is not None else None,
         muac_uncertainty_lower_cm=(
@@ -454,7 +449,10 @@ async def sync_assessment(
         )
         if existing is not None:
             return {"server_visit_id": existing.id, "status": "already_synced"}
-        if db.query(Visit.id).filter(Visit.local_uuid == local_uuid).first() is not None:
+        if (
+            db.query(Visit.id).filter(Visit.local_uuid == local_uuid).first()
+            is not None
+        ):
             raise HTTPException(409, "local_uuid is already in use")
         raise
 

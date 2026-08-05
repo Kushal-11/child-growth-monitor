@@ -1,0 +1,42 @@
+[
+  {
+    "name": "imputed_depth",
+    "features": {
+      "age_months": 24.0,
+      "sex_binary": 1,
+      "height_cm": 87.1,
+      "shoulder_width_cm": 18.0,
+      "hip_width_cm": 15.5,
+      "torso_length_cm": 26.5,
+      "upper_arm_length_cm": 13.7,
+      "shoulder_height_ratio": 0.207,
+      "hip_height_ratio": 0.178,
+      "body_build_score": 0
+    },
+    "expected_raw_features": [24.0, 1.0, 87.1, 18.0, 15.5, 26.5, 13.7, 0.207, 0.178, 0.0, 8.1, 7.75, 0.09299655568312285, 0.08897818599311136],
+    "expected_weight_kg": 11.794523239135742,
+    "expected_class_probabilities": [0.004753005690872669, 0.9375147223472595, 0.0010749729117378592, 0.05527637526392937, 0.0013809206429868937]
+  },
+  {
+    "name": "explicit_depth_ratios",
+    "features": {
+      "age_months": 48.0,
+      "sex_binary": 0,
+      "height_cm": 101.2,
+      "shoulder_width_cm": 20.1,
+      "hip_width_cm": 17.7,
+      "torso_length_cm": 30.4,
+      "upper_arm_length_cm": 16.0,
+      "shoulder_height_ratio": 0.1986,
+      "hip_height_ratio": 0.1749,
+      "body_build_score": -1,
+      "chest_depth_cm": 7.8,
+      "abd_depth_cm": 8.0,
+      "chest_depth_ratio": 0.0771,
+      "abd_depth_ratio": 0.0791
+    },
+    "expected_raw_features": [48.0, 0.0, 101.2, 20.1, 17.7, 30.4, 16.0, 0.1986, 0.1749, -1.0, 7.8, 8.0, 0.0771, 0.0791],
+    "expected_weight_kg": 12.800100326538086,
+    "expected_class_probabilities": [0.42172759771347046, 0.02076951414346695, 0.000005337331913324306, 0.000016755537217250094, 0.5574808120727539]
+  }
+]

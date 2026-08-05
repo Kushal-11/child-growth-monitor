@@ -29,14 +29,17 @@ void main() {
       ),
     );
 
-    expect(prediction.estimatedWeightKg, inInclusiveRange(2, 30));
-    expect(
-      prediction.samProbability +
-          prediction.mamProbability +
-          prediction.normalProbability +
-          prediction.riskProbability +
-          prediction.overweightProbability,
-      closeTo(1, 0.01),
-    );
+    // Locked against shared/ml_parity_cases.json and Python's exact TFLite
+    // interpreter. This catches model, scaler, feature-order, and platform
+    // inference drift rather than merely checking that inference returns.
+    expect(prediction.estimatedWeightKg, closeTo(11.794523239135742, 1e-5));
+    expect(prediction.mamProbability, closeTo(0.004753005690872669, 1e-6));
+    expect(prediction.normalProbability, closeTo(0.9375147223472595, 1e-6));
+    expect(prediction.overweightProbability,
+        closeTo(0.0010749729117378592, 1e-6));
+    expect(prediction.riskProbability,
+        closeTo(0.05527637526392937, 1e-6));
+    expect(prediction.samProbability,
+        closeTo(0.0013809206429868937, 1e-6));
   });
 }
