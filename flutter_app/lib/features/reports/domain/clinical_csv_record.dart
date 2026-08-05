@@ -15,16 +15,17 @@ class ClinicalCsvRecord {
     required this.calculatedWeightKg,
     required this.calculatedWeightMethod,
     required this.muacCm,
-    required this.calculatedMuacCm,
     required this.muacStatus,
     required this.muacMethod,
     required this.muacAgeInRange,
+    required this.muacIsDirectMeasurement,
+    required this.calculatedMuacCm,
+    required this.calculatedMuacMethod,
     required this.muacConfidence,
     required this.muacUncertaintyLowerCm,
     required this.muacUncertaintyUpperCm,
     required this.muacModelVersion,
     required this.muacCalibrationVersion,
-    required this.muacIsDirectMeasurement,
     required this.muacRequiresConfirmation,
     required this.muacReferralGuidance,
     required this.hazZscore,
@@ -50,18 +51,19 @@ class ClinicalCsvRecord {
     'calculated_weight_kg',
     'calculated_weight_method',
     'muac_cm',
-    'calculated_muac_cm',
     'muac_status',
     'muac_method',
     'muac_age_in_range',
-    'muac_confidence',
-    'muac_uncertainty_lower_cm',
-    'muac_uncertainty_upper_cm',
-    'muac_model_version',
-    'muac_calibration_version',
     'muac_is_direct_measurement',
-    'muac_requires_confirmation',
-    'muac_referral_guidance',
+    'calculated_muac_cm',
+    'calculated_muac_method',
+    'calculated_muac_confidence',
+    'calculated_muac_uncertainty_lower_cm',
+    'calculated_muac_uncertainty_upper_cm',
+    'calculated_muac_model_version',
+    'calculated_muac_calibration_version',
+    'calculated_muac_requires_confirmation',
+    'calculated_muac_referral_guidance',
     'haz_zscore',
     'whz_zscore',
     'field_category',
@@ -84,16 +86,17 @@ class ClinicalCsvRecord {
   final double? calculatedWeightKg;
   final String? calculatedWeightMethod;
   final double? muacCm;
-  final double? calculatedMuacCm;
   final String? muacStatus;
   final String? muacMethod;
   final bool? muacAgeInRange;
+  final bool? muacIsDirectMeasurement;
+  final double? calculatedMuacCm;
+  final String? calculatedMuacMethod;
   final double? muacConfidence;
   final double? muacUncertaintyLowerCm;
   final double? muacUncertaintyUpperCm;
   final String? muacModelVersion;
   final String? muacCalibrationVersion;
-  final bool? muacIsDirectMeasurement;
   final bool? muacRequiresConfirmation;
   final String? muacReferralGuidance;
   final double? hazZscore;
@@ -105,39 +108,40 @@ class ClinicalCsvRecord {
   final String? notes;
 
   List<Object?> toCsvRow() => <Object?>[
-    childId,
-    childName,
-    area,
-    sex,
-    dateOfBirth,
-    measurementDate,
-    _formatNumber(actualHeightCm),
-    _formatNumber(calculatedHeightCm),
-    calculatedHeightMethod,
-    _formatNumber(actualWeightKg),
-    _formatNumber(calculatedWeightKg),
-    calculatedWeightMethod,
-    _formatNumber(muacCm),
-    _formatNumber(calculatedMuacCm),
-    muacStatus,
-    muacMethod,
-    _formatBool(muacAgeInRange),
-    _formatNumber(muacConfidence),
-    _formatNumber(muacUncertaintyLowerCm),
-    _formatNumber(muacUncertaintyUpperCm),
-    muacModelVersion,
-    muacCalibrationVersion,
-    _formatBool(muacIsDirectMeasurement),
-    _formatBool(muacRequiresConfirmation),
-    muacReferralGuidance,
-    _formatNumber(hazZscore),
-    _formatNumber(whzZscore),
-    fieldCategory,
-    predictedFieldCategory,
-    stuntingPrediction,
-    wastingPrediction,
-    notes,
-  ];
+        childId,
+        childName,
+        area,
+        sex,
+        dateOfBirth,
+        measurementDate,
+        _formatNumber(actualHeightCm),
+        _formatNumber(calculatedHeightCm),
+        calculatedHeightMethod,
+        _formatNumber(actualWeightKg),
+        _formatNumber(calculatedWeightKg),
+        calculatedWeightMethod,
+        _formatNumber(muacCm),
+        muacStatus,
+        muacMethod,
+        _formatBool(muacAgeInRange),
+        _formatBool(muacIsDirectMeasurement),
+        _formatNumber(calculatedMuacCm),
+        calculatedMuacMethod,
+        _formatNumber(muacConfidence),
+        _formatNumber(muacUncertaintyLowerCm),
+        _formatNumber(muacUncertaintyUpperCm),
+        muacModelVersion,
+        muacCalibrationVersion,
+        _formatBool(muacRequiresConfirmation),
+        muacReferralGuidance,
+        _formatNumber(hazZscore),
+        _formatNumber(whzZscore),
+        fieldCategory,
+        predictedFieldCategory,
+        stuntingPrediction,
+        wastingPrediction,
+        notes,
+      ];
 
   static String? _formatNumber(double? value) {
     if (value == null) return null;

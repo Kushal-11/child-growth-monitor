@@ -40,16 +40,17 @@ void main() {
           calculatedWeightKg: 16.16,
           calculatedWeightMethod: 'ml_estimated',
           muacCm: 13.5,
-          calculatedMuacCm: 16,
           muacStatus: 'MAM',
           muacMethod: 'manual',
           muacAgeInRange: true,
+          muacIsDirectMeasurement: true,
+          calculatedMuacCm: 16,
+          calculatedMuacMethod: 'landmark_estimated',
           muacConfidence: 0.98765,
           muacUncertaintyLowerCm: 12.8,
           muacUncertaintyUpperCm: 14.2,
           muacModelVersion: 'landmark-ratio-v1',
           muacCalibrationVersion: 'direct-tape',
-          muacIsDirectMeasurement: true,
           muacRequiresConfirmation: false,
           muacReferralGuidance: 'Recheck with tape, then refer if confirmed',
           hazZscore: -1.23456,
@@ -95,10 +96,11 @@ void main() {
       expect(value('calculated_height_cm'), '100.9');
       expect(value('calculated_height_method'), 'reference_object');
       expect(value('calculated_weight_method'), 'ml_estimated');
+      expect(value('calculated_muac_method'), 'landmark_estimated');
       expect(value('muac_age_in_range'), 'true');
-      expect(value('muac_confidence'), '0.9877');
+      expect(value('calculated_muac_confidence'), '0.9877');
       expect(value('muac_is_direct_measurement'), 'true');
-      expect(value('muac_requires_confirmation'), 'false');
+      expect(value('calculated_muac_requires_confirmation'), 'false');
       expect(value('haz_zscore'), '-1.2346');
       expect(value('whz_zscore'), '-2.45');
       expect(value('field_category'), '');

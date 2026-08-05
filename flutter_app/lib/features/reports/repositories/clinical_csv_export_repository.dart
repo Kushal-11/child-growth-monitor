@@ -1,9 +1,14 @@
 import 'package:drift/drift.dart';
 import 'package:intl/intl.dart';
 
+import '../../../constants/config.dart';
 import '../../../database/database.dart';
+import '../../../services/muac_service.dart';
+import '../../../services/who_data_service.dart';
 import '../../guided_capture/domain/camera_screening_result.dart';
 import '../domain/clinical_csv_record.dart';
+
+const String whoMuacForAgeMedianV1 = 'who_muac_for_age_median_v1';
 
 abstract interface class ClinicalCsvExportRepository {
   Future<List<ClinicalCsvRecord>> loadSavedRecords({required int ownerUserId});
@@ -13,14 +18,22 @@ abstract interface class ClinicalCsvExportRepository {
 /// worker. A completed record has either a measurement row or a persisted
 /// camera result; incomplete capture drafts are intentionally excluded.
 class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
-  DriftClinicalCsvExportRepository(this._database);
+  DriftClinicalCsvExportRepository(
+    this._database, {
+    WhoDataService? whoData,
+  }) : _who = whoData ?? WhoDataService();
 
   final AppDatabase _database;
+  final WhoDataService _who;
+  Future<void>? _whoLoadFuture;
 
   @override
   Future<List<ClinicalCsvRecord>> loadSavedRecords({
     required int ownerUserId,
   }) async {
+    if (!_who.isLoaded) {
+      await (_whoLoadFuture ??= _who.loadFromAssets());
+    }
     final query = _database.select(_database.visits).join([
       innerJoin(
         _database.children,
@@ -91,6 +104,10 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
     required CameraResult? cameraResult,
   }) {
     final hasDirectMuac = _hasDirectMuac(measurement);
+    final referenceTargets = _who.getReferenceTargets(
+      child.sex,
+      visit.ageMonths,
+    );
     final cameraUsesPopulationHeight =
         cameraResult?.heightSource == legacyWhoHeightSourceV1;
     final cameraUsesPopulationWeight =
@@ -122,7 +139,11 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
     final measurementHeightCm = _isManualMethod(measurement?.heightMethod)
         ? null
         : measurement?.predictedHeightCm ?? measurement?.effectiveHeightCm;
-    final calculatedHeightCm = cameraHeightCm ?? measurementHeightCm;
+    final whoHeightCm = _positiveFinite(
+      referenceTargets.heightForAge?.target,
+    );
+    final calculatedHeightCm =
+        cameraHeightCm ?? measurementHeightCm ?? whoHeightCm;
     final calculatedHeightMethod = cameraHeightCm != null
         ? _nonEmpty(cameraResult?.heightSource) ??
             _nonEmpty(cameraResult?.method)
@@ -131,18 +152,44 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
                 _nonEmpty(measurement?.heightMethod) ??
                     _nonEmpty(measurement?.estimationMethod),
               )
-            : null;
+            : whoHeightCm != null
+                ? legacyWhoHeightSourceV1
+                : null;
     final measurementWeightMethod = measurement?.weightMethod?.toLowerCase();
+    final weightReferenceHeightCm = _positiveFinite(
+      measurement?.manualHeightCm ?? calculatedHeightCm,
+    );
+    final whoMedianWeightKg = weightReferenceHeightCm == null
+        ? null
+        : _positiveFinite(
+            _who.getMedianWeightForHeight(
+              child.sex.toUpperCase(),
+              weightReferenceHeightCm,
+              ageMonths: visit.ageMonths,
+            ),
+          );
+    final rawStoredMlWeightKg =
+        _positiveFinite(measurement?.mlEstimatedWeightKg);
     final storedMlWeightKg = (_isManualMethod(measurementWeightMethod) ||
-            measurementWeightMethod == 'ml_estimated')
-        ? _positiveFinite(measurement?.mlEstimatedWeightKg)
+                measurementWeightMethod == 'ml_estimated') &&
+            _isPlausibleMlWeight(
+              rawStoredMlWeightKg,
+              whoMedianWeightKg,
+            )
+        ? rawStoredMlWeightKg
         : null;
     final fallbackCalculatedWeightKg =
         _isManualMethod(measurement?.weightMethod)
             ? null
             : measurement?.predictedWeightKg ?? measurement?.effectiveWeightKg;
-    final calculatedWeightKg =
-        cameraWeightKg ?? storedMlWeightKg ?? fallbackCalculatedWeightKg;
+    final whoCalculatedWeightKg = whoMedianWeightKg == null
+        ? null
+        : whoMedianWeightKg *
+            bodyBuildWeightAdjustment(measurement?.bodyBuild ?? 'average');
+    final calculatedWeightKg = cameraWeightKg ??
+        storedMlWeightKg ??
+        fallbackCalculatedWeightKg ??
+        whoCalculatedWeightKg;
     final calculatedWeightMethod = cameraWeightKg != null
         ? _nonEmpty(cameraResult?.weightSource) ??
             _nonEmpty(cameraResult?.method)
@@ -152,7 +199,18 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
                 ? _normaliseWeightEstimateMethod(
                     _nonEmpty(measurement?.weightMethod),
                   )
-                : null;
+                : whoCalculatedWeightKg != null
+                    ? legacyWhoWeightSourceV1
+                    : null;
+    final calculatedMuac = _calculatedMuac(
+      child: child,
+      visit: visit,
+      measurement: measurement,
+      hasDirectMuac: hasDirectMuac,
+      whoMedianMuacCm: referenceTargets.muacForAge?.target,
+      whoLowerMuacCm: referenceTargets.muacForAge?.lower2Sd,
+      whoUpperMuacCm: referenceTargets.muacForAge?.upper2Sd,
+    );
     return ClinicalCsvRecord(
       childId: child.id,
       childName: child.name,
@@ -167,19 +225,21 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
       calculatedWeightKg: calculatedWeightKg,
       calculatedWeightMethod: calculatedWeightMethod,
       muacCm: hasDirectMuac ? measurement?.muacCm : null,
-      calculatedMuacCm: hasDirectMuac ? null : measurement?.muacCm,
-      muacStatus: _normaliseCategory(measurement?.muacStatus),
-      muacMethod: _nonEmpty(measurement?.muacMethod),
-      muacAgeInRange: measurement?.muacAgeInRange,
-      muacConfidence: measurement?.muacConfidence,
-      muacUncertaintyLowerCm: measurement?.muacUncertaintyLowerCm,
-      muacUncertaintyUpperCm: measurement?.muacUncertaintyUpperCm,
-      muacModelVersion: _nonEmpty(measurement?.muacModelVersion),
-      muacCalibrationVersion: _nonEmpty(measurement?.muacCalibrationVersion),
-      muacIsDirectMeasurement:
-          measurement?.muacIsDirectMeasurement ?? (hasDirectMuac ? true : null),
-      muacRequiresConfirmation: measurement?.muacRequiresConfirmation,
-      muacReferralGuidance: _nonEmpty(measurement?.muacReferralGuidance),
+      muacStatus:
+          hasDirectMuac ? _normaliseCategory(measurement?.muacStatus) : null,
+      muacMethod: hasDirectMuac ? _nonEmpty(measurement?.muacMethod) : null,
+      muacAgeInRange: measurement?.muacAgeInRange ??
+          (visit.ageMonths >= 6 && visit.ageMonths <= 59.9),
+      muacIsDirectMeasurement: hasDirectMuac ? true : null,
+      calculatedMuacCm: calculatedMuac?.muacCm,
+      calculatedMuacMethod: calculatedMuac?.muacMethod,
+      muacConfidence: calculatedMuac?.confidence,
+      muacUncertaintyLowerCm: calculatedMuac?.uncertaintyLowerCm,
+      muacUncertaintyUpperCm: calculatedMuac?.uncertaintyUpperCm,
+      muacModelVersion: calculatedMuac?.modelVersion,
+      muacCalibrationVersion: calculatedMuac?.calibrationVersion,
+      muacRequiresConfirmation: calculatedMuac?.requiresConfirmation,
+      muacReferralGuidance: _nonEmpty(calculatedMuac?.referralGuidance),
       hazZscore: measurement?.hazZscore ?? cameraHazZscore,
       whzZscore: measurement?.whzZscore ?? cameraWhzZscore,
       // The mobile app does not capture the independent field-worker category.
@@ -199,7 +259,63 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
         visit: visit,
         measurement: measurement,
         cameraResult: cameraResult,
+        calculatedHeightMethod: calculatedHeightMethod,
+        calculatedWeightMethod: calculatedWeightMethod,
+        calculatedMuacMethod: calculatedMuac?.muacMethod,
       ),
+    );
+  }
+
+  MuacResult? _calculatedMuac({
+    required ChildrenData child,
+    required Visit visit,
+    required Measurement? measurement,
+    required bool hasDirectMuac,
+    required double? whoMedianMuacCm,
+    required double? whoLowerMuacCm,
+    required double? whoUpperMuacCm,
+  }) {
+    final storedEstimate =
+        hasDirectMuac ? null : _positiveFinite(measurement?.muacCm);
+    if (storedEstimate != null) {
+      return MuacResult(
+        muacCm: storedEstimate,
+        muacStatus: null,
+        muacMethod: _nonEmpty(measurement?.muacMethod) ?? 'estimated',
+        ageInRange: measurement?.muacAgeInRange ??
+            (visit.ageMonths >= 6 && visit.ageMonths <= 59.9),
+        confidence: measurement?.muacConfidence,
+        uncertaintyLowerCm: measurement?.muacUncertaintyLowerCm,
+        uncertaintyUpperCm: measurement?.muacUncertaintyUpperCm,
+        modelVersion: _nonEmpty(measurement?.muacModelVersion),
+        calibrationVersion: _nonEmpty(measurement?.muacCalibrationVersion),
+        requiresConfirmation: measurement?.muacRequiresConfirmation ?? true,
+        referralGuidance: _nonEmpty(measurement?.muacReferralGuidance) ??
+            'Calculated MUAC requires confirmation with a tape.',
+      );
+    }
+
+    final whzEstimate = MuacService.estimate(
+      ageMonths: visit.ageMonths,
+      sex: child.sex,
+      whz: measurement?.whzZscore,
+    );
+    if (whzEstimate.muacCm != null) return whzEstimate;
+
+    final median = _positiveFinite(whoMedianMuacCm);
+    if (median == null) return null;
+    return MuacResult(
+      muacCm: median,
+      muacStatus: null,
+      muacMethod: whoMuacForAgeMedianV1,
+      ageInRange: visit.ageMonths >= 6 && visit.ageMonths <= 59.9,
+      confidence: 0.0,
+      uncertaintyLowerCm: _positiveFinite(whoLowerMuacCm),
+      uncertaintyUpperCm: _positiveFinite(whoUpperMuacCm),
+      modelVersion: 'who_acfa_lms_v1',
+      calibrationVersion: 'who_official_excel_reference_v1',
+      requiresConfirmation: true,
+      referralGuidance: 'WHO age/sex reference only; confirm MUAC with a tape.',
     );
   }
 
@@ -242,6 +358,9 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
     required Visit visit,
     required Measurement? measurement,
     required CameraResult? cameraResult,
+    required String? calculatedHeightMethod,
+    required String? calculatedWeightMethod,
+    required String? calculatedMuacMethod,
   }) {
     final values = <String>[];
     void addOriginal(String? value) {
@@ -273,6 +392,16 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
       values.add('model_version=${cameraResult.modelVersion}');
       if (cameraResult.nonClinical) values.add('non_clinical=true');
     }
+    if ({
+      calculatedHeightMethod,
+      calculatedWeightMethod,
+      calculatedMuacMethod,
+    }.any((method) =>
+        method?.contains('who_') == true ||
+        method == 'estimated_from_whz' ||
+        method == experimentalMlWeightSourceV1)) {
+      values.add('calculated_values_for_comparison_only=true');
+    }
     return values.isEmpty ? null : values.join('; ');
   }
 
@@ -297,5 +426,11 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
 
   double? _positiveFinite(double? value) {
     return value != null && value.isFinite && value > 0 ? value : null;
+  }
+
+  bool _isPlausibleMlWeight(double? value, double? whoMedianKg) {
+    if (value == null || whoMedianKg == null) return false;
+    return value >= whoMedianKg * mlWeightLowerBound &&
+        value <= whoMedianKg * mlWeightUpperBound;
   }
 }
