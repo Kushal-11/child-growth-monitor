@@ -6,9 +6,7 @@ import '../../guided_capture/domain/camera_screening_result.dart';
 import '../domain/clinical_csv_record.dart';
 
 abstract interface class ClinicalCsvExportRepository {
-  Future<List<ClinicalCsvRecord>> loadSavedRecords({
-    required int ownerUserId,
-  });
+  Future<List<ClinicalCsvRecord>> loadSavedRecords({required int ownerUserId});
 }
 
 /// Reads every completed assessment/report owned by the signed-in field
@@ -57,11 +55,8 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
       }
     }
 
-    final records = <({
-      ClinicalCsvRecord record,
-      DateTime visitDate,
-      int visitId,
-    })>[];
+    final records =
+        <({ClinicalCsvRecord record, DateTime visitDate, int visitId})>[];
     for (final row in joinedRows) {
       final visit = row.readTable(_database.visits);
       final child = row.readTable(_database.children);
@@ -104,6 +99,12 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
         cameraUsesPopulationHeight ? null : cameraResult?.estimatedHeightCm;
     final cameraWeightKg =
         cameraUsesPopulationWeight ? null : cameraResult?.estimatedWeightKg;
+    final cameraHazZscore =
+        cameraUsesPopulationHeight ? null : cameraResult?.estimatedHaz;
+    final cameraWhzZscore =
+        cameraUsesPopulationHeight || cameraUsesPopulationWeight
+            ? null
+            : cameraResult?.estimatedWhz;
     final cameraStuntingStatus = cameraUsesPopulationHeight
         ? null
         : cameraResult?.estimatedStuntingStatus;
@@ -118,29 +119,69 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
             measurement?.wastingStatus ??
             measurement?.whzStatus ??
             measurement?.poshanStatus;
+    final measurementHeightCm = _isManualMethod(measurement?.heightMethod)
+        ? null
+        : measurement?.predictedHeightCm ?? measurement?.effectiveHeightCm;
+    final calculatedHeightCm = cameraHeightCm ?? measurementHeightCm;
+    final calculatedHeightMethod = cameraHeightCm != null
+        ? _nonEmpty(cameraResult?.heightSource) ??
+            _nonEmpty(cameraResult?.method)
+        : measurementHeightCm != null
+            ? _normaliseHeightEstimateMethod(
+                _nonEmpty(measurement?.heightMethod) ??
+                    _nonEmpty(measurement?.estimationMethod),
+              )
+            : null;
+    final measurementWeightMethod = measurement?.weightMethod?.toLowerCase();
+    final storedMlWeightKg = (_isManualMethod(measurementWeightMethod) ||
+            measurementWeightMethod == 'ml_estimated')
+        ? _positiveFinite(measurement?.mlEstimatedWeightKg)
+        : null;
+    final fallbackCalculatedWeightKg =
+        _isManualMethod(measurement?.weightMethod)
+            ? null
+            : measurement?.predictedWeightKg ?? measurement?.effectiveWeightKg;
+    final calculatedWeightKg =
+        cameraWeightKg ?? storedMlWeightKg ?? fallbackCalculatedWeightKg;
+    final calculatedWeightMethod = cameraWeightKg != null
+        ? _nonEmpty(cameraResult?.weightSource) ??
+            _nonEmpty(cameraResult?.method)
+        : storedMlWeightKg != null
+            ? experimentalMlWeightSourceV1
+            : fallbackCalculatedWeightKg != null
+                ? _normaliseWeightEstimateMethod(
+                    _nonEmpty(measurement?.weightMethod),
+                  )
+                : null;
     return ClinicalCsvRecord(
       childId: child.id,
+      childName: child.name,
       area: _nonEmpty(child.location),
       sex: child.sex.toUpperCase(),
       dateOfBirth: _formatStoredDate(child.dateOfBirth),
       measurementDate: DateFormat('yyyy-MM-dd').format(visit.visitDate),
       actualHeightCm: measurement?.manualHeightCm,
-      calculatedHeightCm: cameraHeightCm ??
-          (_isManualMethod(measurement?.heightMethod)
-              ? null
-              : measurement?.predictedHeightCm ??
-                  measurement?.effectiveHeightCm),
+      calculatedHeightCm: calculatedHeightCm,
+      calculatedHeightMethod: calculatedHeightMethod,
       actualWeightKg: measurement?.manualWeightKg,
-      calculatedWeightKg: cameraWeightKg ??
-          (_isManualMethod(measurement?.weightMethod)
-              ? null
-              : measurement?.weightMethod?.toLowerCase() == 'ml_estimated'
-                  ? measurement?.mlEstimatedWeightKg ??
-                      measurement?.predictedWeightKg
-                  : measurement?.predictedWeightKg ??
-                      measurement?.effectiveWeightKg),
+      calculatedWeightKg: calculatedWeightKg,
+      calculatedWeightMethod: calculatedWeightMethod,
       muacCm: hasDirectMuac ? measurement?.muacCm : null,
       calculatedMuacCm: hasDirectMuac ? null : measurement?.muacCm,
+      muacStatus: _normaliseCategory(measurement?.muacStatus),
+      muacMethod: _nonEmpty(measurement?.muacMethod),
+      muacAgeInRange: measurement?.muacAgeInRange,
+      muacConfidence: measurement?.muacConfidence,
+      muacUncertaintyLowerCm: measurement?.muacUncertaintyLowerCm,
+      muacUncertaintyUpperCm: measurement?.muacUncertaintyUpperCm,
+      muacModelVersion: _nonEmpty(measurement?.muacModelVersion),
+      muacCalibrationVersion: _nonEmpty(measurement?.muacCalibrationVersion),
+      muacIsDirectMeasurement:
+          measurement?.muacIsDirectMeasurement ?? (hasDirectMuac ? true : null),
+      muacRequiresConfirmation: measurement?.muacRequiresConfirmation,
+      muacReferralGuidance: _nonEmpty(measurement?.muacReferralGuidance),
+      hazZscore: measurement?.hazZscore ?? cameraHazZscore,
+      whzZscore: measurement?.whzZscore ?? cameraWhzZscore,
       // The mobile app does not capture the independent field-worker category.
       // Keep this blank rather than misrepresenting a computed classification
       // as manually observed ground truth.
@@ -238,5 +279,23 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
   String? _nonEmpty(String? value) {
     final trimmed = value?.trim();
     return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  String? _normaliseHeightEstimateMethod(String? method) {
+    return method?.toLowerCase() == 'who_statistical'
+        ? legacyWhoHeightSourceV1
+        : method;
+  }
+
+  String? _normaliseWeightEstimateMethod(String? method) {
+    return switch (method?.toLowerCase()) {
+      'ml_estimated' => experimentalMlWeightSourceV1,
+      'who_statistical' => legacyWhoWeightSourceV1,
+      _ => method,
+    };
+  }
+
+  double? _positiveFinite(double? value) {
+    return value != null && value.isFinite && value > 0 ? value : null;
   }
 }
