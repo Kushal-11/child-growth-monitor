@@ -1,4 +1,5 @@
 """Poshan Setu v1 boundary and provenance tests."""
+
 import json
 from pathlib import Path
 
@@ -8,8 +9,9 @@ from app.services.poshan_setu_service import classify_poshan_setu
 
 
 CASES = json.loads(
-    (Path(__file__).resolve().parents[1] / "shared" / "poshan_setu_v1_cases.json")
-    .read_text(encoding="utf-8")
+    (
+        Path(__file__).resolve().parents[1] / "shared" / "poshan_setu_v1_cases.json"
+    ).read_text(encoding="utf-8")
 )
 
 
@@ -46,6 +48,21 @@ def test_estimated_values_cannot_certify_normal():
     assert result.bmi is None
     assert result.final_status == "Indeterminate"
     assert result.complete is False
+
+
+def test_reference_height_and_calibrated_scale_weight_are_eligible():
+    result = classify_poshan_setu(
+        sex="F",
+        age_months=36,
+        weight_kg=14,
+        height_cm=100,
+        weight_source="calibrated_scale",
+        height_source="reference_object",
+        muac_cm=14,
+        muac_method="manual",
+    )
+    assert result.bmi is not None
+    assert result.complete is True
 
 
 def test_mam_requires_other_component_but_sam_does_not():

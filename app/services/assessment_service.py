@@ -9,6 +9,7 @@ Height resolution priority:
   2. Validated image-based estimate (WHO statistical + anthropometric ratios)
   3. Unavailable
 """
+
 import json
 from datetime import date
 from math import isfinite
@@ -36,8 +37,6 @@ from app.services.nutrition_service import NutritionService
 from app.services.poshan_setu_service import classify_poshan_setu
 from app.services.who_data_service import WHODataService
 from config import (
-    ML_WEIGHT_MAX_MEDIAN_RATIO,
-    ML_WEIGHT_MIN_MEDIAN_RATIO,
     WASTING_STATUS_LABELS,
     WastingStatus,
 )
@@ -47,9 +46,7 @@ class AssessmentService:
     PROTOCOL_VERSION = "WHO-CMAM-OR-2009/2013-v1"
     age_svc = AgeService()
 
-    def __init__(
-        self, who_data: WHODataService, age_service: AgeService | None = None
-    ):
+    def __init__(self, who_data: WHODataService, age_service: AgeService | None = None):
         self.measurement_svc = MeasurementService()
         self.nutrition_svc = NutritionService(who_data)
         self.who_data = who_data
@@ -84,67 +81,49 @@ class AssessmentService:
             image_path=image_path,
             age_months=age_months,
             sex=sex,
-            who_data=self.who_data
+            who_data=self.who_data,
         )
 
         # 3. Determine effective height
         # Manual measurements are authoritative.  Keep this resolution in one
         # place so every downstream consumer receives exactly the same height.
         effective_height, height_method = self._resolve_effective_height(
-            height_cm, meas.predicted_height_cm
+            height_cm,
+            meas.predicted_height_cm,
+            estimation_method=meas.estimation_method,
+            reference_object_detected=meas.reference_object_detected,
         )
+        screening_height = effective_height
+        if (
+            screening_height is None
+            and meas.predicted_height_cm is not None
+            and isfinite(meas.predicted_height_cm)
+            and meas.predicted_height_cm > 0
+        ):
+            screening_height = meas.predicted_height_cm
 
         # 3b. Process side-view image for AP depth features (optional)
         side_segments = None
-        if side_image is not None and effective_height is not None:
+        if side_image is not None and screening_height is not None:
             side_segments = self.measurement_svc.process_side_image(
-                side_image, effective_height
+                side_image, screening_height
             )
 
-        # 4a. Run ML prediction (uses body proportions from pose landmarks)
+        # 4a. Run ML prediction as experimental screening evidence.  An image
+        # estimate can feed the model, but it must never become an effective
+        # clinical measurement without metric calibration.
         ml_pred = None
-        if effective_height is not None and meas.body_segments is not None:
+        if screening_height is not None and meas.body_segments is not None:
             ml_pred = self.ml_svc.predict(
-                meas.body_segments, age_months, sex, effective_height, side_segments
+                meas.body_segments, age_months, sex, screening_height, side_segments
             )
 
         # 4b. Determine effective weight
-        # Priority: manual_weight > ML-estimated > WHO-median (slender/stocky adjusted)
+        # Only a direct measurement is effective. ML and WHO medians remain
+        # explicitly non-diagnostic evidence and cannot drive WHZ.
         effective_weight = weight_kg
-        estimated_weight = None
+        estimated_weight = ml_pred.estimated_weight_kg if ml_pred else None
         weight_source = "manual" if weight_kg is not None else "unavailable"
-
-        if effective_weight is None:
-            # Try ML weight estimate first (captures wasting signal)
-            if ml_pred is not None and ml_pred.estimated_weight_kg is not None and effective_height is not None:
-                ml_weight = ml_pred.estimated_weight_kg
-                # Sanity check against WHO physiological bounds.
-                # If ML output is outside 45–180% of WHO median, bad input features
-                # (e.g. frontal photo uploaded as side view) caused extrapolation —
-                # fall through to WHO median instead.
-                who_median_ref = self.who_data.get_median_weight_for_height(
-                    sex, effective_height, age_months=age_months
-                )
-                weight_in_bounds = who_median_ref is not None and (
-                    ML_WEIGHT_MIN_MEDIAN_RATIO * who_median_ref
-                    <= ml_weight
-                    <= ML_WEIGHT_MAX_MEDIAN_RATIO * who_median_ref
-                )
-                if weight_in_bounds:
-                    effective_weight = ml_weight
-                    estimated_weight = effective_weight
-                    weight_source = "ml_estimated"
-
-            if effective_weight is None and effective_height is not None:
-                # Fall back to WHO median with body build adjustment
-                estimated_weight = self.who_data.get_median_weight_for_height(
-                    sex, effective_height, age_months=age_months
-                )
-                if estimated_weight is not None:
-                    weight_adjustment = getattr(meas, 'weight_adjustment', 1.0)
-                    estimated_weight = round(estimated_weight * weight_adjustment, 2)
-                    weight_source = "who_statistical"
-                effective_weight = estimated_weight
 
         # 5. Compute Z-scores
         haz_z = None
@@ -176,10 +155,14 @@ class AssessmentService:
             )
         if effective_height is not None and effective_weight is None:
             assessment_warnings.append(
-                f"Weight unavailable: authoritative WHO weight-for-length/height LMS "
-                f"data does not cover {effective_height:.1f} cm; no median fallback was used."
+                "WHZ unavailable: enter a direct scale weight; camera and WHO "
+                "estimates are experimental and are not used diagnostically."
             )
-        elif effective_height is not None and effective_weight is not None and whz_z is None:
+        elif (
+            effective_height is not None
+            and effective_weight is not None
+            and whz_z is None
+        ):
             assessment_warnings.append(
                 f"WHZ unavailable: authoritative WHO weight-for-length/height LMS data "
                 f"does not cover {effective_height:.1f} cm."
@@ -211,19 +194,14 @@ class AssessmentService:
             upper_arm_length_cm=muac_arm_cm,
             shoulder_width_cm=muac_shoulder_cm,
             height_cm=effective_height,
-            landmark_visibility=(meas.body_segments.arm_confidence if meas.body_segments else None),
+            landmark_visibility=(
+                meas.body_segments.arm_confidence if meas.body_segments else None
+            ),
         )
 
         # Poshan Setu is deliberately provenance-gated. Image/ML/WHO-derived
         # values remain useful screening evidence but cannot certify a result.
-        height_source = (
-            "manual"
-            if height_method == "manual"
-            else "reference_object"
-            if meas.estimation_method == "reference_object"
-            and meas.reference_object_detected
-            else "unavailable"
-        )
+        height_source = height_method
         poshan = classify_poshan_setu(
             sex=sex,
             age_months=age_months,
@@ -244,7 +222,8 @@ class AssessmentService:
             landmark_autonomous_call_allowed=MUACService.LANDMARK_SAM_RECALL_VALIDATED,
         )
         combined_confidence = self._combined_confidence(
-            combined_status.triggered_by, muac_result.muac_method,
+            combined_status.triggered_by,
+            muac_result.muac_method,
             meas.confidence_score,
         )
 
@@ -312,9 +291,7 @@ class AssessmentService:
             height_confidence=(
                 1.0 if height_method == "manual" else meas.confidence_score
             ),
-            weight_confidence=(
-                1.0 if weight_source == "manual" else meas.confidence_score
-            ),
+            weight_confidence=(1.0 if weight_source == "manual" else None),
             classification_confidence=classification_confidence,
             body_build=body_build_str,
             side_view_used=(
@@ -397,7 +374,8 @@ class AssessmentService:
                     1.0 if weight_source == "manual" else meas.confidence_score
                 ),
                 body_build=body_build_str,
-                side_view_used=chest_depth_cm_out is not None or abd_depth_cm_out is not None,
+                side_view_used=chest_depth_cm_out is not None
+                or abd_depth_cm_out is not None,
                 chest_depth_cm=chest_depth_cm_out,
                 abd_depth_cm=abd_depth_cm_out,
             ),
@@ -416,10 +394,14 @@ class AssessmentService:
                 mam_probability=ml_pred.mam_probability if ml_pred else 0.0,
                 normal_probability=ml_pred.normal_probability if ml_pred else 0.0,
                 risk_probability=ml_pred.risk_probability if ml_pred else 0.0,
-                overweight_probability=ml_pred.overweight_probability if ml_pred else 0.0,
+                overweight_probability=ml_pred.overweight_probability
+                if ml_pred
+                else 0.0,
                 wasting_status=ml_pred.wasting_status if ml_pred else None,
                 wasting_method=ml_pred.wasting_method if ml_pred else "unavailable",
-            ) if ml_pred else None,
+            )
+            if ml_pred
+            else None,
             muac=MUACDetail(
                 muac_cm=muac_result.muac_cm,
                 muac_status=muac_result.muac_status,
@@ -457,7 +439,11 @@ class AssessmentService:
 
     @staticmethod
     def _resolve_effective_height(
-        manual_height: Optional[float], predicted_height: Optional[float]
+        manual_height: Optional[float],
+        predicted_height: Optional[float],
+        *,
+        estimation_method: Optional[str] = None,
+        reference_object_detected: bool = False,
     ) -> tuple[Optional[float], str]:
         """Resolve the authoritative height and expose its provenance."""
         if manual_height is not None and isfinite(manual_height) and manual_height > 0:
@@ -466,8 +452,10 @@ class AssessmentService:
             predicted_height is not None
             and isfinite(predicted_height)
             and predicted_height > 0
+            and estimation_method == "reference_object"
+            and reference_object_detected
         ):
-            return predicted_height, "image_estimated"
+            return predicted_height, "reference_object"
         return None, "unavailable"
 
     @staticmethod
@@ -503,9 +491,17 @@ class AssessmentService:
 
     @staticmethod
     def _build_summary(
-        name, age_months, effective_height, height_method,
-        weight, haz_status, combined_status, ref_detected,
-        muac_cm=None, muac_status=None, poshan_status=None,
+        name,
+        age_months,
+        effective_height,
+        height_method,
+        weight,
+        haz_status,
+        combined_status,
+        ref_detected,
+        muac_cm=None,
+        muac_status=None,
+        poshan_status=None,
     ) -> str:
         """Build a human-readable summary string."""
         lines = [f"Assessment for {name} ({age_months:.1f} months old):"]

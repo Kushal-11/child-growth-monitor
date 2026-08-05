@@ -1,4 +1,5 @@
 """Tests for POST /api/v1/sync — idempotent ingestion of mobile assessments."""
+
 import io
 import uuid
 
@@ -32,7 +33,9 @@ def _auth_headers():
             db.add(user)
             db.commit()
             db.refresh(user)
-        token = auth_service.create_access_token(user_id=user.id, username=user.username)
+        token = auth_service.create_access_token(
+            user_id=user.id, username=user.username
+        )
     finally:
         db.close()
     return {"Authorization": f"Bearer {token}"}
@@ -124,11 +127,15 @@ def test_sync_happy_path_returns_synced():
 
 def test_sync_same_local_uuid_twice_is_idempotent():
     body = _payload()
-    first = client.post("/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS)
+    first = client.post(
+        "/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS
+    )
     assert first.status_code == 200
     first_id = first.json()["server_visit_id"]
 
-    second = client.post("/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS)
+    second = client.post(
+        "/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS
+    )
     assert second.status_code == 200
     assert second.json()["status"] == "already_synced"
     assert second.json()["server_visit_id"] == first_id
@@ -137,7 +144,9 @@ def test_sync_same_local_uuid_twice_is_idempotent():
 def test_sync_missing_required_field_returns_422():
     body = _payload()
     del body["local_uuid"]
-    response = client.post("/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS)
+    response = client.post(
+        "/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS
+    )
     assert response.status_code == 422
 
 
@@ -153,18 +162,15 @@ def test_sync_persists_evidence_but_recomputes_client_verdicts():
     body["side_view_used"] = "true"
     body["chest_depth_cm"] = "8.1"
     body["abd_depth_cm"] = "8.5"
-    response = client.post("/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS)
+    response = client.post(
+        "/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS
+    )
     assert response.status_code == 200
     visit_id = response.json()["server_visit_id"]
 
     db = SessionLocal()
     try:
-        m = (
-            db.query(MeasurementResult)
-            .join(Visit)
-            .filter(Visit.id == visit_id)
-            .one()
-        )
+        m = db.query(MeasurementResult).join(Visit).filter(Visit.id == visit_id).one()
         assert m.body_build == "slender"
         assert m.side_view_used is True
         assert m.chest_depth_cm == 8.1
@@ -179,10 +185,10 @@ def test_sync_persists_evidence_but_recomputes_client_verdicts():
         assert m.risk_probability == 0.02
         assert m.overweight_probability == 0.01
         assert m.confidence_score == 0.85
-        assert m.effective_height_cm == 78.0
-        assert m.effective_weight_kg == 9.5
+        assert m.effective_height_cm is None
+        assert m.effective_weight_kg is None
         assert m.height_method == "unavailable"
-        assert m.weight_method == "ml_estimated"
+        assert m.weight_method == "unavailable"
         assert m.estimation_method == "who_statistical"
         assert m.bmi is None
         assert m.bmi_status == "Indeterminate"
@@ -222,8 +228,7 @@ def test_sync_persists_evidence_but_recomputes_client_verdicts():
     detail = client.get(f"/api/v1/children/{child_id}", headers=AUTH_HEADERS)
     assert detail.status_code == 200
     restored = next(
-        v["measurement"] for v in detail.json()["visits"]
-        if v["visit_id"] == visit_id
+        v["measurement"] for v in detail.json()["visits"] if v["visit_id"] == visit_id
     )
     assert restored["combined_triggered_by"] == []
     assert restored["poshan_triggered_by"] == []
@@ -269,9 +274,7 @@ def test_sync_rejects_tampered_normal_verdict_and_recomputes_sam():
     try:
         stored = (
             db.query(MeasurementResult)
-            .filter(
-                MeasurementResult.visit_id == response.json()["server_visit_id"]
-            )
+            .filter(MeasurementResult.visit_id == response.json()["server_visit_id"])
             .one()
         )
         assert stored.poshan_status == "SAM"
@@ -298,7 +301,9 @@ def test_sync_concurrent_duplicate_returns_already_synced(monkeypatch):
 
     # First request — succeeds normally, populating the row that the
     # "concurrent" second request will collide with.
-    first = client.post("/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS)
+    first = client.post(
+        "/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS
+    )
     assert first.status_code == 200
     first_id = first.json()["server_visit_id"]
 
@@ -309,7 +314,9 @@ def test_sync_concurrent_duplicate_returns_already_synced(monkeypatch):
     # Since that's awkward, instead just confirm the public idempotent contract:
     # second post with the same UUID still returns already_synced (which is the
     # pre-IntegrityError dedup-check path, but the assertion validates the contract).
-    second = client.post("/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS)
+    second = client.post(
+        "/api/v1/sync", data=body, files={"image": _file()}, headers=AUTH_HEADERS
+    )
     assert second.status_code == 200
     assert second.json()["status"] == "already_synced"
     assert second.json()["server_visit_id"] == first_id

@@ -7,6 +7,7 @@ Pages:
   GET  /children      - Child listing page
   GET  /children/{id} - Child detail/history page
 """
+
 import json
 import shutil
 import uuid
@@ -34,6 +35,7 @@ def parse_date_input(date_str: str) -> date:
     except ValueError:
         raise ValueError(f"Invalid date format: {date_str}. Expected yyyy-mm-dd")
 
+
 router = APIRouter(tags=["Web UI"])
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.filters["tojson"] = lambda obj: Markup(json.dumps(obj))
@@ -58,8 +60,16 @@ def _growth_chart_points(child: Optional[Child]) -> List[dict]:
         m = v.measurement
         if not m:
             continue
-        h = m.predicted_height_cm or m.manual_height_cm
-        w = m.manual_weight_kg or m.predicted_weight_kg
+        h = (
+            m.effective_height_cm
+            if m.height_method in {"manual", "reference_object"}
+            else None
+        )
+        w = (
+            m.effective_weight_kg
+            if m.weight_method in {"manual", "calibrated_scale"}
+            else None
+        )
         if h is None and w is None:
             continue
         label = v.visit_date.strftime("%Y-%m-%d") if v.visit_date else ""
@@ -163,9 +173,7 @@ async def children_list(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/children/{child_id}", response_class=HTMLResponse)
-async def child_detail(
-    request: Request, child_id: int, db: Session = Depends(get_db)
-):
+async def child_detail(request: Request, child_id: int, db: Session = Depends(get_db)):
     child = db.query(Child).filter(Child.id == child_id).first()
     chart_points = _growth_chart_points(child)
     return templates.TemplateResponse(

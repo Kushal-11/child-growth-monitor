@@ -15,6 +15,8 @@ class WastingFeatures {
   final int bodyBuildScore; // -1 = slender, 0 = average, 1 = stocky
   final double? chestDepthCm;
   final double? abdDepthCm;
+  final double? chestDepthRatio;
+  final double? abdDepthRatio;
 
   const WastingFeatures({
     required this.ageMonths,
@@ -29,6 +31,8 @@ class WastingFeatures {
     required this.bodyBuildScore,
     this.chestDepthCm,
     this.abdDepthCm,
+    this.chestDepthRatio,
+    this.abdDepthRatio,
   });
 
   /// Convert to 14-element Float32 array for TFLite inference.
@@ -36,8 +40,8 @@ class WastingFeatures {
   Float32List toArray() {
     final cd = chestDepthCm ?? shoulderWidthCm * 0.45;
     final ad = abdDepthCm ?? hipWidthCm * 0.50;
-    final cdr = cd / heightCm;
-    final adr = ad / heightCm;
+    final cdr = chestDepthRatio ?? cd / heightCm;
+    final adr = abdDepthRatio ?? ad / heightCm;
 
     return Float32List.fromList([
       ageMonths,

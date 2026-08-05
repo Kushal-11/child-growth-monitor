@@ -138,11 +138,29 @@ class ChildDetailScreen extends ConsumerWidget {
     );
   }
 
+  double? _eligibleHeight(ChildVisitMeasurement? measurement) {
+    final method = measurement?.heightMethod;
+    if (measurement == null ||
+        (method != 'manual' && method != 'reference_object')) {
+      return null;
+    }
+    return measurement.predictedHeightCm;
+  }
+
+  double? _eligibleWeight(ChildVisitMeasurement? measurement) {
+    final method = measurement?.weightMethod;
+    if (measurement == null ||
+        (method != 'manual' && method != 'calibrated_scale')) {
+      return null;
+    }
+    return measurement.predictedWeightKg;
+  }
+
   bool _hasChartData(ChildDetail child) {
     int withData = 0;
     for (final v in child.visits) {
-      if (v.measurement?.predictedHeightCm != null ||
-          v.measurement?.predictedWeightKg != null) {
+      if (_eligibleHeight(v.measurement) != null ||
+          _eligibleWeight(v.measurement) != null) {
         withData++;
       }
     }
@@ -152,8 +170,8 @@ class ChildDetailScreen extends ConsumerWidget {
   Widget _growthChart(BuildContext context, WidgetRef ref, ChildDetail child) {
     final visitsWithData = child.visits
         .where((v) =>
-            v.measurement?.predictedHeightCm != null ||
-            v.measurement?.predictedWeightKg != null)
+            _eligibleHeight(v.measurement) != null ||
+            _eligibleWeight(v.measurement) != null)
         .toList()
       ..sort((a, b) => (a.ageMonths ?? 0).compareTo(b.ageMonths ?? 0));
 
@@ -162,8 +180,8 @@ class ChildDetailScreen extends ConsumerWidget {
 
     for (final v in visitsWithData) {
       final x = v.ageMonths ?? 0;
-      final h = v.measurement?.predictedHeightCm;
-      final w = v.measurement?.predictedWeightKg;
+      final h = _eligibleHeight(v.measurement);
+      final w = _eligibleWeight(v.measurement);
       if (h != null) heightSpots.add(FlSpot(x, h));
       if (w != null) weightSpots.add(FlSpot(x, w));
     }
