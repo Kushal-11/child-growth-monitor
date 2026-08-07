@@ -10,7 +10,7 @@ void main() {
       .setMockMethodCallHandler(channel, null));
 
   test('missing native plugin fails safely to fallback capability', () async {
-    final platform = MethodChannelArScanPlatform(channel: channel);
+    const platform = MethodChannelArScanPlatform(channel: channel);
     final capability = await platform.checkCapability();
     expect(capability.shouldOfferSparseScan, isFalse);
   });
