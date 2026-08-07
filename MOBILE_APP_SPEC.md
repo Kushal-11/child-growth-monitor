@@ -892,3 +892,78 @@ For reference when evaluating on-device accuracy:
 
 7. **Multi-language support**: Field workers may speak local languages. Plan for
    i18n from the start — all status strings and UI labels should be localizable.
+
+---
+
+## Optional guided ARCore depth capture (Android research path)
+
+The Android app may offer `arcore_guided_depth_v2` when Google Play Services
+for AR reports a supported device, the app has a sufficient Android memory
+class, and the native Depth API starts successfully. ARCore is optional: the
+app and its existing guided RGB workflow remain available on devices without
+ARCore or depth support.
+
+The v2 capture is a bounded, guided multi-view scan. It:
+
+- samples only unique raw-depth frames and pairs each one with ARCore's raw
+  depth confidence image;
+- rejects pixels below half confidence and accepts data only in ARCore's useful
+  0.5-5.0 m depth range;
+- uses depth-texture camera intrinsics to unproject samples into world space;
+- identifies a tracked upward-facing floor plane and requires both feet to be
+  visible near that plane;
+- isolates the centered subject by target depth and a bounded 3D radius;
+- rejects near-duplicate views, unstable floor estimates, low-confidence
+  frames, insufficient points, and apparent subject movement;
+- requires a multi-view arc and camera travel before producing a result;
+- keeps at most 32 reduced keyframes and stops after 45 seconds; and
+- closes every raw depth/confidence image immediately after reducing it to
+  summary evidence.
+
+No RGB image, raw depth image, point cloud, or mesh is retained. The result is
+stored under `device_metadata.arcore_depth_scan` and queued with the visit sync
+payload. It includes the method, experimental height, robust uncertainty,
+accepted keyframes, valid-depth fraction, mean depth confidence, scan coverage,
+camera travel, floor stability, captured point count, duration, quality score,
+and depth mode. It MUST include both `raw_media_retained: false` and
+`clinical_measurement_eligible: false`.
+
+The result must not populate effective height, HAZ, WHZ, stunting, wasting,
+BMI, or MUAC fields. It is available only when the child can stand safely
+without support. Operators always continue the normal front/side guided-photo
+workflow after the optional scan.
+
+### Runtime fallback
+
+| Condition | Behavior |
+|---|---|
+| ARCore available and Depth API starts | Offer guided full depth scan |
+| Availability still transient | Use guided RGB capture |
+| ARCore unavailable/unsupported | Use guided RGB capture |
+| Android memory class below 256 MB | Use guided RGB capture |
+| Depth mode unsupported | Cancel depth activity and use guided RGB capture |
+| Child cannot stand safely | Skip depth and use guided RGB capture |
+| Live quality gate/timeout failure | Discard summary and use guided RGB capture |
+| Permission/startup/runtime failure | Show fallback message; guided RGB remains usable |
+
+### Resource ceilings
+
+| Resource | v2 ceiling |
+|---|---|
+| Accepted keyframes | 32 (20 target, 12 minimum) |
+| Sampling interval | 250 ms minimum |
+| Scan duration | 45 seconds |
+| Sampled depth grid | 6,000 points per attempted keyframe |
+| Retained raw RGB/depth | none |
+| Retained point cloud/mesh | none |
+| Raw depth range | 0.5–5.0 m |
+| Minimum raw confidence | 128/255 |
+| Candidate body-height range | 0.35–1.45 m above tracked floor |
+| Minimum camera travel | 0.25 m |
+| Minimum scan coverage | 20 degrees |
+| Maximum floor instability | 5 cm |
+| Maximum robust height uncertainty | 6 cm |
+
+The AR estimate is research evidence only. Before any clinical eligibility
+is considered it requires device-specific calibration and prospective agreement
+validation against duplicate conventional anthropometry on real children.

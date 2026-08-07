@@ -50,7 +50,7 @@ class _ChildrenListScreenState extends ConsumerState<ChildrenListScreen> {
                   width: double.infinity,
                   child: FilledButton.icon(
                     key: const Key('new_child_btn'),
-                    onPressed: () => context.go('/children/new'),
+                    onPressed: () => context.push('/children/new'),
                     icon: const Icon(Icons.add),
                     label: Text(t('new_child', ref)),
                   ),
@@ -127,7 +127,7 @@ class _ChildrenListScreenState extends ConsumerState<ChildrenListScreen> {
                                 '${t('th_sex', ref)}: ${c.sex}',
                               ),
                               trailing: const Icon(Icons.chevron_right),
-                              onTap: () => context.go('/children/${c.id}'),
+                              onTap: () => context.push('/children/${c.id}'),
                             ),
                           );
                         },

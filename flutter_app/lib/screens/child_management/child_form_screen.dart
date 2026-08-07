@@ -116,7 +116,10 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
           ownerUserId: ownerId,
           photoPath: _photoPath,
         );
-        if (mounted) context.go('/children/$id');
+        // Replace only the form, preserving the children list underneath it.
+        // This makes both the app-bar and system back buttons return to the
+        // list instead of leaving a stale completed form in the stack.
+        if (mounted) context.pushReplacement('/children/$id');
       }
     } catch (e) {
       if (mounted) {

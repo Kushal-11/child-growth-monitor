@@ -68,7 +68,7 @@ class _CaptureConsentScreenState extends ConsumerState<CaptureConsentScreen> {
                   'entry': 'child_profile',
                 }),
               );
-      if (mounted) context.go('/visits/$visitUuid/capture');
+      if (mounted) context.push('/visits/$visitUuid/capture');
     } catch (error) {
       if (mounted) setState(() => _localError = error.toString());
     } finally {
@@ -78,7 +78,11 @@ class _CaptureConsentScreenState extends ConsumerState<CaptureConsentScreen> {
 
   void _decline() {
     ref.read(guidedCaptureProvider.notifier).declineConsent();
-    context.go('/children/${widget.childId}');
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/children/${widget.childId}');
+    }
   }
 
   @override

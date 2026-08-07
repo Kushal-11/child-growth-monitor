@@ -79,7 +79,7 @@ class AssessmentScreen extends ConsumerWidget {
                   return;
                 }
                 final completed = await notifier.submit();
-                if (completed && context.mounted) context.go('/result');
+                if (completed && context.mounted) context.push('/result');
               },
             ),
           ],

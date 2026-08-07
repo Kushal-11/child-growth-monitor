@@ -165,10 +165,13 @@ class ChildVisitMeasurement {
 
   factory ChildVisitMeasurement.fromJson(Map<String, dynamic> json) {
     return ChildVisitMeasurement(
-      // History charts intentionally expose only provenance-eligible
-      // measurements. Camera/ML estimates live in CameraResultSummary.
-      predictedHeightCm: (json['effective_height_cm'] as num?)?.toDouble(),
-      predictedWeightKg: (json['effective_weight_kg'] as num?)?.toDouble(),
+      // New payloads expose provenance-eligible effective values. Preserve the
+      // older predicted_* keys only as a compatibility fallback for existing
+      // visit history, while always preferring the effective fields.
+      predictedHeightCm: (json['effective_height_cm'] as num?)?.toDouble() ??
+          (json['predicted_height_cm'] as num?)?.toDouble(),
+      predictedWeightKg: (json['effective_weight_kg'] as num?)?.toDouble() ??
+          (json['predicted_weight_kg'] as num?)?.toDouble(),
       heightMethod: json['height_method'] as String?,
       weightMethod: json['weight_method'] as String?,
       muacCm: (json['muac_cm'] as num?)?.toDouble(),
