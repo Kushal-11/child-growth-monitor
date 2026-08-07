@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../providers/auth_provider.dart';
 import '../../../screens/assessment/capture_screen.dart';
+import '../../ar_scan/widgets/ar_scan_card.dart';
 import '../domain/capture_models.dart';
 import '../providers/guided_capture_provider.dart';
 import '../services/guided_camera_controller.dart';
@@ -173,6 +174,13 @@ class _GuidedCaptureFlowScreenState
               role: role,
               capturedFrameCount: state.acceptedFrames[role]?.length ?? 0,
             ),
+            if (role == CaptureAssetRole.front && state.ownerUserId != null) ...[
+              const SizedBox(height: 8),
+              ArScanCard(
+                ownerUserId: state.ownerUserId!,
+                visitUuid: widget.visitUuid,
+              ),
+            ],
             if (error != null) ...[
               const SizedBox(height: 8),
               Text(error, style: const TextStyle(color: Colors.red)),
