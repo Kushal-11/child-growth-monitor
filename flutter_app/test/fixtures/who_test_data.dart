@@ -22,6 +22,10 @@ Future<void> loadWhoForTests(WhoDataService who) async {
     hfaGirlsPath: '$assets/who_lhfa_girls_2_5.xlsx',
     wfaBoysPath: '$assets/who_wfa_boys_0_5.xlsx',
     wfaGirlsPath: '$assets/who_wfa_girls_0_5.xlsx',
+    bfaBoys0To2Path: '$assets/who_bfa_boys_0_2.xlsx',
+    bfaBoys2To5Path: '$assets/who_bfa_boys_2_5.xlsx',
+    bfaGirls0To2Path: '$assets/who_bfa_girls_0_2.xlsx',
+    bfaGirls2To5Path: '$assets/who_bfa_girls_2_5.xlsx',
     acfaBoysPath: '$assets/who_acfa_boys_3_5.xlsx',
     acfaGirlsPath: '$assets/who_acfa_girls_3_5.xlsx',
   );

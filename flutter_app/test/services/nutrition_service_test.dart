@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:child_growth_monitor_app/services/nutrition_service.dart';
 import 'package:child_growth_monitor_app/services/who_data_service.dart';
 
+import '../fixtures/who_test_data.dart';
+
 void main() {
   late WhoDataService who;
   late NutritionService svc;
@@ -9,17 +11,7 @@ void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
     who = WhoDataService();
-    await who.loadFromFiles(
-      manifestPath: 'assets/who_data/who_reference_manifest.json',
-      wflBoysPath: 'test/fixtures/who_wfl_boys_0_2.xlsx',
-      wflGirlsPath: 'test/fixtures/who_wfl_girls_0_2.xlsx',
-      wfhBoysPath: 'test/fixtures/who_wfh_boys_2_5.xlsx',
-      wfhGirlsPath: 'test/fixtures/who_wfh_girls_2_5.xlsx',
-      lfaBoysPath: 'assets/who_data/who_lhfa_boys_0_2.xlsx',
-      lfaGirlsPath: 'assets/who_data/who_lhfa_girls_0_2.xlsx',
-      hfaBoysPath: 'assets/who_data/who_lhfa_boys_2_5.xlsx',
-      hfaGirlsPath: 'assets/who_data/who_lhfa_girls_2_5.xlsx',
-    );
+    await loadWhoForTests(who);
     svc = NutritionService(who);
   });
 
@@ -40,5 +32,20 @@ void main() {
     final z = svc.computeWhz('M', 24.0, 87.0, 12.0);
     expect(z, isNotNull);
     expect(z!, closeTo(0.0, 1.0));
+  });
+
+  test('computeWaz returns z near 0 for WHO median weight', () {
+    final median = who.getReferenceTargets('F', 24).weightForAge!.target;
+    final z = svc.computeWaz('F', 24, median);
+    expect(z, isNotNull);
+    expect(z!, closeTo(0, 0.01));
+  });
+
+  test('computeBaz returns z near 0 for WHO median BMI', () {
+    final lms = who.getBfaLms('M', 24);
+    expect(lms, isNotNull);
+    final z = svc.computeBaz('M', 24, lms!.$2);
+    expect(z, isNotNull);
+    expect(z!, closeTo(0, 0.01));
   });
 }

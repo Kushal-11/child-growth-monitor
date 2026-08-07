@@ -41,6 +41,12 @@ class WhoDataService {
   static const _lfaGirlsAsset = 'assets/who_data/who_lhfa_girls_0_2.xlsx';
   static const _hfaBoysAsset = 'assets/who_data/who_lhfa_boys_2_5.xlsx';
   static const _hfaGirlsAsset = 'assets/who_data/who_lhfa_girls_2_5.xlsx';
+  static const _wfaBoysAsset = 'assets/who_data/who_wfa_boys_0_5.xlsx';
+  static const _wfaGirlsAsset = 'assets/who_data/who_wfa_girls_0_5.xlsx';
+  static const _bfaBoys0To2Asset = 'assets/who_data/who_bfa_boys_0_2.xlsx';
+  static const _bfaBoys2To5Asset = 'assets/who_data/who_bfa_boys_2_5.xlsx';
+  static const _bfaGirls0To2Asset = 'assets/who_data/who_bfa_girls_0_2.xlsx';
+  static const _bfaGirls2To5Asset = 'assets/who_data/who_bfa_girls_2_5.xlsx';
 
   /// WFL LMS rows keyed by sex ('M' or 'F'), sorted by indexValue.
   Map<String, List<_LmsRow>> _wflLms = {};
@@ -56,6 +62,10 @@ class WhoDataService {
 
   /// Weight-for-age LMS rows keyed by sex, indexed by age in months.
   Map<String, List<_LmsRow>> _wfaLms = {};
+
+  /// BMI-for-age LMS rows keyed by sex and measurement basis.
+  Map<String, List<_LmsRow>> _bfa0To2Lms = {};
+  Map<String, List<_LmsRow>> _bfa2To5Lms = {};
 
   /// Arm-circumference-for-age LMS rows keyed by sex, indexed by age in months.
   Map<String, List<_LmsRow>> _acfaLms = {};
@@ -87,10 +97,12 @@ class WhoDataService {
     final lfaGirls = await rootBundle.load(_lfaGirlsAsset);
     final hfaBoys = await rootBundle.load(_hfaBoysAsset);
     final hfaGirls = await rootBundle.load(_hfaGirlsAsset);
-    final wfaBoys =
-        await rootBundle.load('assets/who_data/who_wfa_boys_0_5.xlsx');
-    final wfaGirls =
-        await rootBundle.load('assets/who_data/who_wfa_girls_0_5.xlsx');
+    final wfaBoys = await rootBundle.load(_wfaBoysAsset);
+    final wfaGirls = await rootBundle.load(_wfaGirlsAsset);
+    final bfaBoys0To2 = await rootBundle.load(_bfaBoys0To2Asset);
+    final bfaBoys2To5 = await rootBundle.load(_bfaBoys2To5Asset);
+    final bfaGirls0To2 = await rootBundle.load(_bfaGirls0To2Asset);
+    final bfaGirls2To5 = await rootBundle.load(_bfaGirls2To5Asset);
     final acfaBoys =
         await rootBundle.load('assets/who_data/who_acfa_boys_3_5.xlsx');
     final acfaGirls =
@@ -104,6 +116,36 @@ class WhoDataService {
     _verifyReferenceBytes(_lfaGirlsAsset, lfaGirlsBytes, manifest);
     _verifyReferenceBytes(_hfaBoysAsset, hfaBoysBytes, manifest);
     _verifyReferenceBytes(_hfaGirlsAsset, hfaGirlsBytes, manifest);
+    _verifyReferenceBytes(
+      _wfaBoysAsset,
+      wfaBoys.buffer.asUint8List(),
+      manifest,
+    );
+    _verifyReferenceBytes(
+      _wfaGirlsAsset,
+      wfaGirls.buffer.asUint8List(),
+      manifest,
+    );
+    _verifyReferenceBytes(
+      _bfaBoys0To2Asset,
+      bfaBoys0To2.buffer.asUint8List(),
+      manifest,
+    );
+    _verifyReferenceBytes(
+      _bfaBoys2To5Asset,
+      bfaBoys2To5.buffer.asUint8List(),
+      manifest,
+    );
+    _verifyReferenceBytes(
+      _bfaGirls0To2Asset,
+      bfaGirls0To2.buffer.asUint8List(),
+      manifest,
+    );
+    _verifyReferenceBytes(
+      _bfaGirls2To5Asset,
+      bfaGirls2To5.buffer.asUint8List(),
+      manifest,
+    );
 
     _wflLms = {
       'M': _parseExcelLms(wflBoys.buffer.asUint8List()),
@@ -124,6 +166,14 @@ class WhoDataService {
     _wfaLms = {
       'M': _parseExcelLms(wfaBoys.buffer.asUint8List()),
       'F': _parseExcelLms(wfaGirls.buffer.asUint8List()),
+    };
+    _bfa0To2Lms = {
+      'M': _parseExcelLms(bfaBoys0To2.buffer.asUint8List()),
+      'F': _parseExcelLms(bfaGirls0To2.buffer.asUint8List()),
+    };
+    _bfa2To5Lms = {
+      'M': _parseExcelLms(bfaBoys2To5.buffer.asUint8List()),
+      'F': _parseExcelLms(bfaGirls2To5.buffer.asUint8List()),
     };
     _acfaLms = {
       'M': _parseExcelLms(acfaBoys.buffer.asUint8List()),
@@ -151,6 +201,10 @@ class WhoDataService {
     required String hfaGirlsPath,
     String? wfaBoysPath,
     String? wfaGirlsPath,
+    String? bfaBoys0To2Path,
+    String? bfaBoys2To5Path,
+    String? bfaGirls0To2Path,
+    String? bfaGirls2To5Path,
     String? acfaBoysPath,
     String? acfaGirlsPath,
   }) async {
@@ -184,9 +238,50 @@ class WhoDataService {
       'F': _parseExcelLms(hfaGirlsBytes),
     };
     if (wfaBoysPath != null && wfaGirlsPath != null) {
+      final wfaBoysBytes = await File(wfaBoysPath).readAsBytes();
+      final wfaGirlsBytes = await File(wfaGirlsPath).readAsBytes();
+      _verifyReferenceBytes(_wfaBoysAsset, wfaBoysBytes, manifest);
+      _verifyReferenceBytes(_wfaGirlsAsset, wfaGirlsBytes, manifest);
       _wfaLms = {
-        'M': _parseExcelLms(await File(wfaBoysPath).readAsBytes()),
-        'F': _parseExcelLms(await File(wfaGirlsPath).readAsBytes()),
+        'M': _parseExcelLms(wfaBoysBytes),
+        'F': _parseExcelLms(wfaGirlsBytes),
+      };
+    }
+    if (bfaBoys0To2Path != null &&
+        bfaBoys2To5Path != null &&
+        bfaGirls0To2Path != null &&
+        bfaGirls2To5Path != null) {
+      final bfaBoys0To2Bytes = await File(bfaBoys0To2Path).readAsBytes();
+      final bfaBoys2To5Bytes = await File(bfaBoys2To5Path).readAsBytes();
+      final bfaGirls0To2Bytes = await File(bfaGirls0To2Path).readAsBytes();
+      final bfaGirls2To5Bytes = await File(bfaGirls2To5Path).readAsBytes();
+      _verifyReferenceBytes(
+        _bfaBoys0To2Asset,
+        bfaBoys0To2Bytes,
+        manifest,
+      );
+      _verifyReferenceBytes(
+        _bfaBoys2To5Asset,
+        bfaBoys2To5Bytes,
+        manifest,
+      );
+      _verifyReferenceBytes(
+        _bfaGirls0To2Asset,
+        bfaGirls0To2Bytes,
+        manifest,
+      );
+      _verifyReferenceBytes(
+        _bfaGirls2To5Asset,
+        bfaGirls2To5Bytes,
+        manifest,
+      );
+      _bfa0To2Lms = {
+        'M': _parseExcelLms(bfaBoys0To2Bytes),
+        'F': _parseExcelLms(bfaGirls0To2Bytes),
+      };
+      _bfa2To5Lms = {
+        'M': _parseExcelLms(bfaBoys2To5Bytes),
+        'F': _parseExcelLms(bfaGirls2To5Bytes),
       };
     }
     if (acfaBoysPath != null && acfaGirlsPath != null) {
@@ -265,6 +360,32 @@ class WhoDataService {
     return _interpolateLms(rows, ageMonths.toDouble());
   }
 
+  /// Get HAZ LMS parameters using exact decimal age rather than truncating to
+  /// completed months.
+  (double, double, double)? getHazLmsForAge(
+    String sex,
+    double ageMonths,
+  ) {
+    if (!ageMonths.isFinite || ageMonths < 0 || ageMonths >= 60) return null;
+    final normalizedSex = _normalizeSex(sex);
+    final rows = (ageMonths < 24 ? _lfaLms : _hfaLms)[normalizedSex];
+    return _interpolateLms(rows, ageMonths);
+  }
+
+  /// Return official WHO weight-for-age LMS parameters.
+  (double, double, double)? getWfaLms(String sex, double ageMonths) {
+    if (!ageMonths.isFinite || ageMonths < 0 || ageMonths >= 60) return null;
+    return _interpolateLms(_wfaLms[_normalizeSex(sex)], ageMonths);
+  }
+
+  /// Return official WHO BMI-for-age LMS parameters.
+  (double, double, double)? getBfaLms(String sex, double ageMonths) {
+    if (!ageMonths.isFinite || ageMonths < 0 || ageMonths >= 60) return null;
+    final normalizedSex = _normalizeSex(sex);
+    final rows = (ageMonths < 24 ? _bfa0To2Lms : _bfa2To5Lms)[normalizedSex];
+    return _interpolateLms(rows, ageMonths);
+  }
+
   /// Get median height (z=0) for a given sex and age.
   ///
   /// Returns the WHO median height in cm, or null if age is out of range.
@@ -335,7 +456,7 @@ class WhoDataService {
     double ageMonths,
   ) {
     final dataset = ageMonths < 24 ? _wflLms : _wfhLms;
-    final rows = dataset[sex];
+    final rows = dataset[_normalizeSex(sex)];
     if (rows == null || rows.isEmpty) return null;
 
     // Try exact match first (tolerance 0.05 cm).

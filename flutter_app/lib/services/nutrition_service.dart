@@ -1,4 +1,4 @@
-/// Computes HAZ and WHZ z-scores using WHO reference data.
+/// Computes HAZ, WHZ, WAZ and BAZ z-scores using WHO reference data.
 ///
 /// Ported from Python nutrition_service.py — logic is identical.
 library;
@@ -19,6 +19,13 @@ class NutritionService {
     return WhoDataService.lmsZscore(heightCm, lms.$1, lms.$2, lms.$3);
   }
 
+  /// Compute HAZ using exact decimal age derived from DOB and visit date.
+  double? computeHazForAge(String sex, double ageMonths, double heightCm) {
+    final lms = _who.getHazLmsForAge(sex, ageMonths);
+    if (lms == null) return null;
+    return WhoDataService.lmsZscore(heightCm, lms.$1, lms.$2, lms.$3);
+  }
+
   /// Compute Weight-for-Height Z-score (WHZ).
   ///
   /// Uses LMS parameters from [WhoDataService.getWfhLms] and the standard
@@ -34,5 +41,19 @@ class NutritionService {
     final lms = _who.getWfhLms(sex, heightCm, ageMonths);
     if (lms == null) return null;
     return WhoDataService.lmsZscore(weightKg, lms.$1, lms.$2, lms.$3);
+  }
+
+  /// Compute Weight-for-Age Z-score (WAZ).
+  double? computeWaz(String sex, double ageMonths, double weightKg) {
+    final lms = _who.getWfaLms(sex, ageMonths);
+    if (lms == null) return null;
+    return WhoDataService.lmsZscore(weightKg, lms.$1, lms.$2, lms.$3);
+  }
+
+  /// Compute BMI-for-Age Z-score (BAZ).
+  double? computeBaz(String sex, double ageMonths, double bmi) {
+    final lms = _who.getBfaLms(sex, ageMonths);
+    if (lms == null) return null;
+    return WhoDataService.lmsZscore(bmi, lms.$1, lms.$2, lms.$3);
   }
 }

@@ -20,6 +20,10 @@ void main() {
       hfaGirlsPath: 'assets/who_data/who_lhfa_girls_2_5.xlsx',
       wfaBoysPath: 'assets/who_data/who_wfa_boys_0_5.xlsx',
       wfaGirlsPath: 'assets/who_data/who_wfa_girls_0_5.xlsx',
+      bfaBoys0To2Path: 'assets/who_data/who_bfa_boys_0_2.xlsx',
+      bfaBoys2To5Path: 'assets/who_data/who_bfa_boys_2_5.xlsx',
+      bfaGirls0To2Path: 'assets/who_data/who_bfa_girls_0_2.xlsx',
+      bfaGirls2To5Path: 'assets/who_data/who_bfa_girls_2_5.xlsx',
       acfaBoysPath: 'assets/who_data/who_acfa_boys_3_5.xlsx',
       acfaGirlsPath: 'assets/who_data/who_acfa_girls_3_5.xlsx',
     );
@@ -96,6 +100,25 @@ void main() {
     test('returns no targets beyond the WHO under-five table', () {
       final targets = svc.getReferenceTargets('M', 61);
       expect(targets.isEmpty, isTrue);
+    });
+  });
+
+  group('WAZ and BAZ LMS tables', () {
+    test('returns sex-specific WFA LMS at exact decimal age', () {
+      final girls = svc.getWfaLms('F', 24.5);
+      final boys = svc.getWfaLms('M', 24.5);
+      expect(girls, isNotNull);
+      expect(boys, isNotNull);
+      expect(girls!.$2, isNot(equals(boys!.$2)));
+    });
+
+    test('uses the official age-specific BMI table', () {
+      final beforeTwo = svc.getBfaLms('M', 23.9);
+      final afterTwo = svc.getBfaLms('M', 24.1);
+      expect(beforeTwo, isNotNull);
+      expect(afterTwo, isNotNull);
+      expect(beforeTwo!.$2, greaterThan(0));
+      expect(afterTwo!.$2, greaterThan(0));
     });
   });
 
@@ -224,6 +247,11 @@ void main() {
       // M (median weight) for 75cm WFL girls
       expect(lms!.$2, greaterThan(5.0));
       expect(lms.$2, lessThan(15.0));
+    });
+
+    test('accepts lowercase stored sex values', () {
+      expect(svc.getWfhLms('f', 100, 48), isNotNull);
+      expect(svc.getWfhLms('male', 100, 48), isNotNull);
     });
 
     test('interpolates for non-exact height values', () {

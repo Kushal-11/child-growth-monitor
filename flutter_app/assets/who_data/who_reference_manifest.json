@@ -1,7 +1,11 @@
 {
   "schema_version": 1,
-  "retrieved_at": "2026-07-29",
-  "source_page": "https://www.who.int/tools/child-growth-standards/standards/length-height-for-age",
+  "retrieved_at": "2026-08-07",
+  "source_pages": [
+    "https://www.who.int/tools/child-growth-standards/standards/length-height-for-age",
+    "https://www.who.int/tools/child-growth-standards/standards/weight-for-age",
+    "https://www.who.int/toolkits/child-growth-standards/standards/body-mass-index-for-age-bmi-for-age"
+  ],
   "files": {
     "who_lhfa_boys_0_2.xlsx": {
       "indicator": "length_for_age",
@@ -34,6 +38,54 @@
       "size_bytes": 12882,
       "sha256": "a976c56a6d36885cc32bf77c5539ca066e396ef2adad06011cd71d9eb0f0eb5c",
       "source_url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/length-height-for-age/lhfa_girls_2-to-5-years_zscores.xlsx?sfvrsn=2ec187b9_11"
+    },
+    "who_wfa_boys_0_5.xlsx": {
+      "indicator": "weight_for_age",
+      "sex": "M",
+      "age_months": [0, 60],
+      "size_bytes": 14319,
+      "sha256": "f8f5a77b944ff7a8c1524e76f9d33f8a93cc423d23c2e7f2b10ba6b96a428e69",
+      "source_url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/weight-for-age/wfa_boys_0-to-5-years_zscores.xlsx?sfvrsn=97a05331_9"
+    },
+    "who_wfa_girls_0_5.xlsx": {
+      "indicator": "weight_for_age",
+      "sex": "F",
+      "age_months": [0, 60],
+      "size_bytes": 14320,
+      "sha256": "01e9a6fda2f3723dbc74d3c86bfbfcb9f6d474367d1d7b4a804501a2debd2ef1",
+      "source_url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/weight-for-age/wfa_girls_0-to-5-years_zscores.xlsx?sfvrsn=4c03b8db_7"
+    },
+    "who_bfa_boys_0_2.xlsx": {
+      "indicator": "bmi_for_age",
+      "sex": "M",
+      "age_months": [0, 24],
+      "size_bytes": 11775,
+      "sha256": "1d5e9e0062795ec5e7b06f1e36c23bea32d6f554840bef5a755cc0b47858e1b0",
+      "source_url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/body-mass-index-for-age/bmi_boys_0-to-2-years_zcores.xlsx?sfvrsn=df725cc9_7"
+    },
+    "who_bfa_boys_2_5.xlsx": {
+      "indicator": "bmi_for_age",
+      "sex": "M",
+      "age_months": [24, 60],
+      "size_bytes": 12461,
+      "sha256": "874063e82b4592e4d2dc8b7534861d759541548abe38269fba50ba3861e9aff1",
+      "source_url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/body-mass-index-for-age/bmi_boys_2-to-5-years_zscores.xlsx?sfvrsn=73010c9b_5"
+    },
+    "who_bfa_girls_0_2.xlsx": {
+      "indicator": "bmi_for_age",
+      "sex": "F",
+      "age_months": [0, 24],
+      "size_bytes": 11787,
+      "sha256": "daf06e553ef31c7100cbb7f27fa9ddc8a9e9326167865b07ee8c1268931e1eb6",
+      "source_url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/body-mass-index-for-age/bmi_girls_0-to-2-years_zscores.xlsx?sfvrsn=2be9859c_7"
+    },
+    "who_bfa_girls_2_5.xlsx": {
+      "indicator": "bmi_for_age",
+      "sex": "F",
+      "age_months": [24, 60],
+      "size_bytes": 12227,
+      "sha256": "9e27264b319e9290fc32b7896894da6c5b41b4f471695f2e13016cae8f329973",
+      "source_url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/body-mass-index-for-age/bmi_girls_2-to-5-years_zscores.xlsx?sfvrsn=452aca36_7"
     }
   }
 }
