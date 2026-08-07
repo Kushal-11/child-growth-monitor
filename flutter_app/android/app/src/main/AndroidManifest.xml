@@ -16,7 +16,7 @@
         android:extractNativeLibs="true">
         <meta-data android:name="com.google.ar.core" android:value="optional" />
         <activity
-            android:name=".ar.SparseArScanActivity"
+            android:name=".ar.FullArScanActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@android:style/Theme.Material.Light.NoActionBar.Fullscreen" />

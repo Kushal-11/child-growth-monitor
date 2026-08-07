@@ -4,12 +4,13 @@ import '../domain/ar_scan_models.dart';
 
 abstract interface class ArScanPlatform {
   Future<ArScanCapability> checkCapability();
-  Future<SparseArScanResult?> startSparseScan();
+  Future<FullArScanResult?> startFullScan();
 }
 
 class MethodChannelArScanPlatform implements ArScanPlatform {
   const MethodChannelArScanPlatform({
-    MethodChannel channel = const MethodChannel('org.childgrowthmonitor/ar_scan'),
+    MethodChannel channel =
+        const MethodChannel('org.childgrowthmonitor/ar_scan'),
   }) : _channel = channel;
 
   final MethodChannel _channel;
@@ -30,12 +31,12 @@ class MethodChannelArScanPlatform implements ArScanPlatform {
   }
 
   @override
-  Future<SparseArScanResult?> startSparseScan() async {
+  Future<FullArScanResult?> startFullScan() async {
     final response = await _channel.invokeMapMethod<Object?, Object?>(
-      'startSparseScan',
+      'startFullScan',
     );
     if (response == null) return null;
-    return SparseArScanResult.fromMap(response);
+    return FullArScanResult.fromMap(response);
   }
 
   static const _unsupported = ArScanCapability(

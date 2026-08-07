@@ -10,7 +10,7 @@ abstract interface class ArScanRepository {
   Future<void> saveExperimentalResult({
     required int ownerUserId,
     required String visitUuid,
-    required SparseArScanResult result,
+    required FullArScanResult result,
   });
 }
 
@@ -22,8 +22,9 @@ class DriftArScanRepository implements ArScanRepository {
   Future<void> saveExperimentalResult({
     required int ownerUserId,
     required String visitUuid,
-    required SparseArScanResult result,
-  }) => _database.transaction(() async {
+    required FullArScanResult result,
+  }) =>
+      _database.transaction(() async {
         final visit = await (_database.select(_database.visits)
               ..where((row) =>
                   row.localUuid.equals(visitUuid) &
@@ -31,7 +32,7 @@ class DriftArScanRepository implements ArScanRepository {
             .getSingleOrNull();
         if (visit == null) throw StateError('Owner-scoped visit was not found');
         final metadata = _decodeObject(visit.deviceMetadataJson);
-        metadata['sparse_ar_scan'] = result.toJson();
+        metadata['arcore_depth_scan'] = result.toJson();
         final encoded = jsonEncode(metadata);
         await (_database.update(_database.visits)
               ..where((row) => row.id.equals(visit.id)))
@@ -43,7 +44,9 @@ class DriftArScanRepository implements ArScanRepository {
                   row.entityType.equals(SyncOutboxEntityType.visit) &
                   row.entityUuid.equals(visitUuid)))
             .getSingleOrNull();
-        if (outbox == null) throw StateError('Visit outbox record was not found');
+        if (outbox == null) {
+          throw StateError('Visit outbox record was not found');
+        }
         final payload = _decodeObject(outbox.payloadJson);
         payload['device_metadata'] = metadata;
         await SyncOutboxDao(_database).refreshPayload(

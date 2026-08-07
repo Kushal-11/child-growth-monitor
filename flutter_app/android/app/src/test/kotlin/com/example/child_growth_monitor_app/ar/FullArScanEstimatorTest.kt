@@ -1,0 +1,78 @@
+package com.example.child_growth_monitor_app.ar
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class FullArScanEstimatorTest {
+    @Test
+    fun `stable multi-view evidence produces a bounded summary`() {
+        val estimator = FullArScanEstimator()
+        repeat(20) { index ->
+            val acceptance = estimator.tryAdd(evidence(index))
+            assertTrue("frame $index should be accepted", acceptance.accepted)
+        }
+
+        assertTrue(estimator.readyToFinish())
+        val summary = estimator.summarize(durationMs = 14_000)
+        assertNotNull(summary)
+        assertEquals(20, summary!!.acceptedKeyframes)
+        assertEquals(90.0, summary.estimatedHeightCm, 0.6)
+        assertTrue(summary.uncertaintyCm >= 0.2)
+        assertTrue(summary.scanCoverageDegrees >= 35.0)
+        assertTrue(summary.cameraTravelMeters >= 0.4)
+        assertTrue(summary.qualityScore in 0.0..1.0)
+    }
+
+    @Test
+    fun `stationary duplicate view is rejected`() {
+        val estimator = FullArScanEstimator()
+        val first = evidence(0)
+        assertTrue(estimator.tryAdd(first).accepted)
+        val stationary = first.copy(
+            pose = first.pose.copy(timestampNs = first.pose.timestampNs + 300_000_000L),
+        )
+
+        assertFalse(estimator.tryAdd(stationary).accepted)
+        assertEquals(1, estimator.acceptedKeyframes)
+    }
+
+    @Test
+    fun `unstable floor is rejected after warmup`() {
+        val estimator = FullArScanEstimator()
+        repeat(3) { assertTrue(estimator.tryAdd(evidence(it)).accepted) }
+        val unstable = evidence(3).copy(floorY = 0.20)
+
+        val acceptance = estimator.tryAdd(unstable)
+        assertFalse(acceptance.accepted)
+        assertTrue(acceptance.guidance.contains("same floor"))
+    }
+
+    @Test
+    fun `angular span handles wraparound`() {
+        assertEquals(
+            20.0,
+            FullArScanEstimator.angularSpan(listOf(350.0, 0.0, 10.0)),
+            0.001,
+        )
+    }
+
+    private fun evidence(index: Int): DepthFrameEvidence = DepthFrameEvidence(
+        heightCm = if (index % 2 == 0) 89.6 else 90.4,
+        validDepthFraction = 0.45,
+        meanConfidence = 0.82,
+        floorY = if (index % 2 == 0) -0.005 else 0.005,
+        bodyCenterX = 0.0,
+        bodyCenterZ = -1.5,
+        bodyPointCount = 220,
+        pose = ScanPose(
+            x = index * 0.05,
+            y = 1.2,
+            z = 0.0,
+            yawDegrees = index * 2.0,
+            timestampNs = index * 300_000_000L,
+        ),
+    )
+}

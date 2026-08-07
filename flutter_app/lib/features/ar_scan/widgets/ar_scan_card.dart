@@ -3,28 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/ar_scan_provider.dart';
 
-class ArScanCard extends ConsumerStatefulWidget {
+class ArScanCard extends ConsumerWidget {
   const ArScanCard({
     super.key,
     required this.ownerUserId,
     required this.visitUuid,
   });
+
   final int ownerUserId;
   final String visitUuid;
 
   @override
-  ConsumerState<ArScanCard> createState() => _ArScanCardState();
-}
-
-class _ArScanCardState extends ConsumerState<ArScanCard> {
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(() => ref.read(arScanProvider.notifier).check());
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(arScanProvider);
     if (state.loading) {
       return const Card(
@@ -33,7 +23,7 @@ class _ArScanCardState extends ConsumerState<ArScanCard> {
             dimension: 22,
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
-          title: Text('Checking efficient depth scan…'),
+          title: Text('Checking guided AR depth…'),
         ),
       );
     }
@@ -43,12 +33,13 @@ class _ArScanCardState extends ConsumerState<ArScanCard> {
           leading: Icon(Icons.photo_camera_outlined),
           title: Text('Standard guided photos'),
           subtitle: Text(
-            'Depth scanning is not supported on this phone. The lightweight '
-            'capture remains available.',
+            'Full depth scanning is not supported on this phone. Continue '
+            'with the standard front and side photos.',
           ),
         ),
       );
     }
+
     final result = state.result;
     return Card(
       color: Theme.of(context).colorScheme.secondaryContainer,
@@ -58,23 +49,42 @@ class _ArScanCardState extends ConsumerState<ArScanCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Efficient AR depth scan',
+              'Guided AR depth scan',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 6),
             const Text(
-              'Captures up to eight sparse depth keyframes. No raw depth '
-              'video or dense 3D mesh is retained.',
+              'Optional multi-view scan using raw depth confidence, floor '
+              'stability, and movement checks. No RGB, raw depth, point '
+              'cloud, or mesh is retained.',
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Use only when the child can stand safely without support. '
+              'Otherwise skip this and continue with guided photos.',
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Google Play Services for AR (ARCore) is provided by Google LLC '
+              'and governed by the Google Privacy Policy.',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
             if (result != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Text(
                 'Experimental height '
                 '${result.estimatedHeightCm.toStringAsFixed(1)} ± '
                 '${result.uncertaintyCm.toStringAsFixed(1)} cm',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              Text(
+                '${result.acceptedKeyframes} frames • '
+                '${result.scanCoverageDegrees.toStringAsFixed(0)}° coverage • '
+                '${(result.qualityScore * 100).toStringAsFixed(0)}% quality',
               ),
               const Text(
-                'Research evidence only — continue with guided photos.',
+                'Research evidence only. It does not replace a measured '
+                'height or drive clinical classifications.',
               ),
             ],
             if (state.error != null) ...[
@@ -89,11 +99,13 @@ class _ArScanCardState extends ConsumerState<ArScanCard> {
               onPressed: state.scanning || result != null
                   ? null
                   : () => ref.read(arScanProvider.notifier).scanAndSave(
-                        ownerUserId: widget.ownerUserId,
-                        visitUuid: widget.visitUuid,
+                        ownerUserId: ownerUserId,
+                        visitUuid: visitUuid,
                       ),
               icon: const Icon(Icons.view_in_ar),
-              label: Text(state.scanning ? 'Scanning…' : 'Start depth scan'),
+              label: Text(
+                state.scanning ? 'Scanning…' : 'Start guided depth scan',
+              ),
             ),
           ],
         ),

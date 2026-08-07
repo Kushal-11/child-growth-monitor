@@ -1,18 +1,35 @@
 import 'package:child_growth_monitor_app/features/ar_scan/domain/ar_scan_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+Map<String, Object?> validResultMap() => {
+      'method': fullArMethodV2,
+      'estimatedHeightCm': 84.2,
+      'uncertaintyCm': 0.8,
+      'acceptedKeyframes': 20,
+      'validDepthFraction': 0.42,
+      'meanDepthConfidence': 0.81,
+      'scanCoverageDegrees': 39.0,
+      'cameraTravelMeters': 0.62,
+      'floorStabilityCm': 1.4,
+      'capturedBodyPoints': 4200,
+      'durationMs': 12500,
+      'qualityScore': 0.87,
+      'depthMode': 'raw_depth_with_confidence',
+      'clinicalMeasurementEligible': false,
+    };
+
 void main() {
-  test('compatible device offers sparse scan', () {
+  test('compatible device offers full scan', () {
     const capability = ArScanCapability(
       availability: 'supported_installed',
       arSupported: true,
       transient: false,
-      ramMb: sparseArMinimumRamMb,
+      ramMb: fullArMinimumRamMb,
     );
-    expect(capability.shouldOfferSparseScan, isTrue);
+    expect(capability.shouldOfferFullScan, isTrue);
   });
 
-  test('unsupported and transient devices use fallback', () {
+  test('unsupported, transient, low-memory, and old method use fallback', () {
     const unsupported = ArScanCapability(
       availability: 'unsupported_device_not_capable',
       arSupported: false,
@@ -25,32 +42,47 @@ void main() {
       transient: true,
       ramMb: 512,
     );
-    expect(unsupported.shouldOfferSparseScan, isFalse);
-    expect(transient.shouldOfferSparseScan, isFalse);
+    const lowMemory = ArScanCapability(
+      availability: 'supported_installed',
+      arSupported: true,
+      transient: false,
+      ramMb: fullArMinimumRamMb - 1,
+    );
+    const oldMethod = ArScanCapability(
+      availability: 'supported_installed',
+      arSupported: true,
+      transient: false,
+      ramMb: 512,
+      method: 'arcore_sparse_depth_v1',
+    );
+    expect(unsupported.shouldOfferFullScan, isFalse);
+    expect(transient.shouldOfferFullScan, isFalse);
+    expect(lowMemory.shouldOfferFullScan, isFalse);
+    expect(oldMethod.shouldOfferFullScan, isFalse);
   });
 
-  test('result rejects clinical eligibility and invalid measurements', () {
+  test('result rejects clinical eligibility and insufficient coverage', () {
+    final clinicallyEligible = validResultMap()
+      ..['clinicalMeasurementEligible'] = true;
+    final insufficientFrames = validResultMap()
+      ..['acceptedKeyframes'] = fullArMinimumKeyframes - 1;
     expect(
-      () => SparseArScanResult.fromMap({
-        'estimatedHeightCm': 84.2,
-        'uncertaintyCm': 0.8,
-        'acceptedKeyframes': 8,
-        'clinicalMeasurementEligible': true,
-      }),
+      () => FullArScanResult.fromMap(clinicallyEligible),
+      throwsFormatException,
+    );
+    expect(
+      () => FullArScanResult.fromMap(insufficientFrames),
       throwsFormatException,
     );
   });
 
-  test('valid result remains explicitly experimental', () {
-    final result = SparseArScanResult.fromMap({
-      'estimatedHeightCm': 84.2,
-      'uncertaintyCm': 0.8,
-      'acceptedKeyframes': 8,
-      'validDepthFraction': 0.7,
-      'depthMode': 'automatic',
-      'clinicalMeasurementEligible': false,
-    });
-    expect(result.toJson()['clinical_measurement_eligible'], isFalse);
-    expect(result.toJson()['method'], sparseArMethodV1);
+  test('valid result serializes complete experimental provenance', () {
+    final result = FullArScanResult.fromMap(validResultMap());
+    final json = result.toJson();
+    expect(result.acceptedKeyframes, 20);
+    expect(json['method'], fullArMethodV2);
+    expect(json['clinical_measurement_eligible'], isFalse);
+    expect(json['raw_media_retained'], isFalse);
+    expect(json['mean_depth_confidence'], 0.81);
   });
 }

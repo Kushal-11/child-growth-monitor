@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/database_provider.dart';
@@ -16,18 +18,17 @@ class ArScanState {
   final bool loading;
   final bool scanning;
   final ArScanCapability? capability;
-  final SparseArScanResult? result;
+  final FullArScanResult? result;
   final String? error;
 
-  bool get useFallback => !loading && capability?.shouldOfferSparseScan != true;
+  bool get useFallback => !loading && capability?.shouldOfferFullScan != true;
 }
 
 class ArScanNotifier extends StateNotifier<ArScanState> {
   ArScanNotifier({
     required ArScanPlatform platform,
     required ArScanRepository repository,
-  })
-      : _platform = platform,
+  })  : _platform = platform,
         _repository = repository,
         super(const ArScanState());
   final ArScanPlatform _platform;
@@ -36,6 +37,7 @@ class ArScanNotifier extends StateNotifier<ArScanState> {
   Future<void> check() async {
     state = const ArScanState();
     final capability = await _platform.checkCapability();
+    if (!mounted) return;
     state = ArScanState(loading: false, capability: capability);
   }
 
@@ -43,7 +45,7 @@ class ArScanNotifier extends StateNotifier<ArScanState> {
     required int ownerUserId,
     required String visitUuid,
   }) async {
-    if (state.capability?.shouldOfferSparseScan != true || state.scanning) {
+    if (state.capability?.shouldOfferFullScan != true || state.scanning) {
       return;
     }
     state = ArScanState(
@@ -52,7 +54,8 @@ class ArScanNotifier extends StateNotifier<ArScanState> {
       capability: state.capability,
     );
     try {
-      final result = await _platform.startSparseScan();
+      final result = await _platform.startFullScan();
+      if (!mounted) return;
       if (result == null) {
         state = ArScanState(loading: false, capability: state.capability);
         return;
@@ -62,12 +65,14 @@ class ArScanNotifier extends StateNotifier<ArScanState> {
         visitUuid: visitUuid,
         result: result,
       );
+      if (!mounted) return;
       state = ArScanState(
         loading: false,
         capability: state.capability,
         result: result,
       );
     } catch (error) {
+      if (!mounted) return;
       state = ArScanState(
         loading: false,
         capability: state.capability,
@@ -85,8 +90,12 @@ final arScanRepositoryProvider = Provider<ArScanRepository>(
 );
 final arScanProvider =
     StateNotifierProvider.autoDispose<ArScanNotifier, ArScanState>(
-  (ref) => ArScanNotifier(
-    platform: ref.watch(arScanPlatformProvider),
-    repository: ref.watch(arScanRepositoryProvider),
-  ),
+  (ref) {
+    final notifier = ArScanNotifier(
+      platform: ref.watch(arScanPlatformProvider),
+      repository: ref.watch(arScanRepositoryProvider),
+    );
+    unawaited(notifier.check());
+    return notifier;
+  },
 );
