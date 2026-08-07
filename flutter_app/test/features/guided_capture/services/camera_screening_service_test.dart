@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:child_growth_monitor_app/database/daos/camera_result_dao.dart';
 import 'package:child_growth_monitor_app/database/daos/capture_asset_dao.dart';
 import 'package:child_growth_monitor_app/database/daos/guided_visit_dao.dart';
 import 'package:child_growth_monitor_app/database/database.dart';
+import 'package:child_growth_monitor_app/features/ar_scan/domain/ar_scan_models.dart';
 import 'package:child_growth_monitor_app/features/guided_capture/domain/camera_screening_result.dart';
 import 'package:child_growth_monitor_app/features/guided_capture/domain/capture_models.dart';
 import 'package:child_growth_monitor_app/features/guided_capture/services/camera_screening_service.dart';
@@ -89,6 +92,7 @@ class FakeCameraMlInference implements CameraMlInference {
 
   WastingPrediction prediction;
   Object? error;
+  final List<WastingFeatures> featuresSeen = [];
 
   @override
   CameraModelMetadata get metadata => const CameraModelMetadata(
@@ -100,6 +104,7 @@ class FakeCameraMlInference implements CameraMlInference {
 
   @override
   WastingPrediction predict(WastingFeatures features) {
+    featuresSeen.add(features);
     if (error case final error?) throw error;
     return prediction;
   }
@@ -114,12 +119,54 @@ class FakeCameraMlInference implements CameraMlInference {
   }
 }
 
-CameraScreeningVisit screeningVisit() => const CameraScreeningVisit(
+CameraScreeningVisit screeningVisit({FullArScanResult? arScan}) =>
+    CameraScreeningVisit(
       visitUuid: '10000000-0000-0000-0000-000000000001',
       ownerUserId: 7,
       ageMonths: 30,
       sex: 'F',
+      arScan: arScan,
     );
+
+const contactlessArResult = FullArScanResult(
+  estimatedHeightCm: 91,
+  uncertaintyCm: 0.7,
+  acceptedKeyframes: 20,
+  validDepthFraction: 0.45,
+  meanDepthConfidence: 0.82,
+  scanCoverageDegrees: 92,
+  cameraTravelMeters: 0.9,
+  floorStabilityCm: 1.2,
+  capturedBodyPoints: 5000,
+  durationMs: 14000,
+  qualityScore: 0.9,
+  depthMode: 'raw_depth_with_confidence',
+  shoulderWidthCm: 19.5,
+  hipWidthCm: 17,
+  torsoLengthCm: 27.3,
+  upperArmLengthCm: 14.6,
+  chestDepthCm: 8.2,
+  abdomenDepthCm: 8.6,
+  estimatedMuacCm: 12.4,
+  muacUncertaintyCm: 0.5,
+  poseQualityScore: 0.9,
+  geometryQualityScore: 0.86,
+);
+
+const contactlessHeightOnlyResult = FullArScanResult(
+  estimatedHeightCm: 99,
+  uncertaintyCm: 0.8,
+  acceptedKeyframes: 20,
+  validDepthFraction: 0.45,
+  meanDepthConfidence: 0.82,
+  scanCoverageDegrees: 92,
+  cameraTravelMeters: 0.9,
+  floorStabilityCm: 1.2,
+  capturedBodyPoints: 5000,
+  durationMs: 14000,
+  qualityScore: 0.8,
+  depthMode: 'raw_depth_with_confidence',
+);
 
 List<CameraScreeningAsset> acceptedAssets() => const [
       CameraScreeningAsset(
@@ -174,12 +221,12 @@ void main() {
 
       expect(result.method, cameraScreeningMethodV1);
       expect(result.nonClinical, isTrue);
-      expect(result.estimatedHeightCm, isNull);
-      expect(result.heightSource, isNull);
-      expect(result.estimatedHaz, isNull);
-      expect(result.estimatedWhz, isNull);
-      expect(result.estimatedStuntingStatus, isNull);
-      expect(result.estimatedWastingStatus, isNull);
+      expect(result.estimatedHeightCm, 90);
+      expect(result.heightSource, legacyWhoHeightSourceV1);
+      expect(result.estimatedHaz, 0);
+      expect(result.estimatedWhz, closeTo(-0.8333, 0.001));
+      expect(result.estimatedStuntingStatus, 'Normal');
+      expect(result.estimatedWastingStatus, 'NORMAL');
       expect(result.weightSource, experimentalMlWeightSourceV1);
       expect(result.modelVersion, 'synthetic-who-v1');
       expect(result.manifestChecksum, hasLength(64));
@@ -197,7 +244,7 @@ void main() {
       expect(result.captureQualitySummary['used_views'], ['front', 'side']);
     });
 
-    test('does not publish the WHO reference height as a measurement',
+    test('publishes the WHO reference only as an explicit population estimate',
         () async {
       final who = FakeWhoDataService(medianWeightKg: null);
       final ml = FakeCameraMlInference(
@@ -218,14 +265,65 @@ void main() {
         version: 1,
       );
 
-      expect(result.estimatedHeightCm, isNull);
-      expect(result.heightSource, isNull);
+      expect(result.estimatedHeightCm, 90);
+      expect(result.heightSource, legacyWhoHeightSourceV1);
       expect(result.estimatedWeightKg, isNull);
-      expect(result.estimatedHaz, isNull);
+      expect(result.estimatedHaz, 0);
       expect(result.estimatedWhz, isNull);
-      expect(result.estimatedStuntingStatus, isNull);
+      expect(result.estimatedStuntingStatus, 'Normal');
       expect(result.estimatedWastingStatus, isNull);
       expect(result.experimentalOverallCategory, isNull);
+    });
+
+    test('AR geometry produces contactless height weight and MUAC estimates',
+        () async {
+      final ml = FakeCameraMlInference();
+      final result = await service(ml: ml).run(
+        visit: screeningVisit(arScan: contactlessArResult),
+        acceptedAssets: acceptedAssets(),
+        version: 1,
+      );
+
+      expect(result.method, cameraScreeningContactlessMethodV2);
+      expect(result.estimatedHeightCm, 91);
+      expect(result.heightSource, arcoreDepthHeightSourceV3);
+      expect(result.heightRangeLowerCm, 90.3);
+      expect(result.heightRangeUpperCm, 91.7);
+      expect(result.estimatedWeightKg, 11);
+      expect(result.weightSource, arcoreGeometryWeightSourceV3);
+      expect(result.weightRangeLowerKg, 10.2);
+      expect(result.weightRangeUpperKg, 11.8);
+      expect(result.estimatedMuacCm, 12.4);
+      expect(result.muacSource, arcoreArmMuacSourceV3);
+      expect(result.muacRangeLowerCm, 11.9);
+      expect(result.muacRangeUpperCm, 12.9);
+      expect(ml.featuresSeen.first.heightCm, 91);
+      expect(ml.featuresSeen.first.shoulderWidthCm, 19.5);
+      expect(ml.featuresSeen.first.chestDepthCm, 8.2);
+      expect(result.captureQualitySummary['ar_coverage_degrees'], 92);
+    });
+
+    test(
+        'AR height rescales guided-photo geometry when depth geometry is partial',
+        () async {
+      final ml = FakeCameraMlInference();
+      final result = await service(ml: ml).run(
+        visit: screeningVisit(arScan: contactlessHeightOnlyResult),
+        acceptedAssets: acceptedAssets(),
+        version: 1,
+      );
+
+      expect(result.estimatedHeightCm, 99);
+      expect(result.heightSource, arcoreDepthHeightSourceV3);
+      expect(
+        result.weightSource,
+        arcoreHeightPhotoGeometryWeightSourceV3,
+      );
+      expect(ml.featuresSeen.first.heightCm, 99);
+      expect(ml.featuresSeen.first.shoulderWidthCm, closeTo(19.8, 0.001));
+      expect(ml.featuresSeen.first.hipWidthCm, closeTo(17.325, 0.001));
+      expect(result.bodyProportionFeatures['geometry_source'],
+          arcoreHeightPhotoGeometryWeightSourceV3);
     });
 
     test('keeps valid weight but omits an invalid classifier category',
@@ -381,6 +479,45 @@ void main() {
       expect(visit!.captureState, 'estimated_report');
     });
 
+    test('loads AR metadata and persists all contactless estimate fields',
+        () async {
+      await (db.update(db.visits)
+            ..where((row) => row.localUuid.equals(screeningVisit().visitUuid)))
+          .write(
+        VisitsCompanion(
+          deviceMetadataJson: Value(
+            jsonEncode({'arcore_depth_scan': contactlessArResult.toJson()}),
+          ),
+        ),
+      );
+      final runner = _CapturingRunner();
+      final workflow = CameraScreeningWorkflow(
+        database: db,
+        visitDao: visitDao,
+        cameraResultDao: resultDao,
+        runner: runner,
+      );
+
+      await workflow.process(
+        ownerUserId: 7,
+        visitUuid: screeningVisit().visitUuid,
+      );
+
+      expect(runner.receivedVisit?.arScan?.estimatedHeightCm, 91);
+      expect(runner.receivedVisit?.arScan?.estimatedMuacCm, 12.4);
+      final stored = (await resultDao.getVersions(
+        ownerUserId: 7,
+        visitUuid: screeningVisit().visitUuid,
+      ))
+          .single;
+      expect(stored.estimatedHeightCm, 91);
+      expect(stored.estimatedWeightKg, 11);
+      expect(stored.estimatedMuacCm, 12.4);
+      expect(stored.heightRangeLowerCm, 90.3);
+      expect(stored.weightRangeUpperKg, 11.8);
+      expect(stored.muacSource, arcoreArmMuacSourceV3);
+    });
+
     test('failed reprocessing preserves the last estimated report', () async {
       final initialWorkflow = CameraScreeningWorkflow(
         database: db,
@@ -483,5 +620,41 @@ class _FailingRunner implements CameraScreeningRunner {
     String? supersedesResultUuid,
   }) {
     throw StateError('inference failed');
+  }
+}
+
+class _CapturingRunner implements CameraScreeningRunner {
+  CameraScreeningVisit? receivedVisit;
+
+  @override
+  Future<CameraScreeningResult> run({
+    required CameraScreeningVisit visit,
+    required List<CameraScreeningAsset> acceptedAssets,
+    required int version,
+    String? supersedesResultUuid,
+  }) async {
+    receivedVisit = visit;
+    return CameraScreeningResult(
+      resultUuid: '30000000-0000-0000-0000-000000000099',
+      version: version,
+      estimatedHeightCm: 91,
+      estimatedWeightKg: 11,
+      estimatedMuacCm: 12.4,
+      heightSource: arcoreDepthHeightSourceV3,
+      weightSource: arcoreGeometryWeightSourceV3,
+      muacSource: arcoreArmMuacSourceV3,
+      heightRangeLowerCm: 90.3,
+      heightRangeUpperCm: 91.7,
+      weightRangeLowerKg: 10.2,
+      weightRangeUpperKg: 11.8,
+      muacRangeLowerCm: 11.9,
+      muacRangeUpperCm: 12.9,
+      captureQualitySummary: const {'ar_overall': 0.9},
+      method: cameraScreeningContactlessMethodV2,
+      modelVersion: 'synthetic-who-v1',
+      manifestChecksum: 'a' * 64,
+      trainingDataLabel: 'synthetic_who_research_only',
+      createdAt: DateTime.utc(2026, 7, 29),
+    );
   }
 }

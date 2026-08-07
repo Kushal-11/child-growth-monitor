@@ -6339,6 +6339,12 @@ class $CameraResultsTable extends CameraResults
   late final GeneratedColumn<double> estimatedWeightKg =
       GeneratedColumn<double>('estimated_weight_kg', aliasedName, true,
           type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _estimatedMuacCmMeta =
+      const VerificationMeta('estimatedMuacCm');
+  @override
+  late final GeneratedColumn<double> estimatedMuacCm = GeneratedColumn<double>(
+      'estimated_muac_cm', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
   static const VerificationMeta _heightSourceMeta =
       const VerificationMeta('heightSource');
   @override
@@ -6351,6 +6357,48 @@ class $CameraResultsTable extends CameraResults
   late final GeneratedColumn<String> weightSource = GeneratedColumn<String>(
       'weight_source', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _muacSourceMeta =
+      const VerificationMeta('muacSource');
+  @override
+  late final GeneratedColumn<String> muacSource = GeneratedColumn<String>(
+      'muac_source', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _heightRangeLowerCmMeta =
+      const VerificationMeta('heightRangeLowerCm');
+  @override
+  late final GeneratedColumn<double> heightRangeLowerCm =
+      GeneratedColumn<double>('height_range_lower_cm', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _heightRangeUpperCmMeta =
+      const VerificationMeta('heightRangeUpperCm');
+  @override
+  late final GeneratedColumn<double> heightRangeUpperCm =
+      GeneratedColumn<double>('height_range_upper_cm', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _weightRangeLowerKgMeta =
+      const VerificationMeta('weightRangeLowerKg');
+  @override
+  late final GeneratedColumn<double> weightRangeLowerKg =
+      GeneratedColumn<double>('weight_range_lower_kg', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _weightRangeUpperKgMeta =
+      const VerificationMeta('weightRangeUpperKg');
+  @override
+  late final GeneratedColumn<double> weightRangeUpperKg =
+      GeneratedColumn<double>('weight_range_upper_kg', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _muacRangeLowerCmMeta =
+      const VerificationMeta('muacRangeLowerCm');
+  @override
+  late final GeneratedColumn<double> muacRangeLowerCm = GeneratedColumn<double>(
+      'muac_range_lower_cm', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _muacRangeUpperCmMeta =
+      const VerificationMeta('muacRangeUpperCm');
+  @override
+  late final GeneratedColumn<double> muacRangeUpperCm = GeneratedColumn<double>(
+      'muac_range_upper_cm', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
   static const VerificationMeta _estimatedHazMeta =
       const VerificationMeta('estimatedHaz');
   @override
@@ -6452,8 +6500,16 @@ class $CameraResultsTable extends CameraResults
         supersedesResultUuid,
         estimatedHeightCm,
         estimatedWeightKg,
+        estimatedMuacCm,
         heightSource,
         weightSource,
+        muacSource,
+        heightRangeLowerCm,
+        heightRangeUpperCm,
+        weightRangeLowerKg,
+        weightRangeUpperKg,
+        muacRangeLowerCm,
+        muacRangeUpperCm,
         estimatedHaz,
         estimatedWhz,
         estimatedStuntingStatus,
@@ -6524,6 +6580,12 @@ class $CameraResultsTable extends CameraResults
           estimatedWeightKg.isAcceptableOrUnknown(
               data['estimated_weight_kg']!, _estimatedWeightKgMeta));
     }
+    if (data.containsKey('estimated_muac_cm')) {
+      context.handle(
+          _estimatedMuacCmMeta,
+          estimatedMuacCm.isAcceptableOrUnknown(
+              data['estimated_muac_cm']!, _estimatedMuacCmMeta));
+    }
     if (data.containsKey('height_source')) {
       context.handle(
           _heightSourceMeta,
@@ -6535,6 +6597,48 @@ class $CameraResultsTable extends CameraResults
           _weightSourceMeta,
           weightSource.isAcceptableOrUnknown(
               data['weight_source']!, _weightSourceMeta));
+    }
+    if (data.containsKey('muac_source')) {
+      context.handle(
+          _muacSourceMeta,
+          muacSource.isAcceptableOrUnknown(
+              data['muac_source']!, _muacSourceMeta));
+    }
+    if (data.containsKey('height_range_lower_cm')) {
+      context.handle(
+          _heightRangeLowerCmMeta,
+          heightRangeLowerCm.isAcceptableOrUnknown(
+              data['height_range_lower_cm']!, _heightRangeLowerCmMeta));
+    }
+    if (data.containsKey('height_range_upper_cm')) {
+      context.handle(
+          _heightRangeUpperCmMeta,
+          heightRangeUpperCm.isAcceptableOrUnknown(
+              data['height_range_upper_cm']!, _heightRangeUpperCmMeta));
+    }
+    if (data.containsKey('weight_range_lower_kg')) {
+      context.handle(
+          _weightRangeLowerKgMeta,
+          weightRangeLowerKg.isAcceptableOrUnknown(
+              data['weight_range_lower_kg']!, _weightRangeLowerKgMeta));
+    }
+    if (data.containsKey('weight_range_upper_kg')) {
+      context.handle(
+          _weightRangeUpperKgMeta,
+          weightRangeUpperKg.isAcceptableOrUnknown(
+              data['weight_range_upper_kg']!, _weightRangeUpperKgMeta));
+    }
+    if (data.containsKey('muac_range_lower_cm')) {
+      context.handle(
+          _muacRangeLowerCmMeta,
+          muacRangeLowerCm.isAcceptableOrUnknown(
+              data['muac_range_lower_cm']!, _muacRangeLowerCmMeta));
+    }
+    if (data.containsKey('muac_range_upper_cm')) {
+      context.handle(
+          _muacRangeUpperCmMeta,
+          muacRangeUpperCm.isAcceptableOrUnknown(
+              data['muac_range_upper_cm']!, _muacRangeUpperCmMeta));
     }
     if (data.containsKey('estimated_haz')) {
       context.handle(
@@ -6659,10 +6763,26 @@ class $CameraResultsTable extends CameraResults
           DriftSqlType.double, data['${effectivePrefix}estimated_height_cm']),
       estimatedWeightKg: attachedDatabase.typeMapping.read(
           DriftSqlType.double, data['${effectivePrefix}estimated_weight_kg']),
+      estimatedMuacCm: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}estimated_muac_cm']),
       heightSource: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}height_source']),
       weightSource: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}weight_source']),
+      muacSource: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}muac_source']),
+      heightRangeLowerCm: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}height_range_lower_cm']),
+      heightRangeUpperCm: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}height_range_upper_cm']),
+      weightRangeLowerKg: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}weight_range_lower_kg']),
+      weightRangeUpperKg: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}weight_range_upper_kg']),
+      muacRangeLowerCm: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}muac_range_lower_cm']),
+      muacRangeUpperCm: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}muac_range_upper_cm']),
       estimatedHaz: attachedDatabase.typeMapping
           .read(DriftSqlType.double, data['${effectivePrefix}estimated_haz']),
       estimatedWhz: attachedDatabase.typeMapping
@@ -6715,8 +6835,16 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
   final String? supersedesResultUuid;
   final double? estimatedHeightCm;
   final double? estimatedWeightKg;
+  final double? estimatedMuacCm;
   final String? heightSource;
   final String? weightSource;
+  final String? muacSource;
+  final double? heightRangeLowerCm;
+  final double? heightRangeUpperCm;
+  final double? weightRangeLowerKg;
+  final double? weightRangeUpperKg;
+  final double? muacRangeLowerCm;
+  final double? muacRangeUpperCm;
   final double? estimatedHaz;
   final double? estimatedWhz;
   final String? estimatedStuntingStatus;
@@ -6740,8 +6868,16 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
       this.supersedesResultUuid,
       this.estimatedHeightCm,
       this.estimatedWeightKg,
+      this.estimatedMuacCm,
       this.heightSource,
       this.weightSource,
+      this.muacSource,
+      this.heightRangeLowerCm,
+      this.heightRangeUpperCm,
+      this.weightRangeLowerKg,
+      this.weightRangeUpperKg,
+      this.muacRangeLowerCm,
+      this.muacRangeUpperCm,
       this.estimatedHaz,
       this.estimatedWhz,
       this.estimatedStuntingStatus,
@@ -6775,11 +6911,35 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
     if (!nullToAbsent || estimatedWeightKg != null) {
       map['estimated_weight_kg'] = Variable<double>(estimatedWeightKg);
     }
+    if (!nullToAbsent || estimatedMuacCm != null) {
+      map['estimated_muac_cm'] = Variable<double>(estimatedMuacCm);
+    }
     if (!nullToAbsent || heightSource != null) {
       map['height_source'] = Variable<String>(heightSource);
     }
     if (!nullToAbsent || weightSource != null) {
       map['weight_source'] = Variable<String>(weightSource);
+    }
+    if (!nullToAbsent || muacSource != null) {
+      map['muac_source'] = Variable<String>(muacSource);
+    }
+    if (!nullToAbsent || heightRangeLowerCm != null) {
+      map['height_range_lower_cm'] = Variable<double>(heightRangeLowerCm);
+    }
+    if (!nullToAbsent || heightRangeUpperCm != null) {
+      map['height_range_upper_cm'] = Variable<double>(heightRangeUpperCm);
+    }
+    if (!nullToAbsent || weightRangeLowerKg != null) {
+      map['weight_range_lower_kg'] = Variable<double>(weightRangeLowerKg);
+    }
+    if (!nullToAbsent || weightRangeUpperKg != null) {
+      map['weight_range_upper_kg'] = Variable<double>(weightRangeUpperKg);
+    }
+    if (!nullToAbsent || muacRangeLowerCm != null) {
+      map['muac_range_lower_cm'] = Variable<double>(muacRangeLowerCm);
+    }
+    if (!nullToAbsent || muacRangeUpperCm != null) {
+      map['muac_range_upper_cm'] = Variable<double>(muacRangeUpperCm);
     }
     if (!nullToAbsent || estimatedHaz != null) {
       map['estimated_haz'] = Variable<double>(estimatedHaz);
@@ -6838,12 +6998,36 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
       estimatedWeightKg: estimatedWeightKg == null && nullToAbsent
           ? const Value.absent()
           : Value(estimatedWeightKg),
+      estimatedMuacCm: estimatedMuacCm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(estimatedMuacCm),
       heightSource: heightSource == null && nullToAbsent
           ? const Value.absent()
           : Value(heightSource),
       weightSource: weightSource == null && nullToAbsent
           ? const Value.absent()
           : Value(weightSource),
+      muacSource: muacSource == null && nullToAbsent
+          ? const Value.absent()
+          : Value(muacSource),
+      heightRangeLowerCm: heightRangeLowerCm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(heightRangeLowerCm),
+      heightRangeUpperCm: heightRangeUpperCm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(heightRangeUpperCm),
+      weightRangeLowerKg: weightRangeLowerKg == null && nullToAbsent
+          ? const Value.absent()
+          : Value(weightRangeLowerKg),
+      weightRangeUpperKg: weightRangeUpperKg == null && nullToAbsent
+          ? const Value.absent()
+          : Value(weightRangeUpperKg),
+      muacRangeLowerCm: muacRangeLowerCm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(muacRangeLowerCm),
+      muacRangeUpperCm: muacRangeUpperCm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(muacRangeUpperCm),
       estimatedHaz: estimatedHaz == null && nullToAbsent
           ? const Value.absent()
           : Value(estimatedHaz),
@@ -6896,8 +7080,20 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
           serializer.fromJson<double?>(json['estimatedHeightCm']),
       estimatedWeightKg:
           serializer.fromJson<double?>(json['estimatedWeightKg']),
+      estimatedMuacCm: serializer.fromJson<double?>(json['estimatedMuacCm']),
       heightSource: serializer.fromJson<String?>(json['heightSource']),
       weightSource: serializer.fromJson<String?>(json['weightSource']),
+      muacSource: serializer.fromJson<String?>(json['muacSource']),
+      heightRangeLowerCm:
+          serializer.fromJson<double?>(json['heightRangeLowerCm']),
+      heightRangeUpperCm:
+          serializer.fromJson<double?>(json['heightRangeUpperCm']),
+      weightRangeLowerKg:
+          serializer.fromJson<double?>(json['weightRangeLowerKg']),
+      weightRangeUpperKg:
+          serializer.fromJson<double?>(json['weightRangeUpperKg']),
+      muacRangeLowerCm: serializer.fromJson<double?>(json['muacRangeLowerCm']),
+      muacRangeUpperCm: serializer.fromJson<double?>(json['muacRangeUpperCm']),
       estimatedHaz: serializer.fromJson<double?>(json['estimatedHaz']),
       estimatedWhz: serializer.fromJson<double?>(json['estimatedWhz']),
       estimatedStuntingStatus:
@@ -6932,8 +7128,16 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
       'supersedesResultUuid': serializer.toJson<String?>(supersedesResultUuid),
       'estimatedHeightCm': serializer.toJson<double?>(estimatedHeightCm),
       'estimatedWeightKg': serializer.toJson<double?>(estimatedWeightKg),
+      'estimatedMuacCm': serializer.toJson<double?>(estimatedMuacCm),
       'heightSource': serializer.toJson<String?>(heightSource),
       'weightSource': serializer.toJson<String?>(weightSource),
+      'muacSource': serializer.toJson<String?>(muacSource),
+      'heightRangeLowerCm': serializer.toJson<double?>(heightRangeLowerCm),
+      'heightRangeUpperCm': serializer.toJson<double?>(heightRangeUpperCm),
+      'weightRangeLowerKg': serializer.toJson<double?>(weightRangeLowerKg),
+      'weightRangeUpperKg': serializer.toJson<double?>(weightRangeUpperKg),
+      'muacRangeLowerCm': serializer.toJson<double?>(muacRangeLowerCm),
+      'muacRangeUpperCm': serializer.toJson<double?>(muacRangeUpperCm),
       'estimatedHaz': serializer.toJson<double?>(estimatedHaz),
       'estimatedWhz': serializer.toJson<double?>(estimatedWhz),
       'estimatedStuntingStatus':
@@ -6966,8 +7170,16 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
           Value<String?> supersedesResultUuid = const Value.absent(),
           Value<double?> estimatedHeightCm = const Value.absent(),
           Value<double?> estimatedWeightKg = const Value.absent(),
+          Value<double?> estimatedMuacCm = const Value.absent(),
           Value<String?> heightSource = const Value.absent(),
           Value<String?> weightSource = const Value.absent(),
+          Value<String?> muacSource = const Value.absent(),
+          Value<double?> heightRangeLowerCm = const Value.absent(),
+          Value<double?> heightRangeUpperCm = const Value.absent(),
+          Value<double?> weightRangeLowerKg = const Value.absent(),
+          Value<double?> weightRangeUpperKg = const Value.absent(),
+          Value<double?> muacRangeLowerCm = const Value.absent(),
+          Value<double?> muacRangeUpperCm = const Value.absent(),
           Value<double?> estimatedHaz = const Value.absent(),
           Value<double?> estimatedWhz = const Value.absent(),
           Value<String?> estimatedStuntingStatus = const Value.absent(),
@@ -6997,10 +7209,32 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
         estimatedWeightKg: estimatedWeightKg.present
             ? estimatedWeightKg.value
             : this.estimatedWeightKg,
+        estimatedMuacCm: estimatedMuacCm.present
+            ? estimatedMuacCm.value
+            : this.estimatedMuacCm,
         heightSource:
             heightSource.present ? heightSource.value : this.heightSource,
         weightSource:
             weightSource.present ? weightSource.value : this.weightSource,
+        muacSource: muacSource.present ? muacSource.value : this.muacSource,
+        heightRangeLowerCm: heightRangeLowerCm.present
+            ? heightRangeLowerCm.value
+            : this.heightRangeLowerCm,
+        heightRangeUpperCm: heightRangeUpperCm.present
+            ? heightRangeUpperCm.value
+            : this.heightRangeUpperCm,
+        weightRangeLowerKg: weightRangeLowerKg.present
+            ? weightRangeLowerKg.value
+            : this.weightRangeLowerKg,
+        weightRangeUpperKg: weightRangeUpperKg.present
+            ? weightRangeUpperKg.value
+            : this.weightRangeUpperKg,
+        muacRangeLowerCm: muacRangeLowerCm.present
+            ? muacRangeLowerCm.value
+            : this.muacRangeLowerCm,
+        muacRangeUpperCm: muacRangeUpperCm.present
+            ? muacRangeUpperCm.value
+            : this.muacRangeUpperCm,
         estimatedHaz:
             estimatedHaz.present ? estimatedHaz.value : this.estimatedHaz,
         estimatedWhz:
@@ -7047,12 +7281,35 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
       estimatedWeightKg: data.estimatedWeightKg.present
           ? data.estimatedWeightKg.value
           : this.estimatedWeightKg,
+      estimatedMuacCm: data.estimatedMuacCm.present
+          ? data.estimatedMuacCm.value
+          : this.estimatedMuacCm,
       heightSource: data.heightSource.present
           ? data.heightSource.value
           : this.heightSource,
       weightSource: data.weightSource.present
           ? data.weightSource.value
           : this.weightSource,
+      muacSource:
+          data.muacSource.present ? data.muacSource.value : this.muacSource,
+      heightRangeLowerCm: data.heightRangeLowerCm.present
+          ? data.heightRangeLowerCm.value
+          : this.heightRangeLowerCm,
+      heightRangeUpperCm: data.heightRangeUpperCm.present
+          ? data.heightRangeUpperCm.value
+          : this.heightRangeUpperCm,
+      weightRangeLowerKg: data.weightRangeLowerKg.present
+          ? data.weightRangeLowerKg.value
+          : this.weightRangeLowerKg,
+      weightRangeUpperKg: data.weightRangeUpperKg.present
+          ? data.weightRangeUpperKg.value
+          : this.weightRangeUpperKg,
+      muacRangeLowerCm: data.muacRangeLowerCm.present
+          ? data.muacRangeLowerCm.value
+          : this.muacRangeLowerCm,
+      muacRangeUpperCm: data.muacRangeUpperCm.present
+          ? data.muacRangeUpperCm.value
+          : this.muacRangeUpperCm,
       estimatedHaz: data.estimatedHaz.present
           ? data.estimatedHaz.value
           : this.estimatedHaz,
@@ -7104,8 +7361,16 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
           ..write('supersedesResultUuid: $supersedesResultUuid, ')
           ..write('estimatedHeightCm: $estimatedHeightCm, ')
           ..write('estimatedWeightKg: $estimatedWeightKg, ')
+          ..write('estimatedMuacCm: $estimatedMuacCm, ')
           ..write('heightSource: $heightSource, ')
           ..write('weightSource: $weightSource, ')
+          ..write('muacSource: $muacSource, ')
+          ..write('heightRangeLowerCm: $heightRangeLowerCm, ')
+          ..write('heightRangeUpperCm: $heightRangeUpperCm, ')
+          ..write('weightRangeLowerKg: $weightRangeLowerKg, ')
+          ..write('weightRangeUpperKg: $weightRangeUpperKg, ')
+          ..write('muacRangeLowerCm: $muacRangeLowerCm, ')
+          ..write('muacRangeUpperCm: $muacRangeUpperCm, ')
           ..write('estimatedHaz: $estimatedHaz, ')
           ..write('estimatedWhz: $estimatedWhz, ')
           ..write('estimatedStuntingStatus: $estimatedStuntingStatus, ')
@@ -7134,8 +7399,16 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
         supersedesResultUuid,
         estimatedHeightCm,
         estimatedWeightKg,
+        estimatedMuacCm,
         heightSource,
         weightSource,
+        muacSource,
+        heightRangeLowerCm,
+        heightRangeUpperCm,
+        weightRangeLowerKg,
+        weightRangeUpperKg,
+        muacRangeLowerCm,
+        muacRangeUpperCm,
         estimatedHaz,
         estimatedWhz,
         estimatedStuntingStatus,
@@ -7163,8 +7436,16 @@ class CameraResult extends DataClass implements Insertable<CameraResult> {
           other.supersedesResultUuid == this.supersedesResultUuid &&
           other.estimatedHeightCm == this.estimatedHeightCm &&
           other.estimatedWeightKg == this.estimatedWeightKg &&
+          other.estimatedMuacCm == this.estimatedMuacCm &&
           other.heightSource == this.heightSource &&
           other.weightSource == this.weightSource &&
+          other.muacSource == this.muacSource &&
+          other.heightRangeLowerCm == this.heightRangeLowerCm &&
+          other.heightRangeUpperCm == this.heightRangeUpperCm &&
+          other.weightRangeLowerKg == this.weightRangeLowerKg &&
+          other.weightRangeUpperKg == this.weightRangeUpperKg &&
+          other.muacRangeLowerCm == this.muacRangeLowerCm &&
+          other.muacRangeUpperCm == this.muacRangeUpperCm &&
           other.estimatedHaz == this.estimatedHaz &&
           other.estimatedWhz == this.estimatedWhz &&
           other.estimatedStuntingStatus == this.estimatedStuntingStatus &&
@@ -7191,8 +7472,16 @@ class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
   final Value<String?> supersedesResultUuid;
   final Value<double?> estimatedHeightCm;
   final Value<double?> estimatedWeightKg;
+  final Value<double?> estimatedMuacCm;
   final Value<String?> heightSource;
   final Value<String?> weightSource;
+  final Value<String?> muacSource;
+  final Value<double?> heightRangeLowerCm;
+  final Value<double?> heightRangeUpperCm;
+  final Value<double?> weightRangeLowerKg;
+  final Value<double?> weightRangeUpperKg;
+  final Value<double?> muacRangeLowerCm;
+  final Value<double?> muacRangeUpperCm;
   final Value<double?> estimatedHaz;
   final Value<double?> estimatedWhz;
   final Value<String?> estimatedStuntingStatus;
@@ -7216,8 +7505,16 @@ class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
     this.supersedesResultUuid = const Value.absent(),
     this.estimatedHeightCm = const Value.absent(),
     this.estimatedWeightKg = const Value.absent(),
+    this.estimatedMuacCm = const Value.absent(),
     this.heightSource = const Value.absent(),
     this.weightSource = const Value.absent(),
+    this.muacSource = const Value.absent(),
+    this.heightRangeLowerCm = const Value.absent(),
+    this.heightRangeUpperCm = const Value.absent(),
+    this.weightRangeLowerKg = const Value.absent(),
+    this.weightRangeUpperKg = const Value.absent(),
+    this.muacRangeLowerCm = const Value.absent(),
+    this.muacRangeUpperCm = const Value.absent(),
     this.estimatedHaz = const Value.absent(),
     this.estimatedWhz = const Value.absent(),
     this.estimatedStuntingStatus = const Value.absent(),
@@ -7242,8 +7539,16 @@ class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
     this.supersedesResultUuid = const Value.absent(),
     this.estimatedHeightCm = const Value.absent(),
     this.estimatedWeightKg = const Value.absent(),
+    this.estimatedMuacCm = const Value.absent(),
     this.heightSource = const Value.absent(),
     this.weightSource = const Value.absent(),
+    this.muacSource = const Value.absent(),
+    this.heightRangeLowerCm = const Value.absent(),
+    this.heightRangeUpperCm = const Value.absent(),
+    this.weightRangeLowerKg = const Value.absent(),
+    this.weightRangeUpperKg = const Value.absent(),
+    this.muacRangeLowerCm = const Value.absent(),
+    this.muacRangeUpperCm = const Value.absent(),
     this.estimatedHaz = const Value.absent(),
     this.estimatedWhz = const Value.absent(),
     this.estimatedStuntingStatus = const Value.absent(),
@@ -7274,8 +7579,16 @@ class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
     Expression<String>? supersedesResultUuid,
     Expression<double>? estimatedHeightCm,
     Expression<double>? estimatedWeightKg,
+    Expression<double>? estimatedMuacCm,
     Expression<String>? heightSource,
     Expression<String>? weightSource,
+    Expression<String>? muacSource,
+    Expression<double>? heightRangeLowerCm,
+    Expression<double>? heightRangeUpperCm,
+    Expression<double>? weightRangeLowerKg,
+    Expression<double>? weightRangeUpperKg,
+    Expression<double>? muacRangeLowerCm,
+    Expression<double>? muacRangeUpperCm,
     Expression<double>? estimatedHaz,
     Expression<double>? estimatedWhz,
     Expression<String>? estimatedStuntingStatus,
@@ -7301,8 +7614,20 @@ class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
         'supersedes_result_uuid': supersedesResultUuid,
       if (estimatedHeightCm != null) 'estimated_height_cm': estimatedHeightCm,
       if (estimatedWeightKg != null) 'estimated_weight_kg': estimatedWeightKg,
+      if (estimatedMuacCm != null) 'estimated_muac_cm': estimatedMuacCm,
       if (heightSource != null) 'height_source': heightSource,
       if (weightSource != null) 'weight_source': weightSource,
+      if (muacSource != null) 'muac_source': muacSource,
+      if (heightRangeLowerCm != null)
+        'height_range_lower_cm': heightRangeLowerCm,
+      if (heightRangeUpperCm != null)
+        'height_range_upper_cm': heightRangeUpperCm,
+      if (weightRangeLowerKg != null)
+        'weight_range_lower_kg': weightRangeLowerKg,
+      if (weightRangeUpperKg != null)
+        'weight_range_upper_kg': weightRangeUpperKg,
+      if (muacRangeLowerCm != null) 'muac_range_lower_cm': muacRangeLowerCm,
+      if (muacRangeUpperCm != null) 'muac_range_upper_cm': muacRangeUpperCm,
       if (estimatedHaz != null) 'estimated_haz': estimatedHaz,
       if (estimatedWhz != null) 'estimated_whz': estimatedWhz,
       if (estimatedStuntingStatus != null)
@@ -7335,8 +7660,16 @@ class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
       Value<String?>? supersedesResultUuid,
       Value<double?>? estimatedHeightCm,
       Value<double?>? estimatedWeightKg,
+      Value<double?>? estimatedMuacCm,
       Value<String?>? heightSource,
       Value<String?>? weightSource,
+      Value<String?>? muacSource,
+      Value<double?>? heightRangeLowerCm,
+      Value<double?>? heightRangeUpperCm,
+      Value<double?>? weightRangeLowerKg,
+      Value<double?>? weightRangeUpperKg,
+      Value<double?>? muacRangeLowerCm,
+      Value<double?>? muacRangeUpperCm,
       Value<double?>? estimatedHaz,
       Value<double?>? estimatedWhz,
       Value<String?>? estimatedStuntingStatus,
@@ -7360,8 +7693,16 @@ class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
       supersedesResultUuid: supersedesResultUuid ?? this.supersedesResultUuid,
       estimatedHeightCm: estimatedHeightCm ?? this.estimatedHeightCm,
       estimatedWeightKg: estimatedWeightKg ?? this.estimatedWeightKg,
+      estimatedMuacCm: estimatedMuacCm ?? this.estimatedMuacCm,
       heightSource: heightSource ?? this.heightSource,
       weightSource: weightSource ?? this.weightSource,
+      muacSource: muacSource ?? this.muacSource,
+      heightRangeLowerCm: heightRangeLowerCm ?? this.heightRangeLowerCm,
+      heightRangeUpperCm: heightRangeUpperCm ?? this.heightRangeUpperCm,
+      weightRangeLowerKg: weightRangeLowerKg ?? this.weightRangeLowerKg,
+      weightRangeUpperKg: weightRangeUpperKg ?? this.weightRangeUpperKg,
+      muacRangeLowerCm: muacRangeLowerCm ?? this.muacRangeLowerCm,
+      muacRangeUpperCm: muacRangeUpperCm ?? this.muacRangeUpperCm,
       estimatedHaz: estimatedHaz ?? this.estimatedHaz,
       estimatedWhz: estimatedWhz ?? this.estimatedWhz,
       estimatedStuntingStatus:
@@ -7413,11 +7754,35 @@ class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
     if (estimatedWeightKg.present) {
       map['estimated_weight_kg'] = Variable<double>(estimatedWeightKg.value);
     }
+    if (estimatedMuacCm.present) {
+      map['estimated_muac_cm'] = Variable<double>(estimatedMuacCm.value);
+    }
     if (heightSource.present) {
       map['height_source'] = Variable<String>(heightSource.value);
     }
     if (weightSource.present) {
       map['weight_source'] = Variable<String>(weightSource.value);
+    }
+    if (muacSource.present) {
+      map['muac_source'] = Variable<String>(muacSource.value);
+    }
+    if (heightRangeLowerCm.present) {
+      map['height_range_lower_cm'] = Variable<double>(heightRangeLowerCm.value);
+    }
+    if (heightRangeUpperCm.present) {
+      map['height_range_upper_cm'] = Variable<double>(heightRangeUpperCm.value);
+    }
+    if (weightRangeLowerKg.present) {
+      map['weight_range_lower_kg'] = Variable<double>(weightRangeLowerKg.value);
+    }
+    if (weightRangeUpperKg.present) {
+      map['weight_range_upper_kg'] = Variable<double>(weightRangeUpperKg.value);
+    }
+    if (muacRangeLowerCm.present) {
+      map['muac_range_lower_cm'] = Variable<double>(muacRangeLowerCm.value);
+    }
+    if (muacRangeUpperCm.present) {
+      map['muac_range_upper_cm'] = Variable<double>(muacRangeUpperCm.value);
     }
     if (estimatedHaz.present) {
       map['estimated_haz'] = Variable<double>(estimatedHaz.value);
@@ -7481,8 +7846,16 @@ class CameraResultsCompanion extends UpdateCompanion<CameraResult> {
           ..write('supersedesResultUuid: $supersedesResultUuid, ')
           ..write('estimatedHeightCm: $estimatedHeightCm, ')
           ..write('estimatedWeightKg: $estimatedWeightKg, ')
+          ..write('estimatedMuacCm: $estimatedMuacCm, ')
           ..write('heightSource: $heightSource, ')
           ..write('weightSource: $weightSource, ')
+          ..write('muacSource: $muacSource, ')
+          ..write('heightRangeLowerCm: $heightRangeLowerCm, ')
+          ..write('heightRangeUpperCm: $heightRangeUpperCm, ')
+          ..write('weightRangeLowerKg: $weightRangeLowerKg, ')
+          ..write('weightRangeUpperKg: $weightRangeUpperKg, ')
+          ..write('muacRangeLowerCm: $muacRangeLowerCm, ')
+          ..write('muacRangeUpperCm: $muacRangeUpperCm, ')
           ..write('estimatedHaz: $estimatedHaz, ')
           ..write('estimatedWhz: $estimatedWhz, ')
           ..write('estimatedStuntingStatus: $estimatedStuntingStatus, ')
@@ -12282,8 +12655,16 @@ typedef $$CameraResultsTableCreateCompanionBuilder = CameraResultsCompanion
   Value<String?> supersedesResultUuid,
   Value<double?> estimatedHeightCm,
   Value<double?> estimatedWeightKg,
+  Value<double?> estimatedMuacCm,
   Value<String?> heightSource,
   Value<String?> weightSource,
+  Value<String?> muacSource,
+  Value<double?> heightRangeLowerCm,
+  Value<double?> heightRangeUpperCm,
+  Value<double?> weightRangeLowerKg,
+  Value<double?> weightRangeUpperKg,
+  Value<double?> muacRangeLowerCm,
+  Value<double?> muacRangeUpperCm,
   Value<double?> estimatedHaz,
   Value<double?> estimatedWhz,
   Value<String?> estimatedStuntingStatus,
@@ -12309,8 +12690,16 @@ typedef $$CameraResultsTableUpdateCompanionBuilder = CameraResultsCompanion
   Value<String?> supersedesResultUuid,
   Value<double?> estimatedHeightCm,
   Value<double?> estimatedWeightKg,
+  Value<double?> estimatedMuacCm,
   Value<String?> heightSource,
   Value<String?> weightSource,
+  Value<String?> muacSource,
+  Value<double?> heightRangeLowerCm,
+  Value<double?> heightRangeUpperCm,
+  Value<double?> weightRangeLowerKg,
+  Value<double?> weightRangeUpperKg,
+  Value<double?> muacRangeLowerCm,
+  Value<double?> muacRangeUpperCm,
   Value<double?> estimatedHaz,
   Value<double?> estimatedWhz,
   Value<String?> estimatedStuntingStatus,
@@ -12380,11 +12769,42 @@ class $$CameraResultsTableFilterComposer
       column: $table.estimatedWeightKg,
       builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<double> get estimatedMuacCm => $composableBuilder(
+      column: $table.estimatedMuacCm,
+      builder: (column) => ColumnFilters(column));
+
   ColumnFilters<String> get heightSource => $composableBuilder(
       column: $table.heightSource, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get weightSource => $composableBuilder(
       column: $table.weightSource, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get muacSource => $composableBuilder(
+      column: $table.muacSource, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get heightRangeLowerCm => $composableBuilder(
+      column: $table.heightRangeLowerCm,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get heightRangeUpperCm => $composableBuilder(
+      column: $table.heightRangeUpperCm,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get weightRangeLowerKg => $composableBuilder(
+      column: $table.weightRangeLowerKg,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get weightRangeUpperKg => $composableBuilder(
+      column: $table.weightRangeUpperKg,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get muacRangeLowerCm => $composableBuilder(
+      column: $table.muacRangeLowerCm,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get muacRangeUpperCm => $composableBuilder(
+      column: $table.muacRangeUpperCm,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<double> get estimatedHaz => $composableBuilder(
       column: $table.estimatedHaz, builder: (column) => ColumnFilters(column));
@@ -12490,12 +12910,43 @@ class $$CameraResultsTableOrderingComposer
       column: $table.estimatedWeightKg,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<double> get estimatedMuacCm => $composableBuilder(
+      column: $table.estimatedMuacCm,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get heightSource => $composableBuilder(
       column: $table.heightSource,
       builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get weightSource => $composableBuilder(
       column: $table.weightSource,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get muacSource => $composableBuilder(
+      column: $table.muacSource, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get heightRangeLowerCm => $composableBuilder(
+      column: $table.heightRangeLowerCm,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get heightRangeUpperCm => $composableBuilder(
+      column: $table.heightRangeUpperCm,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get weightRangeLowerKg => $composableBuilder(
+      column: $table.weightRangeLowerKg,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get weightRangeUpperKg => $composableBuilder(
+      column: $table.weightRangeUpperKg,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get muacRangeLowerCm => $composableBuilder(
+      column: $table.muacRangeLowerCm,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get muacRangeUpperCm => $composableBuilder(
+      column: $table.muacRangeUpperCm,
       builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<double> get estimatedHaz => $composableBuilder(
@@ -12602,11 +13053,35 @@ class $$CameraResultsTableAnnotationComposer
   GeneratedColumn<double> get estimatedWeightKg => $composableBuilder(
       column: $table.estimatedWeightKg, builder: (column) => column);
 
+  GeneratedColumn<double> get estimatedMuacCm => $composableBuilder(
+      column: $table.estimatedMuacCm, builder: (column) => column);
+
   GeneratedColumn<String> get heightSource => $composableBuilder(
       column: $table.heightSource, builder: (column) => column);
 
   GeneratedColumn<String> get weightSource => $composableBuilder(
       column: $table.weightSource, builder: (column) => column);
+
+  GeneratedColumn<String> get muacSource => $composableBuilder(
+      column: $table.muacSource, builder: (column) => column);
+
+  GeneratedColumn<double> get heightRangeLowerCm => $composableBuilder(
+      column: $table.heightRangeLowerCm, builder: (column) => column);
+
+  GeneratedColumn<double> get heightRangeUpperCm => $composableBuilder(
+      column: $table.heightRangeUpperCm, builder: (column) => column);
+
+  GeneratedColumn<double> get weightRangeLowerKg => $composableBuilder(
+      column: $table.weightRangeLowerKg, builder: (column) => column);
+
+  GeneratedColumn<double> get weightRangeUpperKg => $composableBuilder(
+      column: $table.weightRangeUpperKg, builder: (column) => column);
+
+  GeneratedColumn<double> get muacRangeLowerCm => $composableBuilder(
+      column: $table.muacRangeLowerCm, builder: (column) => column);
+
+  GeneratedColumn<double> get muacRangeUpperCm => $composableBuilder(
+      column: $table.muacRangeUpperCm, builder: (column) => column);
 
   GeneratedColumn<double> get estimatedHaz => $composableBuilder(
       column: $table.estimatedHaz, builder: (column) => column);
@@ -12702,8 +13177,16 @@ class $$CameraResultsTableTableManager extends RootTableManager<
             Value<String?> supersedesResultUuid = const Value.absent(),
             Value<double?> estimatedHeightCm = const Value.absent(),
             Value<double?> estimatedWeightKg = const Value.absent(),
+            Value<double?> estimatedMuacCm = const Value.absent(),
             Value<String?> heightSource = const Value.absent(),
             Value<String?> weightSource = const Value.absent(),
+            Value<String?> muacSource = const Value.absent(),
+            Value<double?> heightRangeLowerCm = const Value.absent(),
+            Value<double?> heightRangeUpperCm = const Value.absent(),
+            Value<double?> weightRangeLowerKg = const Value.absent(),
+            Value<double?> weightRangeUpperKg = const Value.absent(),
+            Value<double?> muacRangeLowerCm = const Value.absent(),
+            Value<double?> muacRangeUpperCm = const Value.absent(),
             Value<double?> estimatedHaz = const Value.absent(),
             Value<double?> estimatedWhz = const Value.absent(),
             Value<String?> estimatedStuntingStatus = const Value.absent(),
@@ -12728,8 +13211,16 @@ class $$CameraResultsTableTableManager extends RootTableManager<
             supersedesResultUuid: supersedesResultUuid,
             estimatedHeightCm: estimatedHeightCm,
             estimatedWeightKg: estimatedWeightKg,
+            estimatedMuacCm: estimatedMuacCm,
             heightSource: heightSource,
             weightSource: weightSource,
+            muacSource: muacSource,
+            heightRangeLowerCm: heightRangeLowerCm,
+            heightRangeUpperCm: heightRangeUpperCm,
+            weightRangeLowerKg: weightRangeLowerKg,
+            weightRangeUpperKg: weightRangeUpperKg,
+            muacRangeLowerCm: muacRangeLowerCm,
+            muacRangeUpperCm: muacRangeUpperCm,
             estimatedHaz: estimatedHaz,
             estimatedWhz: estimatedWhz,
             estimatedStuntingStatus: estimatedStuntingStatus,
@@ -12754,8 +13245,16 @@ class $$CameraResultsTableTableManager extends RootTableManager<
             Value<String?> supersedesResultUuid = const Value.absent(),
             Value<double?> estimatedHeightCm = const Value.absent(),
             Value<double?> estimatedWeightKg = const Value.absent(),
+            Value<double?> estimatedMuacCm = const Value.absent(),
             Value<String?> heightSource = const Value.absent(),
             Value<String?> weightSource = const Value.absent(),
+            Value<String?> muacSource = const Value.absent(),
+            Value<double?> heightRangeLowerCm = const Value.absent(),
+            Value<double?> heightRangeUpperCm = const Value.absent(),
+            Value<double?> weightRangeLowerKg = const Value.absent(),
+            Value<double?> weightRangeUpperKg = const Value.absent(),
+            Value<double?> muacRangeLowerCm = const Value.absent(),
+            Value<double?> muacRangeUpperCm = const Value.absent(),
             Value<double?> estimatedHaz = const Value.absent(),
             Value<double?> estimatedWhz = const Value.absent(),
             Value<String?> estimatedStuntingStatus = const Value.absent(),
@@ -12780,8 +13279,16 @@ class $$CameraResultsTableTableManager extends RootTableManager<
             supersedesResultUuid: supersedesResultUuid,
             estimatedHeightCm: estimatedHeightCm,
             estimatedWeightKg: estimatedWeightKg,
+            estimatedMuacCm: estimatedMuacCm,
             heightSource: heightSource,
             weightSource: weightSource,
+            muacSource: muacSource,
+            heightRangeLowerCm: heightRangeLowerCm,
+            heightRangeUpperCm: heightRangeUpperCm,
+            weightRangeLowerKg: weightRangeLowerKg,
+            weightRangeUpperKg: weightRangeUpperKg,
+            muacRangeLowerCm: muacRangeLowerCm,
+            muacRangeUpperCm: muacRangeUpperCm,
             estimatedHaz: estimatedHaz,
             estimatedWhz: estimatedWhz,
             estimatedStuntingStatus: estimatedStuntingStatus,

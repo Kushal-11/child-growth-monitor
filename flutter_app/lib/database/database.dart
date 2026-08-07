@@ -34,7 +34,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -224,6 +224,39 @@ class AppDatabase extends _$AppDatabase {
               await migrator.addColumn(
                 measuredDetailRevisions,
                 measuredDetailRevisions.serverId,
+              );
+            }
+          }
+          if (from >= 6 && from < 8) {
+            if (!await hasColumn('camera_results', 'estimated_muac_cm')) {
+              await migrator.addColumn(
+                cameraResults,
+                cameraResults.estimatedMuacCm,
+              );
+              await migrator.addColumn(cameraResults, cameraResults.muacSource);
+              await migrator.addColumn(
+                cameraResults,
+                cameraResults.heightRangeLowerCm,
+              );
+              await migrator.addColumn(
+                cameraResults,
+                cameraResults.heightRangeUpperCm,
+              );
+              await migrator.addColumn(
+                cameraResults,
+                cameraResults.weightRangeLowerKg,
+              );
+              await migrator.addColumn(
+                cameraResults,
+                cameraResults.weightRangeUpperKg,
+              );
+              await migrator.addColumn(
+                cameraResults,
+                cameraResults.muacRangeLowerCm,
+              );
+              await migrator.addColumn(
+                cameraResults,
+                cameraResults.muacRangeUpperCm,
               );
             }
           }

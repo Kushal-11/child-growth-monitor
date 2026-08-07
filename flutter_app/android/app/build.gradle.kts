@@ -71,5 +71,8 @@ dependencies {
     // Optional at runtime: unsupported devices keep the existing lightweight
     // guided-camera workflow instead of being excluded from installation.
     implementation("com.google.ar:core:1.48.0")
+    // Used inside the AR activity to localize anatomical depth bands. Camera
+    // images are processed in memory and closed immediately after inference.
+    implementation("com.google.mlkit:pose-detection:18.0.0-beta5")
     testImplementation("junit:junit:4.13.2")
 }

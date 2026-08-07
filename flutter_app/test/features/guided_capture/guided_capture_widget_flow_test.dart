@@ -372,12 +372,14 @@ void main() {
       find.text('Camera model widget-model-v1; result version 1'),
       findsOneWidget,
     );
-    expect(find.text('Estimated height: 88.0 cm'), findsNothing);
+    expect(find.text('Estimated height: 88.0 cm'), findsOneWidget);
+    expect(find.text('Measured height: 83.6 cm'), findsOneWidget);
+    expect(find.text('Signed difference: -4.4 cm'), findsOneWidget);
     expect(
       find.text(
         'No matching estimated and measured components are available to compare.',
       ),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       reports.snapshot.latestCameraResult?.resultUuid,

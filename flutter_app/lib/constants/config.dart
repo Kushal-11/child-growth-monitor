@@ -61,6 +61,13 @@ const double maxUnderFiveAgeMonths = 60.0;
 const double mlWeightLowerBound = 0.45;
 const double mlWeightUpperBound = 1.80;
 
+/// Contactless weight ranges combine native geometry spread with repeated
+/// on-device inference. This floor prevents the UI from showing false
+/// sub-kilogram precision before a paired real-child calibration set exists.
+const double contactlessWeightRangeMinimumHalfWidthKg = 0.8;
+const double contactlessGeometryPerturbationBase = 0.03;
+const double contactlessGeometryPerturbationQualityPenalty = 0.08;
+
 /// Days per month for age calculation
 const double daysPerMonth = 30.4375;
 

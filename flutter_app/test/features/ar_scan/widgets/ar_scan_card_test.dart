@@ -28,6 +28,8 @@ class FakeArPlatform implements ArScanPlatform {
   final bool supported;
   final FullArScanResult? result;
   int scanCalls = 0;
+  double? receivedAgeMonths;
+  String? receivedSex;
 
   @override
   Future<ArScanCapability> checkCapability() async => ArScanCapability(
@@ -40,14 +42,26 @@ class FakeArPlatform implements ArScanPlatform {
       );
 
   @override
-  Future<FullArScanResult?> startFullScan() async {
+  Future<FullArScanResult?> startFullScan({
+    double? ageMonths,
+    String? sex,
+  }) async {
     scanCalls++;
+    receivedAgeMonths = ageMonths;
+    receivedSex = sex;
     return result;
   }
 }
 
 class RecordingArRepository implements ArScanRepository {
   FullArScanResult? savedResult;
+
+  @override
+  Future<ArScanVisitContext> getVisitContext({
+    required int ownerUserId,
+    required String visitUuid,
+  }) async =>
+      const ArScanVisitContext(ageMonths: 30, sex: 'F');
 
   @override
   Future<void> saveExperimentalResult({
@@ -85,7 +99,7 @@ void main() {
     expect(find.text('Start guided depth scan'), findsNothing);
   });
 
-  testWidgets('successful scan is saved and disclosed as research evidence',
+  testWidgets('successful scan is saved and disclosed as an estimate',
       (tester) async {
     final platform = FakeArPlatform(supported: true, result: _result);
     final repository = RecordingArRepository();
@@ -94,8 +108,10 @@ void main() {
     await tester.tap(find.text('Start guided depth scan'));
     await tester.pumpAndSettle();
     expect(platform.scanCalls, 1);
+    expect(platform.receivedAgeMonths, 30);
+    expect(platform.receivedSex, 'F');
     expect(repository.savedResult, same(_result));
-    expect(find.textContaining('Experimental height 88.1'), findsOneWidget);
-    expect(find.textContaining('Research evidence only'), findsOneWidget);
+    expect(find.textContaining('Estimated height 88.1'), findsOneWidget);
+    expect(find.textContaining('These values are estimates'), findsOneWidget);
   });
 }

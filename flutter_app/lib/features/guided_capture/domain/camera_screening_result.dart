@@ -2,11 +2,20 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 
+import '../../ar_scan/domain/ar_scan_models.dart';
 import 'capture_models.dart';
 
 const String cameraScreeningMethodV1 = 'camera_screening_v1';
+const String cameraScreeningContactlessMethodV2 =
+    'camera_screening_contactless_v2';
 const String experimentalMlWeightSourceV1 =
     'experimental_ml_weight_estimator_v1';
+const String arcoreDepthHeightSourceV3 = 'arcore_depth_height_v3';
+const String arcoreDepthHeightSourceV2 = 'arcore_depth_height_v2';
+const String arcoreGeometryWeightSourceV3 = 'arcore_geometry_ml_weight_v3';
+const String arcoreHeightPhotoGeometryWeightSourceV3 =
+    'arcore_height_photo_geometry_ml_weight_v3';
+const String arcoreArmMuacSourceV3 = 'arcore_arm_cross_section_muac_v3';
 const String legacyWhoHeightSourceV1 = 'who_height_for_age_median_v1';
 const String legacyWhoWeightSourceV1 =
     'who_weight_for_height_median_body_build_v1';
@@ -56,12 +65,14 @@ class CameraScreeningVisit {
     required this.ownerUserId,
     required this.ageMonths,
     required this.sex,
+    this.arScan,
   });
 
   final String visitUuid;
   final int ownerUserId;
   final double ageMonths;
   final String sex;
+  final FullArScanResult? arScan;
 }
 
 class CameraScreeningAsset {
@@ -93,8 +104,16 @@ class CameraScreeningResult {
     this.supersedesResultUuid,
     this.estimatedHeightCm,
     this.estimatedWeightKg,
+    this.estimatedMuacCm,
     this.heightSource,
     this.weightSource,
+    this.muacSource,
+    this.heightRangeLowerCm,
+    this.heightRangeUpperCm,
+    this.weightRangeLowerKg,
+    this.weightRangeUpperKg,
+    this.muacRangeLowerCm,
+    this.muacRangeUpperCm,
     this.estimatedHaz,
     this.estimatedWhz,
     this.estimatedStuntingStatus,
@@ -117,7 +136,8 @@ class CameraScreeningResult {
     if (resultUuid.isEmpty || version < 1) {
       throw ArgumentError('A result UUID and positive version are required');
     }
-    if (method != cameraScreeningMethodV1) {
+    if (method != cameraScreeningMethodV1 &&
+        method != cameraScreeningContactlessMethodV2) {
       throw ArgumentError.value(method, 'method', 'unsupported method');
     }
     if (!RegExp(r'^[a-f0-9]{64}$').hasMatch(manifestChecksum)) {
@@ -130,6 +150,13 @@ class CameraScreeningResult {
     for (final entry in {
       'estimatedHeightCm': estimatedHeightCm,
       'estimatedWeightKg': estimatedWeightKg,
+      'estimatedMuacCm': estimatedMuacCm,
+      'heightRangeLowerCm': heightRangeLowerCm,
+      'heightRangeUpperCm': heightRangeUpperCm,
+      'weightRangeLowerKg': weightRangeLowerKg,
+      'weightRangeUpperKg': weightRangeUpperKg,
+      'muacRangeLowerCm': muacRangeLowerCm,
+      'muacRangeUpperCm': muacRangeUpperCm,
       'estimatedHaz': estimatedHaz,
       'estimatedWhz': estimatedWhz,
     }.entries) {
@@ -137,6 +164,24 @@ class CameraScreeningResult {
         throw ArgumentError.value(entry.value, entry.key, 'must be finite');
       }
     }
+    _validateRange(
+      estimate: estimatedHeightCm,
+      lower: heightRangeLowerCm,
+      upper: heightRangeUpperCm,
+      name: 'heightRangeCm',
+    );
+    _validateRange(
+      estimate: estimatedWeightKg,
+      lower: weightRangeLowerKg,
+      upper: weightRangeUpperKg,
+      name: 'weightRangeKg',
+    );
+    _validateRange(
+      estimate: estimatedMuacCm,
+      lower: muacRangeLowerCm,
+      upper: muacRangeUpperCm,
+      name: 'muacRangeCm',
+    );
     _validateClassifierOutput(
       experimentalOverallCategory,
       this.componentProbabilities,
@@ -148,8 +193,16 @@ class CameraScreeningResult {
   final String? supersedesResultUuid;
   final double? estimatedHeightCm;
   final double? estimatedWeightKg;
+  final double? estimatedMuacCm;
   final String? heightSource;
   final String? weightSource;
+  final String? muacSource;
+  final double? heightRangeLowerCm;
+  final double? heightRangeUpperCm;
+  final double? weightRangeLowerKg;
+  final double? weightRangeUpperKg;
+  final double? muacRangeLowerCm;
+  final double? muacRangeUpperCm;
   final double? estimatedHaz;
   final double? estimatedWhz;
   final String? estimatedStuntingStatus;
@@ -172,11 +225,11 @@ class CameraScreeningResult {
   bool get usesLegacyPopulationWeight =>
       weightSource == legacyWhoWeightSourceV1;
 
-  double? get reportableHeightCm =>
-      usesLegacyPopulationHeight ? null : estimatedHeightCm;
+  double? get reportableHeightCm => estimatedHeightCm;
 
-  double? get reportableWeightKg =>
-      usesLegacyPopulationWeight ? null : estimatedWeightKg;
+  double? get reportableWeightKg => estimatedWeightKg;
+
+  double? get reportableMuacCm => estimatedMuacCm;
 
   double? get reportableHaz => usesLegacyPopulationHeight ? null : estimatedHaz;
 
@@ -216,8 +269,16 @@ class CameraScreeningResult {
         'supersedes_result_uuid': supersedesResultUuid,
         'estimated_height_cm': estimatedHeightCm,
         'estimated_weight_kg': estimatedWeightKg,
+        'estimated_muac_cm': estimatedMuacCm,
         'height_source': heightSource,
         'weight_source': weightSource,
+        'muac_source': muacSource,
+        'height_range_lower_cm': heightRangeLowerCm,
+        'height_range_upper_cm': heightRangeUpperCm,
+        'weight_range_lower_kg': weightRangeLowerKg,
+        'weight_range_upper_kg': weightRangeUpperKg,
+        'muac_range_lower_cm': muacRangeLowerCm,
+        'muac_range_upper_cm': muacRangeUpperCm,
         'estimated_haz': estimatedHaz,
         'estimated_whz': estimatedWhz,
         'estimated_stunting_status': estimatedStuntingStatus,
@@ -241,8 +302,16 @@ class CameraScreeningResult {
       supersedesResultUuid: json['supersedes_result_uuid'] as String?,
       estimatedHeightCm: (json['estimated_height_cm'] as num?)?.toDouble(),
       estimatedWeightKg: (json['estimated_weight_kg'] as num?)?.toDouble(),
+      estimatedMuacCm: (json['estimated_muac_cm'] as num?)?.toDouble(),
       heightSource: json['height_source'] as String?,
       weightSource: json['weight_source'] as String?,
+      muacSource: json['muac_source'] as String?,
+      heightRangeLowerCm: (json['height_range_lower_cm'] as num?)?.toDouble(),
+      heightRangeUpperCm: (json['height_range_upper_cm'] as num?)?.toDouble(),
+      weightRangeLowerKg: (json['weight_range_lower_kg'] as num?)?.toDouble(),
+      weightRangeUpperKg: (json['weight_range_upper_kg'] as num?)?.toDouble(),
+      muacRangeLowerCm: (json['muac_range_lower_cm'] as num?)?.toDouble(),
+      muacRangeUpperCm: (json['muac_range_upper_cm'] as num?)?.toDouble(),
       estimatedHaz: (json['estimated_haz'] as num?)?.toDouble(),
       estimatedWhz: (json['estimated_whz'] as num?)?.toDouble(),
       estimatedStuntingStatus: json['estimated_stunting_status'] as String?,
@@ -293,6 +362,24 @@ class CameraScreeningResult {
     );
     if (highest.key != category) {
       throw ArgumentError('Classifier category must match probability argmax');
+    }
+  }
+
+  static void _validateRange({
+    required double? estimate,
+    required double? lower,
+    required double? upper,
+    required String name,
+  }) {
+    if (lower == null && upper == null) return;
+    if (estimate == null ||
+        lower == null ||
+        upper == null ||
+        !lower.isFinite ||
+        !upper.isFinite ||
+        lower > estimate ||
+        estimate > upper) {
+      throw ArgumentError('$name must contain its finite estimate');
     }
   }
 

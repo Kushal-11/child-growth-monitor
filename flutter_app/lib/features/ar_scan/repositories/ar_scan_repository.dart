@@ -7,6 +7,11 @@ import '../../../database/database.dart';
 import '../domain/ar_scan_models.dart';
 
 abstract interface class ArScanRepository {
+  Future<ArScanVisitContext> getVisitContext({
+    required int ownerUserId,
+    required String visitUuid,
+  });
+
   Future<void> saveExperimentalResult({
     required int ownerUserId,
     required String visitUuid,
@@ -14,9 +19,43 @@ abstract interface class ArScanRepository {
   });
 }
 
+class ArScanVisitContext {
+  const ArScanVisitContext({
+    required this.ageMonths,
+    required this.sex,
+  });
+
+  final double ageMonths;
+  final String sex;
+}
+
 class DriftArScanRepository implements ArScanRepository {
   DriftArScanRepository(this._database);
   final AppDatabase _database;
+
+  @override
+  Future<ArScanVisitContext> getVisitContext({
+    required int ownerUserId,
+    required String visitUuid,
+  }) async {
+    final visit = await (_database.select(_database.visits)
+          ..where(
+            (row) =>
+                row.localUuid.equals(visitUuid) &
+                row.ownerUserId.equals(ownerUserId),
+          ))
+        .getSingleOrNull();
+    if (visit == null) throw StateError('Owner-scoped visit was not found');
+    final child = await (_database.select(_database.children)
+          ..where(
+            (row) =>
+                row.id.equals(visit.childId) &
+                row.ownerUserId.equals(ownerUserId),
+          ))
+        .getSingleOrNull();
+    if (child == null) throw StateError('Owner-scoped child was not found');
+    return ArScanVisitContext(ageMonths: visit.ageMonths, sex: child.sex);
+  }
 
   @override
   Future<void> saveExperimentalResult({

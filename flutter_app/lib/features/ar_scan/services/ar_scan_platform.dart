@@ -4,7 +4,10 @@ import '../domain/ar_scan_models.dart';
 
 abstract interface class ArScanPlatform {
   Future<ArScanCapability> checkCapability();
-  Future<FullArScanResult?> startFullScan();
+  Future<FullArScanResult?> startFullScan({
+    double? ageMonths,
+    String? sex,
+  });
 }
 
 class MethodChannelArScanPlatform implements ArScanPlatform {
@@ -31,9 +34,16 @@ class MethodChannelArScanPlatform implements ArScanPlatform {
   }
 
   @override
-  Future<FullArScanResult?> startFullScan() async {
+  Future<FullArScanResult?> startFullScan({
+    double? ageMonths,
+    String? sex,
+  }) async {
     final response = await _channel.invokeMapMethod<Object?, Object?>(
-      'startFullScan',
+      'startContactlessScan',
+      <String, Object?>{
+        if (ageMonths != null) 'ageMonths': ageMonths,
+        if (sex != null) 'sex': sex,
+      },
     );
     if (response == null) return null;
     return FullArScanResult.fromMap(response);

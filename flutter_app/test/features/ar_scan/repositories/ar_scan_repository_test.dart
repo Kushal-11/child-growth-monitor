@@ -54,7 +54,15 @@ void main() {
       depthMode: 'raw_depth_with_confidence',
     );
 
-    await DriftArScanRepository(database).saveExperimentalResult(
+    final repository = DriftArScanRepository(database);
+    final context = await repository.getVisitContext(
+      ownerUserId: ownerUserId,
+      visitUuid: visitUuid,
+    );
+    expect(context.ageMonths, 36);
+    expect(context.sex, 'F');
+
+    await repository.saveExperimentalResult(
       ownerUserId: ownerUserId,
       visitUuid: visitUuid,
       result: result,
@@ -67,7 +75,7 @@ void main() {
         jsonDecode(visit.deviceMetadataJson!) as Map<String, dynamic>;
     final persisted =
         visitMetadata['arcore_depth_scan'] as Map<String, dynamic>;
-    expect(persisted['method'], fullArMethodV2);
+    expect(persisted['method'], contactlessArMethodV3);
     expect(persisted['clinical_measurement_eligible'], isFalse);
     expect(persisted['raw_media_retained'], isFalse);
 

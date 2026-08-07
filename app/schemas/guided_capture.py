@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.services.guided_capture_contract import (
     CaptureAssetRole,
@@ -61,10 +61,31 @@ class CameraResultSubmission(_StrictContract):
     version: int = Field(ge=1)
     supersedes_result_uuid: Optional[UUID] = None
     estimated_height_cm: Optional[float] = Field(
-        default=None, gt=0, allow_inf_nan=False
+        default=None, ge=35, le=145, allow_inf_nan=False
     )
     estimated_weight_kg: Optional[float] = Field(
-        default=None, gt=0, allow_inf_nan=False
+        default=None, ge=0.5, le=80, allow_inf_nan=False
+    )
+    estimated_muac_cm: Optional[float] = Field(
+        default=None, ge=7, le=24, allow_inf_nan=False
+    )
+    height_range_lower_cm: Optional[float] = Field(
+        default=None, ge=20, le=160, allow_inf_nan=False
+    )
+    height_range_upper_cm: Optional[float] = Field(
+        default=None, ge=20, le=160, allow_inf_nan=False
+    )
+    weight_range_lower_kg: Optional[float] = Field(
+        default=None, ge=0.1, le=100, allow_inf_nan=False
+    )
+    weight_range_upper_kg: Optional[float] = Field(
+        default=None, ge=0.1, le=100, allow_inf_nan=False
+    )
+    muac_range_lower_cm: Optional[float] = Field(
+        default=None, ge=5, le=30, allow_inf_nan=False
+    )
+    muac_range_upper_cm: Optional[float] = Field(
+        default=None, ge=5, le=30, allow_inf_nan=False
     )
     estimated_haz: Optional[float] = Field(default=None, allow_inf_nan=False)
     estimated_whz: Optional[float] = Field(default=None, allow_inf_nan=False)
@@ -75,10 +96,14 @@ class CameraResultSubmission(_StrictContract):
     )
     height_source: Optional[str] = Field(default=None, max_length=100)
     weight_source: Optional[str] = Field(default=None, max_length=100)
+    muac_source: Optional[str] = Field(default=None, max_length=100)
     component_probabilities: dict[str, float] = Field(default_factory=dict)
     body_proportion_features: dict[str, Any] = Field(default_factory=dict)
     capture_quality_summary: dict[str, Any] = Field(default_factory=dict)
-    method: Literal["camera_screening_v1"] = "camera_screening_v1"
+    method: Literal[
+        "camera_screening_v1",
+        "camera_screening_contactless_v2",
+    ] = "camera_screening_v1"
     model_version: str = Field(min_length=1, max_length=100)
     manifest_checksum: str = Field(pattern=r"^[0-9a-f]{64}$")
     training_data_label: str = Field(min_length=1, max_length=100)
@@ -100,6 +125,39 @@ class CameraResultSubmission(_StrictContract):
                     "component probabilities must be finite values from 0 to 1"
                 )
         return probabilities
+
+    @model_validator(mode="after")
+    def validate_estimate_ranges(self):
+        for name, estimate, lower, upper in (
+            (
+                "height_range_cm",
+                self.estimated_height_cm,
+                self.height_range_lower_cm,
+                self.height_range_upper_cm,
+            ),
+            (
+                "weight_range_kg",
+                self.estimated_weight_kg,
+                self.weight_range_lower_kg,
+                self.weight_range_upper_kg,
+            ),
+            (
+                "muac_range_cm",
+                self.estimated_muac_cm,
+                self.muac_range_lower_cm,
+                self.muac_range_upper_cm,
+            ),
+        ):
+            if lower is None and upper is None:
+                continue
+            if (
+                estimate is None
+                or lower is None
+                or upper is None
+                or not lower <= estimate <= upper
+            ):
+                raise ValueError(f"{name} must contain its estimate")
+        return self
 
 
 class MeasuredDetailsSubmission(_StrictContract):

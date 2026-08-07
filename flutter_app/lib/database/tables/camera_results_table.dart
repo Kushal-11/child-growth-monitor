@@ -19,8 +19,16 @@ class CameraResults extends Table {
   TextColumn get supersedesResultUuid => text().nullable()();
   RealColumn get estimatedHeightCm => real().nullable()();
   RealColumn get estimatedWeightKg => real().nullable()();
+  RealColumn get estimatedMuacCm => real().nullable()();
   TextColumn get heightSource => text().nullable()();
   TextColumn get weightSource => text().nullable()();
+  TextColumn get muacSource => text().nullable()();
+  RealColumn get heightRangeLowerCm => real().nullable()();
+  RealColumn get heightRangeUpperCm => real().nullable()();
+  RealColumn get weightRangeLowerKg => real().nullable()();
+  RealColumn get weightRangeUpperKg => real().nullable()();
+  RealColumn get muacRangeLowerCm => real().nullable()();
+  RealColumn get muacRangeUpperCm => real().nullable()();
   RealColumn get estimatedHaz => real().nullable()();
   RealColumn get estimatedWhz => real().nullable()();
   TextColumn get estimatedStuntingStatus => text().nullable()();

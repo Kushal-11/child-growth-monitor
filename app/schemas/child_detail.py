@@ -72,6 +72,13 @@ class CameraResultSummaryResponse(BaseModel):
     version: int
     estimated_height_cm: Optional[float] = None
     estimated_weight_kg: Optional[float] = None
+    estimated_muac_cm: Optional[float] = None
+    height_range_lower_cm: Optional[float] = None
+    height_range_upper_cm: Optional[float] = None
+    weight_range_lower_kg: Optional[float] = None
+    weight_range_upper_kg: Optional[float] = None
+    muac_range_lower_cm: Optional[float] = None
+    muac_range_upper_cm: Optional[float] = None
     estimated_stunting_status: Optional[str] = None
     estimated_wasting_status: Optional[str] = None
     experimental_overall_category: Optional[str] = None

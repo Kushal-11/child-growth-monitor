@@ -100,6 +100,13 @@ class CameraResultSummary {
     required this.version,
     this.estimatedHeightCm,
     this.estimatedWeightKg,
+    this.estimatedMuacCm,
+    this.heightRangeLowerCm,
+    this.heightRangeUpperCm,
+    this.weightRangeLowerKg,
+    this.weightRangeUpperKg,
+    this.muacRangeLowerCm,
+    this.muacRangeUpperCm,
     this.estimatedStuntingStatus,
     this.estimatedWastingStatus,
     this.experimentalOverallCategory,
@@ -112,6 +119,13 @@ class CameraResultSummary {
   final int version;
   final double? estimatedHeightCm;
   final double? estimatedWeightKg;
+  final double? estimatedMuacCm;
+  final double? heightRangeLowerCm;
+  final double? heightRangeUpperCm;
+  final double? weightRangeLowerKg;
+  final double? weightRangeUpperKg;
+  final double? muacRangeLowerCm;
+  final double? muacRangeUpperCm;
   final String? estimatedStuntingStatus;
   final String? estimatedWastingStatus;
   final String? experimentalOverallCategory;
@@ -125,6 +139,13 @@ class CameraResultSummary {
       version: json['version'] as int,
       estimatedHeightCm: (json['estimated_height_cm'] as num?)?.toDouble(),
       estimatedWeightKg: (json['estimated_weight_kg'] as num?)?.toDouble(),
+      estimatedMuacCm: (json['estimated_muac_cm'] as num?)?.toDouble(),
+      heightRangeLowerCm: (json['height_range_lower_cm'] as num?)?.toDouble(),
+      heightRangeUpperCm: (json['height_range_upper_cm'] as num?)?.toDouble(),
+      weightRangeLowerKg: (json['weight_range_lower_kg'] as num?)?.toDouble(),
+      weightRangeUpperKg: (json['weight_range_upper_kg'] as num?)?.toDouble(),
+      muacRangeLowerCm: (json['muac_range_lower_cm'] as num?)?.toDouble(),
+      muacRangeUpperCm: (json['muac_range_upper_cm'] as num?)?.toDouble(),
       estimatedStuntingStatus: json['estimated_stunting_status'] as String?,
       estimatedWastingStatus: json['estimated_wasting_status'] as String?,
       experimentalOverallCategory:

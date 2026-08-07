@@ -103,6 +103,17 @@ times out with partial results rather than failing the whole visit.
 
 ## 6. Native Android geometry pipeline
 
+### 6.0 Initial v3 implementation note
+
+The first production-bounded v3 implementation reduces each accepted depth
+frame directly into pose-localised robust body profiles instead of retaining a
+cross-frame voxel grid. It keeps front and side profile evidence, pose-derived
+segment ratios, confidence, and scan-consistency summaries only. This preserves
+the design's privacy and memory bounds while avoiding a transient full point
+cloud on lower-memory devices. A calibrated voxel-fusion experiment remains a
+future option and must outperform this profile baseline on paired field data
+before replacing it.
+
 ### 6.1 Inputs
 
 Flutter passes the visit's age in months and sex to `startContactlessScan`.

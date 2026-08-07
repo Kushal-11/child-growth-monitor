@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 CameraScreeningResult result({
   double? height = 88,
   double? weight = 11,
+  double? muac = 12.4,
   String? category = 'MAM',
 }) {
   return CameraScreeningResult(
@@ -13,8 +14,10 @@ CameraScreeningResult result({
     version: 1,
     estimatedHeightCm: height,
     estimatedWeightKg: weight,
+    estimatedMuacCm: muac,
     heightSource: height == null ? null : 'who_height_for_age_median_v1',
     weightSource: weight == null ? null : experimentalMlWeightSourceV1,
+    muacSource: muac == null ? null : arcoreArmMuacSourceV3,
     estimatedHaz: height == null ? null : -0.5,
     estimatedWhz: weight == null ? null : -2.4,
     estimatedStuntingStatus: height == null ? null : 'Normal',
@@ -64,14 +67,7 @@ void main() {
     await pumpReport(tester, result());
 
     expect(find.text('Estimated Growth Screening Report'), findsOneWidget);
-    expect(
-      find.text(
-        'The current camera model is research-only. Calibrated height, weight, '
-        'MUAC, and oedema details are required before WHO classifications can '
-        'be reported.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.text(estimatedReportNotice), findsOneWidget);
     expect(find.textContaining('camera_screening_v1'), findsOneWidget);
     expect(
       find.textContaining('bundled-synthetic-baseline-v1'),
@@ -88,32 +84,37 @@ void main() {
       (tester) async {
     await pumpReport(
       tester,
-      result(height: null, weight: null, category: null),
+      result(height: null, weight: null, muac: null, category: null),
     );
 
     expect(
-      find.text('A calibrated height or length measurement is required.'),
+      find.text('Height estimate unavailable. Retry the guided scan.'),
       findsOneWidget,
     );
     expect(
-      find.text('A calibrated weight measurement is required.'),
+      find.text('Weight estimate unavailable. Retry the guided scan.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('MUAC estimate unavailable. Retry with the arm clear.'),
       findsOneWidget,
     );
     expect(find.text('Normal'), findsNothing);
     expect(find.text('Indeterminate'), findsNothing);
   });
 
-  testWidgets('legacy WHO population medians are not displayed as estimates',
+  testWidgets('population estimates are displayed with their source',
       (tester) async {
     await pumpReport(tester, result());
 
-    expect(find.text('Estimated height'), findsNothing);
-    expect(find.text('Estimated stunting status'), findsNothing);
-    expect(find.text('Estimated wasting status'), findsNothing);
+    expect(find.text('Estimated height'), findsOneWidget);
     expect(
-      find.text('A calibrated height or length measurement is required.'),
+      find.textContaining('WHO height-for-age statistical estimate'),
       findsOneWidget,
     );
+    expect(find.text('Estimated stunting status'), findsNothing);
+    expect(find.text('Estimated wasting status'), findsNothing);
+    expect(find.text('Estimated MUAC'), findsOneWidget);
   });
 
   testWidgets('Normal appears only when supplied by the camera result',

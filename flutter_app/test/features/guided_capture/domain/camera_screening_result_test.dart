@@ -28,8 +28,10 @@ void main() {
       version: 1,
       estimatedHeightCm: 88,
       estimatedWeightKg: 11,
+      estimatedMuacCm: 12.4,
       heightSource: 'who_height_for_age_median_v1',
       weightSource: 'ml_weight_estimator_v1',
+      muacSource: 'photo_landmark',
       estimatedHaz: -0.2,
       estimatedWhz: -1.1,
       estimatedStuntingStatus: 'Normal',
@@ -62,7 +64,8 @@ void main() {
     expect(json['estimated_whz'], -1.1);
     expect(keys, isNot(contains('manual')));
     expect(keys, isNot(contains('poshan')));
-    expect(keys, isNot(contains('muac')));
+    expect(json['estimated_muac_cm'], 12.4);
+    expect(json['muac_source'], 'photo_landmark');
     expect(keys, isNot(contains('oedema')));
     expect(keys, isNot(contains('haz_zscore')));
     expect(keys, isNot(contains('whz_zscore')));
@@ -87,8 +90,7 @@ void main() {
     );
   });
 
-  test('legacy population medians are never reportable child measurements',
-      () {
+  test('population estimates remain visible with explicit provenance', () {
     final result = CameraScreeningResult(
       resultUuid: '30000000-0000-0000-0000-000000000003',
       version: 1,
@@ -108,8 +110,8 @@ void main() {
       createdAt: DateTime.utc(2026, 7, 29),
     );
 
-    expect(result.reportableHeightCm, isNull);
-    expect(result.reportableWeightKg, isNull);
+    expect(result.reportableHeightCm, 90);
+    expect(result.reportableWeightKg, 12);
     expect(result.reportableHaz, isNull);
     expect(result.reportableWhz, isNull);
     expect(result.reportableStuntingStatus, isNull);

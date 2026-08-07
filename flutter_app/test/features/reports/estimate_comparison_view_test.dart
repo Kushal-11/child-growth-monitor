@@ -10,6 +10,7 @@ CameraScreeningResult estimate() => CameraScreeningResult(
       supersedesResultUuid: '30000000-0000-0000-0000-000000000000',
       estimatedHeightCm: 88,
       estimatedWeightKg: 11,
+      estimatedMuacCm: 12.4,
       estimatedHaz: -2,
       estimatedStuntingStatus: 'Moderate Stunting',
       method: cameraScreeningMethodV1,
@@ -22,6 +23,7 @@ CameraScreeningResult estimate() => CameraScreeningResult(
 
 const measured = MeasuredReportSnapshot(
   heightCm: 83.5,
+  muacCm: 12,
   hazZscore: -2.1,
   hazStatus: 'Moderate Stunting',
   oedema: 'not_checked',
@@ -55,6 +57,10 @@ void main() {
     expect(find.text('Measured height: 83.5 cm'), findsOneWidget);
     expect(find.text('Signed difference: -4.5 cm'), findsOneWidget);
     expect(find.text('Absolute difference: 4.5 cm'), findsOneWidget);
+    expect(find.text('Estimated MUAC: 12.4 cm'), findsOneWidget);
+    expect(find.text('Measured MUAC: 12.0 cm'), findsOneWidget);
+    expect(find.text('Signed difference: -0.4 cm'), findsOneWidget);
+    expect(find.text('Absolute difference: 0.4 cm'), findsOneWidget);
     expect(find.text('Stunting classification agreement: Yes'), findsOneWidget);
     expect(find.textContaining('Estimated weight'), findsNothing);
   });

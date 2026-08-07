@@ -54,7 +54,14 @@ class ArScanNotifier extends StateNotifier<ArScanState> {
       capability: state.capability,
     );
     try {
-      final result = await _platform.startFullScan();
+      final visit = await _repository.getVisitContext(
+        ownerUserId: ownerUserId,
+        visitUuid: visitUuid,
+      );
+      final result = await _platform.startFullScan(
+        ageMonths: visit.ageMonths,
+        sex: visit.sex,
+      );
       if (!mounted) return;
       if (result == null) {
         state = ArScanState(loading: false, capability: state.capability);
