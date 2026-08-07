@@ -100,7 +100,7 @@ class _CaptureReviewScreenState extends ConsumerState<CaptureReviewScreen> {
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: state.requiredRolesComplete
-                  ? () => context.go('/visits/${widget.visitUuid}/report')
+                  ? () => context.push('/visits/${widget.visitUuid}/report')
                   : null,
               icon: const Icon(Icons.analytics_outlined),
               label: const Text('Generate estimated report'),

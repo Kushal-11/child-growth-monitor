@@ -51,7 +51,7 @@ class ChildDetailScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => context.go('/children/$childId/edit'),
+                      onPressed: () => context.push('/children/$childId/edit'),
                       icon: const Icon(Icons.edit),
                       label: Text(t('edit_profile', ref)),
                     ),
@@ -59,7 +59,8 @@ class ChildDetailScreen extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: FilledButton.icon(
-                      onPressed: () => context.go('/children/$childId/measure'),
+                      onPressed: () =>
+                          context.push('/children/$childId/measure'),
                       icon: const Icon(Icons.add_chart),
                       label: Text(t('add_measurement', ref)),
                     ),
@@ -71,7 +72,7 @@ class ChildDetailScreen extends ConsumerWidget {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.tonalIcon(
-                    onPressed: () => context.go(
+                    onPressed: () => context.push(
                       '/children/$childId/photo-assessment/consent',
                     ),
                     icon: const Icon(Icons.camera_alt_outlined),
@@ -474,14 +475,14 @@ class ChildDetailScreen extends ConsumerWidget {
       if (visit.captureState == 'draft_capture' ||
           visit.captureState == 'incomplete_capture')
         TextButton(
-          onPressed: () => context.go('/visits/$visitUuid/capture'),
+          onPressed: () => context.push('/visits/$visitUuid/capture'),
           child: const Text('Resume capture'),
         ),
       if (visit.captureState == 'processing' ||
           visit.captureState == 'estimated_report' ||
           visit.captureState == 'measured_report')
         TextButton(
-          onPressed: () => context.go('/visits/$visitUuid/report'),
+          onPressed: () => context.push('/visits/$visitUuid/report'),
           child: Text(
             visit.captureState == 'measured_report'
                 ? 'View measured report'
@@ -490,14 +491,14 @@ class ChildDetailScreen extends ConsumerWidget {
         ),
       if (visit.captureState == 'processing_failed')
         TextButton(
-          onPressed: () => context.go('/visits/$visitUuid/report'),
+          onPressed: () => context.push('/visits/$visitUuid/report'),
           child: const Text('Retry estimate'),
         ),
       if (visit.captureState == 'estimated_report' &&
           !visit.hasMeasuredReport &&
           date != null)
         TextButton(
-          onPressed: () => context.go(
+          onPressed: () => context.push(
             '/visits/$visitUuid/measured-details?visitDate=$date',
           ),
           child: const Text('Add Measured Details'),
