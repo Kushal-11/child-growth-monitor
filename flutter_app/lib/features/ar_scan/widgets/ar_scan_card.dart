@@ -21,9 +21,10 @@ class ArScanCard extends ConsumerWidget {
         child: ListTile(
           leading: SizedBox.square(
             dimension: 22,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: Icon(Icons.manage_search_outlined),
           ),
           title: Text('Checking guided AR depth…'),
+          subtitle: Text('Standard guided photos remain available.'),
         ),
       );
     }
