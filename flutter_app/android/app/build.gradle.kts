@@ -66,3 +66,9 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Optional at runtime: unsupported devices keep the existing lightweight
+    // guided-camera workflow instead of being excluded from installation.
+    implementation("com.google.ar:core:1.48.0")
+}

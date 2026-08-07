@@ -892,3 +892,53 @@ For reference when evaluating on-device accuracy:
 
 7. **Multi-language support**: Field workers may speak local languages. Plan for
    i18n from the start — all status strings and UI labels should be localizable.
+
+---
+
+## Optional sparse ARCore depth capture (Android research path)
+
+The Android app may offer `arcore_sparse_depth_v1` when Google Play Services
+for AR reports a supported device and the native Depth API starts successfully.
+ARCore is declared optional: installation and the existing guided RGB workflow
+must remain available on devices without ARCore or depth support.
+
+This is intentionally **not** a dense 3D scanner. To bound phone usage it:
+
+- samples at most eight depth keyframes, no faster than one every 350 ms;
+- examines a sparse grid in the center-body region rather than every pixel;
+- keeps no RGB video, raw depth recording, dense point cloud, or mesh;
+- closes every depth image immediately after extracting a candidate;
+- aggregates candidate height values with a robust median; and
+- closes the AR session as soon as capture ends or falls back.
+
+The result is stored in visit device metadata and queued with the visit sync
+payload. It contains the method, experimental height, uncertainty, accepted
+keyframe count, valid-depth fraction, and depth mode. It MUST always include
+`clinical_measurement_eligible: false`. The result must not populate effective
+height, HAZ, WHZ, stunting, or wasting fields. Operators continue the existing
+front/side guided-photo workflow after the optional depth scan.
+
+### Runtime fallback
+
+| Condition | Behavior |
+|---|---|
+| ARCore available and Depth API starts | Offer sparse depth scan |
+| Availability still transient | Use guided RGB capture |
+| ARCore unavailable/unsupported | Use guided RGB capture |
+| Depth mode unsupported | Cancel depth activity and use guided RGB capture |
+| Permission/startup/runtime failure | Show fallback message; guided RGB remains usable |
+
+### Resource ceilings
+
+| Resource | v1 ceiling |
+|---|---|
+| Accepted keyframes | 8 |
+| Sampling interval | 350 ms minimum |
+| Retained raw RGB/depth | none |
+| Dense point cloud/mesh | none |
+| Body depth range | 0.3–4.0 m |
+| Candidate body-height range | 0.10–1.40 m above tracked floor |
+
+The sparse estimate is research evidence only. Before any clinical eligibility
+is considered it requires device-specific calibration and prospective agreement
+validation against duplicate conventional anthropometry on real children.
