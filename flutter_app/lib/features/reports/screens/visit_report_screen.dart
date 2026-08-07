@@ -71,7 +71,7 @@ class _VisitReportScreenState extends ConsumerState<VisitReportScreen> {
 
   void _addMeasuredDetails(DateTime visitDate) {
     final date = visitDate.toIso8601String().substring(0, 10);
-    context.go(
+    context.push(
       '/visits/${widget.visitUuid}/measured-details?visitDate=$date',
     );
   }

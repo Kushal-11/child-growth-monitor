@@ -28,7 +28,7 @@ class AppScaffold extends ConsumerWidget {
               actions: [
                 IconButton(
                   tooltip: t('sync_status', ref),
-                  onPressed: () => context.go('/settings'),
+                  onPressed: () => context.push('/settings'),
                   icon: Stack(
                     clipBehavior: Clip.none,
                     children: [

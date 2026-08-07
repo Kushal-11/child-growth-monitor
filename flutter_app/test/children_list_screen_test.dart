@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/native.dart';
+import 'package:go_router/go_router.dart';
 import 'package:child_growth_monitor_app/database/database.dart';
 import 'package:child_growth_monitor_app/database/daos/child_dao.dart';
 import 'package:child_growth_monitor_app/providers/database_provider.dart';
@@ -57,5 +58,48 @@ void main() {
     // still open, so drift's stream-cancel timer can flush before teardown.
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('new child keeps the children page in the back stack',
+      (tester) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+      authServiceProvider.overrideWithValue(_FakeAuth()),
+    ]);
+    await container.read(authProvider.notifier).restore();
+    final router = GoRouter(
+      initialLocation: '/children',
+      routes: [
+        GoRoute(
+          path: '/children',
+          builder: (_, __) => const ChildrenListScreen(),
+        ),
+        GoRoute(
+          path: '/children/new',
+          builder: (_, __) => const Scaffold(body: Text('New child page')),
+        ),
+      ],
+    );
+    addTearDown(() {
+      router.dispose();
+      container.dispose();
+      db.close();
+    });
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp.router(routerConfig: router),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('new_child_btn')));
+    await tester.pumpAndSettle();
+    expect(find.text('New child page'), findsOneWidget);
+    expect(router.canPop(), isTrue);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('new_child_btn')), findsOneWidget);
   });
 }

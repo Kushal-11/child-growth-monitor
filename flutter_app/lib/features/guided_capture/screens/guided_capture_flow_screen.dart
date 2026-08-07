@@ -109,7 +109,7 @@ class _GuidedCaptureFlowScreenState
 
   void _review() {
     ref.read(guidedCaptureProvider.notifier).reviewRequiredPhotos();
-    context.go('/visits/${widget.visitUuid}/capture/review');
+    context.push('/visits/${widget.visitUuid}/capture/review');
   }
 
   @override
@@ -145,7 +145,7 @@ class _GuidedCaptureFlowScreenState
         appBar: AppBar(title: const Text('Photo assessment')),
         body: Center(
           child: FilledButton(
-            onPressed: () => context.go(
+            onPressed: () => context.push(
               '/visits/${widget.visitUuid}/capture/review',
             ),
             child: const Text('Open capture review'),
@@ -207,7 +207,7 @@ class _GuidedCaptureFlowScreenState
                         if (!context.mounted) return;
                         if (ref.read(guidedCaptureProvider).phase ==
                             GuidedCapturePhase.review) {
-                          context.go(
+                          context.push(
                             '/visits/${widget.visitUuid}/capture/review',
                           );
                         }
