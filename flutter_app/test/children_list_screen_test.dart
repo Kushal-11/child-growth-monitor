@@ -77,7 +77,10 @@ void main() {
         ),
         GoRoute(
           path: '/children/new',
-          builder: (_, __) => const Scaffold(body: Text('New child page')),
+          builder: (_, __) => Scaffold(
+            appBar: AppBar(title: const Text('New child')),
+            body: const Text('New child page'),
+          ),
         ),
       ],
     );
@@ -101,5 +104,9 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('new_child_btn')), findsOneWidget);
+
+    // Dispose the children stream before closing its database in teardown.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
   });
 }
