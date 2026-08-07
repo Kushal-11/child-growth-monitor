@@ -8,11 +8,18 @@
          image_picker's ImageSource.camera does not need this, but the CameraX
          preview used for live pose guidance does. -->
     <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera.ar" android:required="false"/>
     <application
         android:label="Child Growth Monitor"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:extractNativeLibs="true">
+        <meta-data android:name="com.google.ar.core" android:value="optional" />
+        <activity
+            android:name=".ar.SparseArScanActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar.Fullscreen" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
