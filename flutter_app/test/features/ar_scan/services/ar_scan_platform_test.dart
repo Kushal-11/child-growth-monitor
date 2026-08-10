@@ -23,7 +23,7 @@ void main() {
         .setMockMethodCallHandler(channel, (call) async {
       receivedCall = call;
       return <String, Object?>{
-        'method': fullArMethodV2,
+        'method': contactlessArMethodV3,
         'estimatedHeightCm': 88.1,
         'uncertaintyCm': 0.6,
         'acceptedKeyframes': 20,
@@ -36,14 +36,27 @@ void main() {
         'durationMs': 14000,
         'qualityScore': 0.9,
         'depthMode': 'raw_depth_with_confidence',
+        'shoulderWidthCm': 20.2,
+        'hipWidthCm': 17.4,
+        'torsoLengthCm': 26.4,
+        'upperArmLengthCm': 14.1,
+        'chestDepthCm': 8.0,
+        'abdomenDepthCm': 8.4,
+        'estimatedMuacCm': 12.2,
+        'muacUncertaintyCm': 0.5,
+        'poseQualityScore': 0.88,
+        'geometryQualityScore': 0.84,
         'clinicalMeasurementEligible': false,
+        'isEstimate': true,
       };
     });
     final result = await const MethodChannelArScanPlatform(channel: channel)
-        .startFullScan();
-    expect(receivedCall?.method, 'startFullScan');
+        .startFullScan(ageMonths: 30, sex: 'F');
+    expect(receivedCall?.method, 'startContactlessScan');
+    expect(receivedCall?.arguments, {'ageMonths': 30.0, 'sex': 'F'});
     expect(result?.estimatedHeightCm, 88.1);
     expect(result?.acceptedKeyframes, 20);
     expect(result?.meanDepthConfidence, 0.82);
+    expect(result?.estimatedMuacCm, 12.2);
   });
 }

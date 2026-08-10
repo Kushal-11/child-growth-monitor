@@ -34,6 +34,13 @@ class EstimateComparisonView extends StatelessWidget {
           measured: measured.weightKg!,
           unit: 'kg',
         ),
+      if (estimate.reportableMuacCm != null && measured.muacCm != null)
+        _NumericComparison(
+          label: 'MUAC',
+          estimated: estimate.reportableMuacCm!,
+          measured: measured.muacCm!,
+          unit: 'cm',
+        ),
       if (estimate.reportableStuntingStatus != null &&
           measured.hazStatus != null)
         Text(

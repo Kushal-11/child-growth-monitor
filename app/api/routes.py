@@ -234,6 +234,25 @@ def get_child(
                     "estimated_weight_kg": (
                         latest_camera_result.estimated_weight_kg
                     ),
+                    "estimated_muac_cm": latest_camera_result.estimated_muac_cm,
+                    "height_range_lower_cm": (
+                        latest_camera_result.height_range_lower_cm
+                    ),
+                    "height_range_upper_cm": (
+                        latest_camera_result.height_range_upper_cm
+                    ),
+                    "weight_range_lower_kg": (
+                        latest_camera_result.weight_range_lower_kg
+                    ),
+                    "weight_range_upper_kg": (
+                        latest_camera_result.weight_range_upper_kg
+                    ),
+                    "muac_range_lower_cm": (
+                        latest_camera_result.muac_range_lower_cm
+                    ),
+                    "muac_range_upper_cm": (
+                        latest_camera_result.muac_range_upper_cm
+                    ),
                     "estimated_stunting_status": (
                         latest_camera_result.estimated_stunting_status
                     ),

@@ -2,7 +2,6 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../database/database.dart';
-import '../features/guided_capture/domain/camera_screening_result.dart';
 import '../models/child.dart';
 import '../models/child_detail.dart';
 import 'database_provider.dart';
@@ -76,10 +75,6 @@ final childDetailProvider =
       final heightIsDirect =
           heightMethod == 'manual' || heightMethod == 'reference_object';
       final weightIsDirect = weightMethod == 'manual';
-      final cameraUsesPopulationHeight =
-          camera?.heightSource == legacyWhoHeightSourceV1;
-      final cameraUsesPopulationWeight =
-          camera?.weightSource == legacyWhoWeightSourceV1;
       return ChildVisit(
         visitId: v.id,
         localUuid: v.localUuid,
@@ -92,19 +87,17 @@ final childDetailProvider =
             : CameraResultSummary(
                 resultUuid: camera.resultUuid,
                 version: camera.version,
-                estimatedHeightCm: cameraUsesPopulationHeight
-                    ? null
-                    : camera.estimatedHeightCm,
-                estimatedWeightKg: cameraUsesPopulationWeight
-                    ? null
-                    : camera.estimatedWeightKg,
-                estimatedStuntingStatus: cameraUsesPopulationHeight
-                    ? null
-                    : camera.estimatedStuntingStatus,
-                estimatedWastingStatus:
-                    cameraUsesPopulationHeight || cameraUsesPopulationWeight
-                        ? null
-                        : camera.estimatedWastingStatus,
+                estimatedHeightCm: camera.estimatedHeightCm,
+                estimatedWeightKg: camera.estimatedWeightKg,
+                estimatedMuacCm: camera.estimatedMuacCm,
+                heightRangeLowerCm: camera.heightRangeLowerCm,
+                heightRangeUpperCm: camera.heightRangeUpperCm,
+                weightRangeLowerKg: camera.weightRangeLowerKg,
+                weightRangeUpperKg: camera.weightRangeUpperKg,
+                muacRangeLowerCm: camera.muacRangeLowerCm,
+                muacRangeUpperCm: camera.muacRangeUpperCm,
+                estimatedStuntingStatus: camera.estimatedStuntingStatus,
+                estimatedWastingStatus: camera.estimatedWastingStatus,
                 experimentalOverallCategory: camera.experimentalOverallCategory,
                 method: camera.method,
                 modelVersion: camera.modelVersion,

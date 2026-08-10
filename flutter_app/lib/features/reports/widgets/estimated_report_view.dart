@@ -6,9 +6,8 @@ import 'estimate_provenance_card.dart';
 import 'report_metric_card.dart';
 
 const String estimatedReportNotice =
-    'The current camera model is research-only. Calibrated height, weight, '
-    'MUAC, and oedema details are required before WHO classifications can be '
-    'reported.';
+    'These are research-only contactless estimates from AR depth, guided photos, and the '
+    'on-device model. Review each source and estimated range below.';
 
 class EstimatedReportView extends StatelessWidget {
   const EstimatedReportView({
@@ -48,23 +47,49 @@ class EstimatedReportView extends StatelessWidget {
             ReportMetricCard(
               label: 'Estimated height',
               value: '${height.toStringAsFixed(1)} cm',
-              detail: _sourceLabel(result.heightSource),
+              detail: _detail(
+                source: result.heightSource,
+                lower: result.heightRangeLowerCm,
+                upper: result.heightRangeUpperCm,
+                unit: 'cm',
+              ),
               icon: Icons.height,
             )
           else
             const _UnavailableMetric(
-              message: 'A calibrated height or length measurement is required.',
+              message: 'Height estimate unavailable. Retry the guided scan.',
             ),
           if (result.reportableWeightKg case final weight?)
             ReportMetricCard(
               label: 'Estimated weight',
               value: '${weight.toStringAsFixed(1)} kg',
-              detail: _sourceLabel(result.weightSource),
+              detail: _detail(
+                source: result.weightSource,
+                lower: result.weightRangeLowerKg,
+                upper: result.weightRangeUpperKg,
+                unit: 'kg',
+              ),
               icon: Icons.monitor_weight_outlined,
             )
           else
             const _UnavailableMetric(
-              message: 'A calibrated weight measurement is required.',
+              message: 'Weight estimate unavailable. Retry the guided scan.',
+            ),
+          if (result.reportableMuacCm case final muac?)
+            ReportMetricCard(
+              label: 'Estimated MUAC',
+              value: '${muac.toStringAsFixed(1)} cm',
+              detail: _detail(
+                source: result.muacSource,
+                lower: result.muacRangeLowerCm,
+                upper: result.muacRangeUpperCm,
+                unit: 'cm',
+              ),
+              icon: Icons.straighten,
+            )
+          else
+            const _UnavailableMetric(
+              message: 'MUAC estimate unavailable. Retry with the arm clear.',
             ),
           if (result.reportableStuntingStatus case final status?)
             ReportMetricCard(
@@ -106,6 +131,13 @@ class EstimatedReportView extends StatelessWidget {
 
   static String? _sourceLabel(String? source) {
     return switch (source) {
+      arcoreDepthHeightSourceV3 => 'ARCore depth height estimate',
+      arcoreDepthHeightSourceV2 => 'ARCore depth height estimate (v2)',
+      arcoreGeometryWeightSourceV3 =>
+        'ARCore body geometry + on-device weight model',
+      arcoreHeightPhotoGeometryWeightSourceV3 =>
+        'ARCore height + guided-photo geometry + on-device weight model',
+      arcoreArmMuacSourceV3 => 'ARCore upper-arm cross-section estimate',
       legacyWhoHeightSourceV1 => 'WHO height-for-age statistical estimate',
       experimentalMlWeightSourceV1 =>
         'Experimental on-device ML weight estimate',
@@ -114,6 +146,24 @@ class EstimatedReportView extends StatelessWidget {
       _ => source,
     };
   }
+
+  static String? _detail({
+    required String? source,
+    required double? lower,
+    required double? upper,
+    required String unit,
+  }) {
+    final sourceLabel = _sourceLabel(source);
+    final range = lower != null && upper != null
+        ? 'Estimated range ${lower.toStringAsFixed(1)}-'
+            '${upper.toStringAsFixed(1)} $unit'
+        : null;
+    return [sourceLabel, range].whereType<String>().join(' · ').nullIfEmpty;
+  }
+}
+
+extension on String {
+  String? get nullIfEmpty => isEmpty ? null : this;
 }
 
 class _UnavailableMetric extends StatelessWidget {

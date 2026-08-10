@@ -22,8 +22,15 @@ class FullArScanEstimatorTest {
         assertEquals(90.0, summary.estimatedHeightCm, 0.6)
         assertTrue(summary.uncertaintyCm >= 0.2)
         assertTrue(summary.scanCoverageDegrees >= 35.0)
-        assertTrue(summary.cameraTravelMeters >= 0.4)
+        assertTrue(summary.cameraTravelMeters >= 0.8)
         assertTrue(summary.qualityScore in 0.0..1.0)
+        assertNotNull(summary.geometry)
+        assertEquals(20.0, summary.geometry!!.shoulderWidthCm, 0.1)
+        assertEquals(8.0, summary.geometry!!.chestDepthCm, 0.1)
+        assertEquals(27.0, summary.geometry!!.torsoLengthCm, 0.1)
+        assertEquals(14.0, summary.geometry!!.upperArmLengthCm, 0.1)
+        assertEquals(0.9, summary.geometry!!.poseQualityScore, 0.01)
+        assertNotNull(summary.geometry!!.estimatedMuacCm)
     }
 
     @Test
@@ -59,6 +66,13 @@ class FullArScanEstimatorTest {
         )
     }
 
+    @Test
+    fun `ellipse perimeter rejects missing and implausible arm evidence`() {
+        assertEquals(12.6, FullArScanEstimator.ellipsePerimeter(4.0, 4.0)!!, 0.1)
+        assertEquals(null, FullArScanEstimator.ellipsePerimeter(null, 4.0))
+        assertEquals(null, FullArScanEstimator.ellipsePerimeter(1.0, 4.0))
+    }
+
     private fun evidence(index: Int): DepthFrameEvidence = DepthFrameEvidence(
         heightCm = if (index % 2 == 0) 89.6 else 90.4,
         validDepthFraction = 0.45,
@@ -68,11 +82,25 @@ class FullArScanEstimatorTest {
         bodyCenterZ = -1.5,
         bodyPointCount = 220,
         pose = ScanPose(
-            x = index * 0.05,
+            x = index * 0.06,
             y = 1.2,
             z = 0.0,
-            yawDegrees = index * 2.0,
+            yawDegrees = index * 5.0,
             timestampNs = index * 300_000_000L,
+        ),
+        profile = BodyProfileEvidence(
+            shoulderSpanCm = if (index <= 6) 20.0 else null,
+            hipSpanCm = if (index <= 6) 17.0 else null,
+            chestSpanCm = if (index >= 11) 8.0 else null,
+            abdomenSpanCm = if (index >= 11) 8.5 else null,
+            armSpanCm = when {
+                index <= 6 -> 4.0
+                index >= 11 -> 3.8
+                else -> null
+            },
+            torsoLengthCm = 27.0,
+            upperArmLengthCm = 14.0,
+            poseQualityScore = 0.9,
         ),
     )
 }

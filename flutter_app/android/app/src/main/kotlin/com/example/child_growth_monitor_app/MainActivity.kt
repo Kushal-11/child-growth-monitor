@@ -20,13 +20,18 @@ class MainActivity : FlutterActivity() {
         ).setMethodCallHandler { call, result ->
             when (call.method) {
                 "checkCapability" -> result.success(capability())
-                "startFullScan", "startSparseScan" -> {
+                "startContactlessScan", "startFullScan", "startSparseScan" -> {
                     if (pendingScanResult != null) {
                         result.error("scan_active", "An AR depth scan is already active", null)
                     } else {
                         pendingScanResult = result
                         startActivityForResult(
-                            Intent(this, FullArScanActivity::class.java),
+                            Intent(this, FullArScanActivity::class.java).apply {
+                                call.argument<Double>("ageMonths")?.let {
+                                    putExtra("ageMonths", it)
+                                }
+                                call.argument<String>("sex")?.let { putExtra("sex", it) }
+                            },
                             AR_SCAN_REQUEST,
                         )
                     }
@@ -45,7 +50,7 @@ class MainActivity : FlutterActivity() {
             "arSupported" to availability.isSupported,
             "transient" to availability.isTransient,
             "ramMb" to memoryClassMb,
-            "method" to "arcore_guided_depth_v2",
+            "method" to "arcore_contactless_anthropometry_v3",
         )
     }
 
@@ -66,7 +71,7 @@ class MainActivity : FlutterActivity() {
         }
         pending.success(
             mapOf(
-                "method" to "arcore_guided_depth_v2",
+                "method" to "arcore_contactless_anthropometry_v3",
                 "estimatedHeightCm" to data.getDoubleExtra("estimatedHeightCm", Double.NaN)
                     .takeIf { it.isFinite() },
                 "uncertaintyCm" to data.getDoubleExtra("uncertaintyCm", Double.NaN)
@@ -82,10 +87,24 @@ class MainActivity : FlutterActivity() {
                 "durationMs" to data.getLongExtra("durationMs", 0L),
                 "qualityScore" to data.getDoubleExtra("qualityScore", 0.0),
                 "depthMode" to data.getStringExtra("depthMode"),
+                "shoulderWidthCm" to finiteExtra(data, "shoulderWidthCm"),
+                "hipWidthCm" to finiteExtra(data, "hipWidthCm"),
+                "torsoLengthCm" to finiteExtra(data, "torsoLengthCm"),
+                "upperArmLengthCm" to finiteExtra(data, "upperArmLengthCm"),
+                "chestDepthCm" to finiteExtra(data, "chestDepthCm"),
+                "abdomenDepthCm" to finiteExtra(data, "abdomenDepthCm"),
+                "estimatedMuacCm" to finiteExtra(data, "estimatedMuacCm"),
+                "muacUncertaintyCm" to finiteExtra(data, "muacUncertaintyCm"),
+                "poseQualityScore" to finiteExtra(data, "poseQualityScore"),
+                "geometryQualityScore" to finiteExtra(data, "geometryQualityScore"),
                 "clinicalMeasurementEligible" to false,
+                "isEstimate" to true,
             ),
         )
     }
+
+    private fun finiteExtra(data: Intent, name: String): Double? =
+        data.getDoubleExtra(name, Double.NaN).takeIf { it.isFinite() }
 
     companion object {
         private const val AR_CHANNEL = "org.childgrowthmonitor/ar_scan"

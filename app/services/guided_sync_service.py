@@ -676,6 +676,13 @@ class GuidedSyncService:
             "supersedes_result_uuid": result.supersedes_result_uuid,
             "estimated_height_cm": result.estimated_height_cm,
             "estimated_weight_kg": result.estimated_weight_kg,
+            "estimated_muac_cm": result.estimated_muac_cm,
+            "height_range_lower_cm": result.height_range_lower_cm,
+            "height_range_upper_cm": result.height_range_upper_cm,
+            "weight_range_lower_kg": result.weight_range_lower_kg,
+            "weight_range_upper_kg": result.weight_range_upper_kg,
+            "muac_range_lower_cm": result.muac_range_lower_cm,
+            "muac_range_upper_cm": result.muac_range_upper_cm,
             "estimated_haz": result.estimated_haz,
             "estimated_whz": result.estimated_whz,
             "estimated_stunting_status": result.estimated_stunting_status,
@@ -685,6 +692,7 @@ class GuidedSyncService:
             ),
             "height_source": result.height_source,
             "weight_source": result.weight_source,
+            "muac_source": result.muac_source,
             "component_probabilities": result.component_probabilities_json or {},
             "body_proportion_features": (
                 result.body_proportion_features_json or {}

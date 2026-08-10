@@ -121,6 +121,42 @@ def test_camera_submission_requires_non_clinical_true_and_snake_case_json():
         CameraResultSubmission.model_validate(payload)
 
 
+def test_contactless_camera_submission_accepts_three_estimates_and_ranges():
+    payload = _camera_payload()
+    payload.update(
+        {
+            "method": "camera_screening_contactless_v2",
+            "estimated_muac_cm": 12.4,
+            "muac_source": "arcore_arm_cross_section_muac_v3",
+            "height_range_lower_cm": 87.5,
+            "height_range_upper_cm": 88.9,
+            "weight_range_lower_kg": 11.2,
+            "weight_range_upper_kg": 13.0,
+            "muac_range_lower_cm": 11.9,
+            "muac_range_upper_cm": 12.9,
+        }
+    )
+
+    result = CameraResultSubmission.model_validate(payload)
+
+    assert result.estimated_muac_cm == 12.4
+    assert result.muac_range_lower_cm == 11.9
+    assert result.method == "camera_screening_contactless_v2"
+
+
+def test_contactless_camera_submission_rejects_range_outside_estimate():
+    payload = _camera_payload()
+    payload.update(
+        {
+            "height_range_lower_cm": 89.0,
+            "height_range_upper_cm": 90.0,
+        }
+    )
+
+    with pytest.raises(ValidationError, match="height_range_cm"):
+        CameraResultSubmission.model_validate(payload)
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [

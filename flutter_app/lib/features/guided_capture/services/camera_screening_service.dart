@@ -3,12 +3,16 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../constants/config.dart';
 import '../../../database/daos/camera_result_dao.dart';
 import '../../../database/daos/guided_visit_dao.dart';
 import '../../../database/database.dart';
+import '../../ar_scan/domain/ar_scan_models.dart';
 import '../../../models/wasting_features.dart';
 import '../../../services/measurement_service.dart';
 import '../../../services/ml_inference_service.dart';
+import '../../../services/muac_service.dart';
+import '../../../services/nutrition_service.dart';
 import '../../../services/pose_source.dart';
 import '../../../services/who_data_service.dart';
 import '../domain/camera_screening_result.dart';
@@ -108,20 +112,54 @@ class CameraScreeningService implements CameraScreeningRunner {
       poseConfidence: poseConfidence.isFinite ? poseConfidence : 0,
     );
 
+    final arScan = visit.arScan;
+    final usesArGeometry = arScan?.hasWeightGeometry == true;
+    final heightCm =
+        arScan?.estimatedHeightCm ?? measurements.effectiveHeightCm;
+    final photoGeometryScale = arScan != null &&
+            measurements.effectiveHeightCm.isFinite &&
+            measurements.effectiveHeightCm > 0
+        ? heightCm / measurements.effectiveHeightCm
+        : 1.0;
+    final shoulderWidthCm = usesArGeometry
+        ? arScan!.shoulderWidthCm!
+        : measurements.shoulderWidthCm * photoGeometryScale;
+    final hipWidthCm = usesArGeometry
+        ? arScan!.hipWidthCm!
+        : measurements.hipWidthCm * photoGeometryScale;
+    final torsoLengthCm = usesArGeometry
+        ? arScan!.torsoLengthCm!
+        : measurements.torsoLengthCm * photoGeometryScale;
+    final upperArmLengthCm = usesArGeometry
+        ? arScan!.upperArmLengthCm!
+        : measurements.upperArmLengthCm * photoGeometryScale;
+    final chestDepthCm = usesArGeometry
+        ? arScan!.chestDepthCm
+        : measurements.chestDepthCm == null
+            ? null
+            : measurements.chestDepthCm! * photoGeometryScale;
+    final abdomenDepthCm = usesArGeometry
+        ? arScan!.abdomenDepthCm
+        : measurements.abdDepthCm == null
+            ? null
+            : measurements.abdDepthCm! * photoGeometryScale;
     final features = WastingFeatures(
       ageMonths: visit.ageMonths,
       sexBinary: visit.sex.toUpperCase() == 'M' ? 1 : 0,
-      heightCm: measurements.effectiveHeightCm,
-      shoulderWidthCm: measurements.shoulderWidthCm,
-      hipWidthCm: measurements.hipWidthCm,
-      torsoLengthCm: measurements.torsoLengthCm,
-      upperArmLengthCm: measurements.upperArmLengthCm,
-      shoulderHeightRatio:
-          measurements.shoulderWidthCm / measurements.effectiveHeightCm,
-      hipHeightRatio: measurements.hipWidthCm / measurements.effectiveHeightCm,
-      bodyBuildScore: measurements.bodyBuildScore,
-      chestDepthCm: measurements.chestDepthCm,
-      abdDepthCm: measurements.abdDepthCm,
+      heightCm: heightCm,
+      shoulderWidthCm: shoulderWidthCm,
+      hipWidthCm: hipWidthCm,
+      torsoLengthCm: torsoLengthCm,
+      upperArmLengthCm: upperArmLengthCm,
+      shoulderHeightRatio: shoulderWidthCm / heightCm,
+      hipHeightRatio: hipWidthCm / heightCm,
+      bodyBuildScore: _bodyBuildScore(
+        shoulderWidthCm: shoulderWidthCm,
+        heightCm: heightCm,
+        ageMonths: visit.ageMonths,
+      ),
+      chestDepthCm: chestDepthCm,
+      abdDepthCm: abdomenDepthCm,
     );
 
     WastingPrediction? prediction;
@@ -133,13 +171,66 @@ class CameraScreeningService implements CameraScreeningRunner {
 
     final whoMedianWeight = _who.getMedianWeightForHeight(
       visit.sex,
-      measurements.effectiveHeightCm,
+      heightCm,
       ageMonths: visit.ageMonths,
     );
     final (estimatedWeightKg, weightSource) = _resolveEstimatedWeight(
       prediction: prediction,
       whoMedianWeight: whoMedianWeight,
+      source: usesArGeometry
+          ? arcoreGeometryWeightSourceV3
+          : arScan != null
+              ? arcoreHeightPhotoGeometryWeightSourceV3
+              : experimentalMlWeightSourceV1,
     );
+    final weightRange = estimatedWeightKg != null
+        ? _weightRange(
+            estimateKg: estimatedWeightKg,
+            base: features,
+            whoMedianWeight: whoMedianWeight,
+            geometryQuality: arScan?.geometryQualityScore,
+          )
+        : null;
+    final muac = arScan?.estimatedMuacCm != null
+        ? MuacResult(
+            muacCm: arScan!.estimatedMuacCm,
+            muacStatus: null,
+            muacMethod: arcoreArmMuacSourceV3,
+            ageInRange: visit.ageMonths >= 6 && visit.ageMonths <= 59.9,
+            confidence: arScan.geometryQualityScore,
+            uncertaintyLowerCm: arScan.muacRangeLowerCm,
+            uncertaintyUpperCm: arScan.muacRangeUpperCm,
+            modelVersion: contactlessArMethodV3,
+            calibrationVersion: contactlessArMethodV3,
+            requiresConfirmation: false,
+          )
+        : MuacService.estimate(
+            ageMonths: visit.ageMonths,
+            sex: visit.sex,
+            whz: null,
+            upperArmLengthCm: upperArmLengthCm,
+            shoulderWidthCm: shoulderWidthCm,
+            heightCm: heightCm,
+            landmarkVisibility: poseConfidence,
+            muacMedianCm: _who
+                .getReferenceTargets(visit.sex, visit.ageMonths)
+                .muacForAge
+                ?.target,
+          );
+    final nutrition = NutritionService(_who);
+    final estimatedHaz = nutrition.computeHaz(
+      visit.sex,
+      visit.ageMonths.round(),
+      heightCm,
+    );
+    final estimatedWhz = estimatedWeightKg == null
+        ? null
+        : nutrition.computeWhz(
+            visit.sex,
+            visit.ageMonths,
+            heightCm,
+            estimatedWeightKg,
+          );
     final classifier = _validatedClassifier(prediction);
     final metadata = _ml.metadata;
 
@@ -147,40 +238,56 @@ class CameraScreeningService implements CameraScreeningRunner {
       resultUuid: _newUuid(),
       version: version,
       supersedesResultUuid: supersedesResultUuid,
-      // The current feature extractor uses a WHO population reference to
-      // convert pose ratios into the legacy 14-feature input. That value is
-      // not an image-derived measurement and must never be published as the
-      // child's height or used to derive HAZ/WHZ classifications.
-      estimatedHeightCm: null,
+      estimatedHeightCm: heightCm,
       estimatedWeightKg: estimatedWeightKg,
-      heightSource: null,
+      estimatedMuacCm: muac.muacCm,
+      heightSource: arScan == null
+          ? legacyWhoHeightSourceV1
+          : arScan.method == contactlessArMethodV3
+              ? arcoreDepthHeightSourceV3
+              : arcoreDepthHeightSourceV2,
       weightSource: weightSource,
-      estimatedHaz: null,
-      estimatedWhz: null,
-      estimatedStuntingStatus: null,
-      estimatedWastingStatus: null,
+      muacSource: muac.muacMethod,
+      heightRangeLowerCm: arScan?.heightRangeLowerCm,
+      heightRangeUpperCm: arScan?.heightRangeUpperCm,
+      weightRangeLowerKg: weightRange?.$1,
+      weightRangeUpperKg: weightRange?.$2,
+      muacRangeLowerCm: muac.uncertaintyLowerCm,
+      muacRangeUpperCm: muac.uncertaintyUpperCm,
+      estimatedHaz: estimatedHaz,
+      estimatedWhz: estimatedWhz,
+      estimatedStuntingStatus:
+          estimatedHaz == null ? null : classifyHaz(estimatedHaz),
+      estimatedWastingStatus:
+          estimatedWhz == null ? null : classifyWhz(estimatedWhz),
       experimentalOverallCategory: classifier?.category,
       componentProbabilities: classifier?.probabilities ?? const {},
       bodyProportionFeatures: {
-        'shoulder_width_cm': measurements.shoulderWidthCm,
-        'hip_width_cm': measurements.hipWidthCm,
-        'torso_length_cm': measurements.torsoLengthCm,
-        'upper_arm_length_cm': measurements.upperArmLengthCm,
-        'shoulder_height_ratio':
-            measurements.shoulderWidthCm / measurements.effectiveHeightCm,
-        'hip_height_ratio':
-            measurements.hipWidthCm / measurements.effectiveHeightCm,
-        'body_build': measurements.bodyBuild,
-        'side_view_used': measurements.sideViewUsed,
-        'feature_scaling_height_source': whoReferenceFeatureScalingV1,
+        'height_cm': heightCm,
+        'shoulder_width_cm': shoulderWidthCm,
+        'hip_width_cm': hipWidthCm,
+        'torso_length_cm': torsoLengthCm,
+        'upper_arm_length_cm': upperArmLengthCm,
+        'shoulder_height_ratio': shoulderWidthCm / heightCm,
+        'hip_height_ratio': hipWidthCm / heightCm,
+        'body_build_score': features.bodyBuildScore,
+        'side_view_used': usesArGeometry || measurements.sideViewUsed,
+        'feature_scaling_height_source': arScan != null
+            ? arcoreDepthHeightSourceV3
+            : whoReferenceFeatureScalingV1,
+        'geometry_source': usesArGeometry
+            ? contactlessArMethodV3
+            : arScan != null
+                ? arcoreHeightPhotoGeometryWeightSourceV3
+                : cameraScreeningMethodV1,
         'clinical_measurement_eligible': false,
-        if (measurements.chestDepthCm != null)
-          'chest_depth_cm': measurements.chestDepthCm,
-        if (measurements.abdDepthCm != null)
-          'abd_depth_cm': measurements.abdDepthCm,
+        if (chestDepthCm != null) 'chest_depth_cm': chestDepthCm,
+        if (abdomenDepthCm != null) 'abd_depth_cm': abdomenDepthCm,
       },
-      captureQualitySummary: _qualitySummary(acceptedAssets),
-      method: cameraScreeningMethodV1,
+      captureQualitySummary: _qualitySummary(acceptedAssets, arScan: arScan),
+      method: arScan != null
+          ? cameraScreeningContactlessMethodV2
+          : cameraScreeningMethodV1,
       modelVersion: metadata.modelVersion,
       manifestChecksum: metadata.manifestChecksum,
       trainingDataLabel: metadata.trainingDataLabel,
@@ -204,6 +311,7 @@ class CameraScreeningService implements CameraScreeningRunner {
   (double?, String?) _resolveEstimatedWeight({
     required WastingPrediction? prediction,
     required double? whoMedianWeight,
+    required String source,
   }) {
     final predicted = prediction?.estimatedWeightKg;
     final medianIsValid = whoMedianWeight != null &&
@@ -217,11 +325,83 @@ class CameraScreeningService implements CameraScreeningRunner {
           predictedKg: predicted,
           whoMedianKg: whoMedianWeight,
         )) {
-      return (predicted, experimentalMlWeightSourceV1);
+      return (predicted, source);
     }
     // A WHO population median is a reference value, not a measurement of this
     // child. Invalid or unavailable ML output therefore fails closed.
     return (null, null);
+  }
+
+  (double, double) _weightRange({
+    required double estimateKg,
+    required WastingFeatures base,
+    required double? whoMedianWeight,
+    required double? geometryQuality,
+  }) {
+    final quality = (geometryQuality ?? 0).clamp(0.0, 1.0);
+    final fraction = contactlessGeometryPerturbationBase +
+        contactlessGeometryPerturbationQualityPenalty * (1.0 - quality);
+    final predictions = <double>[estimateKg];
+    for (final factor in [1.0 - fraction, 1.0 + fraction]) {
+      try {
+        final prediction = _ml
+            .predict(
+              WastingFeatures(
+                ageMonths: base.ageMonths,
+                sexBinary: base.sexBinary,
+                heightCm: base.heightCm * factor,
+                shoulderWidthCm: base.shoulderWidthCm * factor,
+                hipWidthCm: base.hipWidthCm * factor,
+                torsoLengthCm: base.torsoLengthCm * factor,
+                upperArmLengthCm: base.upperArmLengthCm * factor,
+                shoulderHeightRatio: base.shoulderHeightRatio,
+                hipHeightRatio: base.hipHeightRatio,
+                bodyBuildScore: base.bodyBuildScore,
+                chestDepthCm: base.chestDepthCm == null
+                    ? null
+                    : base.chestDepthCm! * factor,
+                abdDepthCm:
+                    base.abdDepthCm == null ? null : base.abdDepthCm! * factor,
+              ),
+            )
+            .estimatedWeightKg;
+        if (prediction != null &&
+            prediction.isFinite &&
+            prediction > 0 &&
+            (whoMedianWeight == null ||
+                _ml.weightWithinBounds(
+                  predictedKg: prediction,
+                  whoMedianKg: whoMedianWeight,
+                ))) {
+          predictions.add(prediction);
+        }
+      } on Object {
+        // The base estimate remains available when a perturbation run fails.
+      }
+    }
+    final observedHalfWidth = predictions
+        .map((value) => (value - estimateKg).abs())
+        .fold<double>(0, (largest, value) => value > largest ? value : largest);
+    final halfWidth =
+        observedHalfWidth > contactlessWeightRangeMinimumHalfWidthKg
+            ? observedHalfWidth
+            : contactlessWeightRangeMinimumHalfWidthKg;
+    return (
+      (estimateKg - halfWidth).clamp(0.1, double.infinity),
+      estimateKg + halfWidth,
+    );
+  }
+
+  int _bodyBuildScore({
+    required double shoulderWidthCm,
+    required double heightCm,
+    required double ageMonths,
+  }) {
+    final observed = shoulderWidthCm / heightCm;
+    final expected = expectedShoulderRatio(ageMonths);
+    if (observed < expected - bodyBuildThresholdMl) return -1;
+    if (observed > expected + bodyBuildThresholdMl) return 1;
+    return 0;
   }
 
   _ValidatedClassifier? _validatedClassifier(WastingPrediction? prediction) {
@@ -255,8 +435,9 @@ class CameraScreeningService implements CameraScreeningRunner {
   }
 
   Map<String, Object?> _qualitySummary(
-    List<CameraScreeningAsset> assets,
-  ) {
+    List<CameraScreeningAsset> assets, {
+    FullArScanResult? arScan,
+  }) {
     final used = assets
         .where(
           (asset) =>
@@ -281,6 +462,16 @@ class CameraScreeningService implements CameraScreeningRunner {
       'lighting': average(used.map((asset) => asset.lightingScore)),
       'used_views':
           used.map((asset) => asset.role.wireValue).toList(growable: false),
+      if (arScan != null) ...{
+        'ar_method': arScan.method,
+        'ar_overall': arScan.qualityScore,
+        'ar_geometry': arScan.geometryQualityScore,
+        'ar_pose': arScan.poseQualityScore,
+        'ar_keyframes': arScan.acceptedKeyframes,
+        'ar_coverage_degrees': arScan.scanCoverageDegrees,
+        'ar_floor_stability_cm': arScan.floorStabilityCm,
+        'ar_depth_confidence': arScan.meanDepthConfidence,
+      },
     };
   }
 }
@@ -360,6 +551,7 @@ class CameraScreeningWorkflow {
           ownerUserId: ownerUserId,
           ageMonths: visit.ageMonths,
           sex: child.sex,
+          arScan: _arScanFromMetadata(visit.deviceMetadataJson),
         ),
         acceptedAssets: assets,
         version: previous.length + 1,
@@ -384,6 +576,18 @@ class CameraScreeningWorkflow {
     }
   }
 
+  FullArScanResult? _arScanFromMetadata(String? encoded) {
+    if (encoded == null || encoded.isEmpty) return null;
+    try {
+      final metadata = jsonDecode(encoded) as Map<String, dynamic>;
+      final raw = metadata['arcore_depth_scan'];
+      if (raw is! Map) return null;
+      return FullArScanResult.fromJson(Map<String, dynamic>.from(raw));
+    } on Object {
+      return null;
+    }
+  }
+
   CameraResultsCompanion _companionFor(
     int visitId,
     CameraScreeningResult result,
@@ -395,8 +599,16 @@ class CameraScreeningWorkflow {
       supersedesResultUuid: Value(result.supersedesResultUuid),
       estimatedHeightCm: Value(result.estimatedHeightCm),
       estimatedWeightKg: Value(result.estimatedWeightKg),
+      estimatedMuacCm: Value(result.estimatedMuacCm),
       heightSource: Value(result.heightSource),
       weightSource: Value(result.weightSource),
+      muacSource: Value(result.muacSource),
+      heightRangeLowerCm: Value(result.heightRangeLowerCm),
+      heightRangeUpperCm: Value(result.heightRangeUpperCm),
+      weightRangeLowerKg: Value(result.weightRangeLowerKg),
+      weightRangeUpperKg: Value(result.weightRangeUpperKg),
+      muacRangeLowerCm: Value(result.muacRangeLowerCm),
+      muacRangeUpperCm: Value(result.muacRangeUpperCm),
       estimatedHaz: Value(result.estimatedHaz),
       estimatedWhz: Value(result.estimatedWhz),
       estimatedStuntingStatus: Value(result.estimatedStuntingStatus),

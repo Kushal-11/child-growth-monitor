@@ -55,9 +55,9 @@ class ArScanCard extends ConsumerWidget {
             ),
             const SizedBox(height: 6),
             const Text(
-              'Optional multi-view scan using raw depth confidence, floor '
-              'stability, and movement checks. No RGB, raw depth, point '
-              'cloud, or mesh is retained.',
+              'Optional contactless scan using raw depth confidence, floor '
+              'stability, and front-to-side body geometry. No RGB, raw depth, '
+              'point cloud, or mesh is retained.',
             ),
             const SizedBox(height: 8),
             const Text(
@@ -73,7 +73,7 @@ class ArScanCard extends ConsumerWidget {
             if (result != null) ...[
               const SizedBox(height: 10),
               Text(
-                'Experimental height '
+                'Estimated height '
                 '${result.estimatedHeightCm.toStringAsFixed(1)} ± '
                 '${result.uncertaintyCm.toStringAsFixed(1)} cm',
                 style: Theme.of(context).textTheme.titleSmall,
@@ -83,9 +83,20 @@ class ArScanCard extends ConsumerWidget {
                 '${result.scanCoverageDegrees.toStringAsFixed(0)}° coverage • '
                 '${(result.qualityScore * 100).toStringAsFixed(0)}% quality',
               ),
+              if (result.estimatedMuacCm != null)
+                Text(
+                  'Estimated MUAC '
+                  '${result.estimatedMuacCm!.toStringAsFixed(1)} ± '
+                  '${result.muacUncertaintyCm!.toStringAsFixed(1)} cm',
+                ),
+              Text(
+                result.hasWeightGeometry
+                    ? 'Body geometry captured for the contactless weight estimate.'
+                    : 'Height saved. Weight/MUAC will use the best available guided-camera fallback.',
+              ),
               const Text(
-                'Research evidence only. It does not replace a measured '
-                'height or drive clinical classifications.',
+                'These values are estimates. Full height, weight, and MUAC '
+                'results appear in the estimated report.',
               ),
             ],
             if (state.error != null) ...[
