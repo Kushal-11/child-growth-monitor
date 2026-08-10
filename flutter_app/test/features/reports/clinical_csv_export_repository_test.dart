@@ -44,7 +44,9 @@ void main() {
   test(
     'exports identifying inputs and actual/calculated values side by side',
     () async {
-      final childId = await database.into(database.children).insert(
+      final childId = await database
+          .into(database.children)
+          .insert(
             ChildrenCompanion.insert(
               name: 'Anaya Patil',
               dateOfBirth: '2022-01-28',
@@ -54,7 +56,9 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      final visitId = await database.into(database.visits).insert(
+      final visitId = await database
+          .into(database.visits)
+          .insert(
             VisitsCompanion.insert(
               childId: childId,
               localUuid: '10000000-0000-0000-0000-000000000001',
@@ -69,7 +73,9 @@ void main() {
               consentOperatorIdentifier: const Value('field.worker'),
             ),
           );
-      await database.into(database.measuredDetailRevisions).insert(
+      await database
+          .into(database.measuredDetailRevisions)
+          .insert(
             MeasuredDetailRevisionsCompanion.insert(
               revisionUuid: '70000000-0000-0000-0000-000000000001',
               visitId: visitId,
@@ -79,7 +85,9 @@ void main() {
               reason: const Value('Tape measurement added'),
             ),
           );
-      await database.into(database.measurements).insert(
+      await database
+          .into(database.measurements)
+          .insert(
             MeasurementsCompanion.insert(
               visitId: visitId,
               manualHeightCm: const Value(100),
@@ -126,7 +134,9 @@ void main() {
           );
 
       // Drafts and another owner's visits must not leak into this export.
-      await database.into(database.visits).insert(
+      await database
+          .into(database.visits)
+          .insert(
             VisitsCompanion.insert(
               childId: childId,
               localUuid: '10000000-0000-0000-0000-000000000002',
@@ -136,7 +146,9 @@ void main() {
               captureState: const Value('draft_capture'),
             ),
           );
-      final otherChildId = await database.into(database.children).insert(
+      final otherChildId = await database
+          .into(database.children)
+          .insert(
             ChildrenCompanion.insert(
               name: 'Other worker child',
               dateOfBirth: '2023-01-01',
@@ -144,7 +156,9 @@ void main() {
               ownerUserId: const Value(8),
             ),
           );
-      final otherVisitId = await database.into(database.visits).insert(
+      final otherVisitId = await database
+          .into(database.visits)
+          .insert(
             VisitsCompanion.insert(
               childId: otherChildId,
               localUuid: '10000000-0000-0000-0000-000000000003',
@@ -152,7 +166,9 @@ void main() {
               ownerUserId: const Value(8),
             ),
           );
-      await database.into(database.measurements).insert(
+      await database
+          .into(database.measurements)
+          .insert(
             MeasurementsCompanion.insert(
               visitId: otherVisitId,
               manualHeightCm: const Value(90),
@@ -221,7 +237,9 @@ void main() {
   test(
     'uses strict stunting and wasting vocabularies for camera predictions',
     () async {
-      final childId = await database.into(database.children).insert(
+      final childId = await database
+          .into(database.children)
+          .insert(
             ChildrenCompanion.insert(
               name: 'Camera Child',
               dateOfBirth: '2023-04-10',
@@ -229,7 +247,9 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      final visitId = await database.into(database.visits).insert(
+      final visitId = await database
+          .into(database.visits)
+          .insert(
             VisitsCompanion.insert(
               childId: childId,
               localUuid: '20000000-0000-0000-0000-000000000001',
@@ -240,7 +260,9 @@ void main() {
               captureState: const Value('estimated_report'),
             ),
           );
-      await database.into(database.cameraResults).insert(
+      await database
+          .into(database.cameraResults)
+          .insert(
             CameraResultsCompanion.insert(
               resultUuid: '30000000-0000-0000-0000-000000000001',
               visitId: visitId,
@@ -269,14 +291,8 @@ void main() {
       expect(record.calculatedStuntingPrediction, 'Not Stunted');
       expect(record.calculatedWastingPrediction, isNotNull);
       expect(record.storedOverallNutritionPrediction, 'SAM');
-      expect(
-        record.calculatedStuntingPrediction,
-        isNot(anyOf('SAM', 'MAM')),
-      );
-      expect(
-        record.calculatedWastingPrediction,
-        isNot(anyOf('SAM', 'MAM')),
-      );
+      expect(record.calculatedStuntingPrediction, isNot(anyOf('SAM', 'MAM')));
+      expect(record.calculatedWastingPrediction, isNot(anyOf('SAM', 'MAM')));
       expect(record.calculatedWazZscore, isNotNull);
       expect(record.calculatedBazZscore, isNotNull);
       expect(record.provenanceNotes, contains('camera_non_clinical=true'));
@@ -290,7 +306,9 @@ void main() {
   test(
     'leaves cross-domain labels blank when no z-score can correct them',
     () async {
-      final childId = await database.into(database.children).insert(
+      final childId = await database
+          .into(database.children)
+          .insert(
             ChildrenCompanion.insert(
               name: 'Mixed Label Child',
               dateOfBirth: '2023-01-01',
@@ -298,7 +316,9 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      final visitId = await database.into(database.visits).insert(
+      final visitId = await database
+          .into(database.visits)
+          .insert(
             VisitsCompanion.insert(
               childId: childId,
               localUuid: '40000000-0000-0000-0000-000000000001',
@@ -306,7 +326,9 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      await database.into(database.measurements).insert(
+      await database
+          .into(database.measurements)
+          .insert(
             MeasurementsCompanion.insert(
               visitId: visitId,
               hazStatus: const Value('SAM'),
@@ -328,7 +350,9 @@ void main() {
   test(
     'exports estimated MUAC evidence and suppresses implausible ML weight',
     () async {
-      final childId = await database.into(database.children).insert(
+      final childId = await database
+          .into(database.children)
+          .insert(
             ChildrenCompanion.insert(
               name: 'MUAC Estimate Child',
               dateOfBirth: '2024-01-12',
@@ -336,7 +360,9 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      final visitId = await database.into(database.visits).insert(
+      final visitId = await database
+          .into(database.visits)
+          .insert(
             VisitsCompanion.insert(
               childId: childId,
               localUuid: '50000000-0000-0000-0000-000000000001',
@@ -345,7 +371,9 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      await database.into(database.measurements).insert(
+      await database
+          .into(database.measurements)
+          .insert(
             MeasurementsCompanion.insert(
               visitId: visitId,
               predictedHeightCm: const Value(91.2),
@@ -364,8 +392,9 @@ void main() {
               muacCalibrationVersion: const Value('unvalidated-paired-tape-v0'),
               muacIsDirectMeasurement: const Value(false),
               muacRequiresConfirmation: const Value(true),
-              muacReferralGuidance:
-                  const Value('Confirm with a tape before clinical use.'),
+              muacReferralGuidance: const Value(
+                'Confirm with a tape before clinical use.',
+              ),
             ),
           );
 
@@ -404,7 +433,9 @@ void main() {
   test(
     'does not invent WHO median predictions for manual-only records',
     () async {
-      final childId = await database.into(database.children).insert(
+      final childId = await database
+          .into(database.children)
+          .insert(
             ChildrenCompanion.insert(
               name: 'Manual Only Child',
               dateOfBirth: '2023-01-01',
@@ -412,7 +443,9 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      final visitId = await database.into(database.visits).insert(
+      final visitId = await database
+          .into(database.visits)
+          .insert(
             VisitsCompanion.insert(
               childId: childId,
               localUuid: '60000000-0000-0000-0000-000000000001',
@@ -420,7 +453,9 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      await database.into(database.measurements).insert(
+      await database
+          .into(database.measurements)
+          .insert(
             MeasurementsCompanion.insert(
               visitId: visitId,
               manualHeightCm: const Value(90),
@@ -444,8 +479,155 @@ void main() {
     },
   );
 
+  test(
+    'recovers stored ML outputs without duplicating manual evidence',
+    () async {
+      final childId = await database
+          .into(database.children)
+          .insert(
+            ChildrenCompanion.insert(
+              name: 'Historical Assessment Child',
+              dateOfBirth: '2023-01-01',
+              sex: 'F',
+              ownerUserId: const Value(7),
+            ),
+          );
+      final visitId = await database
+          .into(database.visits)
+          .insert(
+            VisitsCompanion.insert(
+              childId: childId,
+              localUuid: '61000000-0000-0000-0000-000000000001',
+              visitDate: Value(DateTime(2026, 1, 1)),
+              ageMonths: 36,
+              ownerUserId: const Value(7),
+            ),
+          );
+      await database
+          .into(database.measurements)
+          .insert(
+            MeasurementsCompanion.insert(
+              visitId: visitId,
+              manualHeightCm: const Value(90),
+              predictedHeightCm: const Value(90),
+              effectiveHeightCm: const Value(90),
+              heightMethod: const Value('manual'),
+              heightConfidence: const Value(1),
+              manualWeightKg: const Value(10),
+              predictedWeightKg: const Value(10),
+              effectiveWeightKg: const Value(10),
+              weightMethod: const Value('manual'),
+              weightConfidence: const Value(1),
+              mlEstimatedWeightKg: const Value(12),
+              wastingStatus: const Value('MAM'),
+              wastingMethod: const Value('ml_classifier'),
+              samProbability: const Value(0.1),
+              mamProbability: const Value(0.7),
+              normalProbability: const Value(0.15),
+              riskOverweightProbability: const Value(0.03),
+              overweightProbability: const Value(0.02),
+              muacCm: const Value(13),
+              muacMethod: const Value('manual'),
+              muacIsDirectMeasurement: const Value(true),
+              measurementMode: const Value('standing_height'),
+              oedema: const Value('no'),
+            ),
+          );
+
+      final record = (await repository.loadSavedRecords(ownerUserId: 7)).single;
+
+      expect(record.actualHeightCm, 90);
+      expect(record.calculatedHeightCm, isNull);
+      expect(record.calculatedHeightAvailability, 'not_independently_recorded');
+      expect(record.calculatedWeightKg, 12);
+      expect(record.calculatedWeightConfidence, isNull);
+      expect(record.calculatedWeightAvailability, 'available');
+      expect(record.weightErrorKg, 2);
+      expect(record.calculatedWhzZscore, isNull);
+      expect(record.calculatedWazZscore, isNotNull);
+      expect(record.actualMuacCm, 13);
+      expect(record.calculatedMuacCm, isNull);
+      expect(record.calculatedMuacAvailability, 'not_independently_recorded');
+      expect(record.mlEstimatedWeightKg, 12);
+      expect(record.mlWeightAcceptedForCalculation, isTrue);
+      expect(record.mlWastingPrediction, 'MAM');
+      expect(record.mlWastingMethod, 'ml_classifier');
+      expect(record.samProbability, 0.1);
+      expect(record.mamProbability, 0.7);
+      expect(
+        record.provenanceNotes,
+        contains('manual_height_duplicate_suppressed=true'),
+      );
+      expect(
+        record.provenanceNotes,
+        contains('ml_weight_confidence_not_recorded=true'),
+      );
+      expect(
+        record.provenanceNotes,
+        contains('calculated_muac_not_independently_recorded=true'),
+      );
+    },
+  );
+
+  test(
+    'suppresses stored WHO population height from child estimates',
+    () async {
+      final childId = await database
+          .into(database.children)
+          .insert(
+            ChildrenCompanion.insert(
+              name: 'Historical Reference Child',
+              dateOfBirth: '2023-01-01',
+              sex: 'M',
+              ownerUserId: const Value(7),
+            ),
+          );
+      final visitId = await database
+          .into(database.visits)
+          .insert(
+            VisitsCompanion.insert(
+              childId: childId,
+              localUuid: '62000000-0000-0000-0000-000000000001',
+              visitDate: Value(DateTime(2026, 1, 1)),
+              ageMonths: 36,
+              ownerUserId: const Value(7),
+            ),
+          );
+      await database
+          .into(database.measurements)
+          .insert(
+            MeasurementsCompanion.insert(
+              visitId: visitId,
+              predictedHeightCm: const Value(95),
+              effectiveHeightCm: const Value(95),
+              heightMethod: const Value('who_statistical'),
+              mlEstimatedWeightKg: const Value(13),
+              weightMethod: const Value('ml_estimated'),
+            ),
+          );
+
+      final record = (await repository.loadSavedRecords(ownerUserId: 7)).single;
+
+      expect(record.calculatedHeightCm, isNull);
+      expect(
+        record.calculatedHeightAvailability,
+        'population_reference_suppressed',
+      );
+      expect(record.mlEstimatedWeightKg, 13);
+      expect(record.calculatedWeightKg, 13);
+      expect(record.calculatedWazZscore, isNotNull);
+      expect(record.calculatedWhzZscore, isNull);
+      expect(
+        record.provenanceNotes,
+        contains('stored_population_height_suppressed=true'),
+      );
+    },
+  );
+
   test('never mixes measured height with calculated weight', () async {
-    final childId = await database.into(database.children).insert(
+    final childId = await database
+        .into(database.children)
+        .insert(
           ChildrenCompanion.insert(
             name: 'No Mixed Inputs Child',
             dateOfBirth: '2023-01-01',
@@ -453,7 +635,9 @@ void main() {
             ownerUserId: const Value(7),
           ),
         );
-    final visitId = await database.into(database.visits).insert(
+    final visitId = await database
+        .into(database.visits)
+        .insert(
           VisitsCompanion.insert(
             childId: childId,
             localUuid: '80000000-0000-0000-0000-000000000001',
@@ -462,7 +646,9 @@ void main() {
             ownerUserId: const Value(7),
           ),
         );
-    await database.into(database.measurements).insert(
+    await database
+        .into(database.measurements)
+        .insert(
           MeasurementsCompanion.insert(
             visitId: visitId,
             manualHeightCm: const Value(90),
@@ -488,7 +674,9 @@ void main() {
   });
 
   test('oedema triggers measured SAM and suppresses weight scores', () async {
-    final childId = await database.into(database.children).insert(
+    final childId = await database
+        .into(database.children)
+        .insert(
           ChildrenCompanion.insert(
             name: 'Oedema Child',
             dateOfBirth: '2023-01-01',
@@ -496,7 +684,9 @@ void main() {
             ownerUserId: const Value(7),
           ),
         );
-    final visitId = await database.into(database.visits).insert(
+    final visitId = await database
+        .into(database.visits)
+        .insert(
           VisitsCompanion.insert(
             childId: childId,
             localUuid: '81000000-0000-0000-0000-000000000001',
@@ -505,7 +695,9 @@ void main() {
             ownerUserId: const Value(7),
           ),
         );
-    await database.into(database.measurements).insert(
+    await database
+        .into(database.measurements)
+        .insert(
           MeasurementsCompanion.insert(
             visitId: visitId,
             manualHeightCm: const Value(95),
@@ -536,7 +728,9 @@ void main() {
   });
 
   test('exports measured change from the previous completed visit', () async {
-    final childId = await database.into(database.children).insert(
+    final childId = await database
+        .into(database.children)
+        .insert(
           ChildrenCompanion.insert(
             name: 'Longitudinal Child',
             dateOfBirth: '2023-01-01',
@@ -551,7 +745,9 @@ void main() {
       required double weight,
       required double muac,
     }) async {
-      final visitId = await database.into(database.visits).insert(
+      final visitId = await database
+          .into(database.visits)
+          .insert(
             VisitsCompanion.insert(
               childId: childId,
               localUuid: uuid,
@@ -560,7 +756,9 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      await database.into(database.measurements).insert(
+      await database
+          .into(database.measurements)
+          .insert(
             MeasurementsCompanion.insert(
               visitId: visitId,
               manualHeightCm: Value(height),

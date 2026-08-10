@@ -12,7 +12,7 @@ import '../../../services/who_data_service.dart';
 import '../../guided_capture/domain/camera_screening_result.dart';
 import '../domain/clinical_csv_record.dart';
 
-const _exportSchemaVersion = 'clinical_csv_v3';
+const _exportSchemaVersion = 'clinical_csv_v4_recovery';
 const _whoStandardVersion = 'who_child_growth_standards_2006_lms';
 const _whoActualAcuteMethod = 'who_imnci_measured_whz_muac_oedema_v1';
 const _whoCalculatedAcuteMethod =
@@ -74,10 +74,8 @@ typedef _PreviousActual = ({DateTime date, Measurement measurement});
 /// worker. Draft visits without a measurement or persisted camera result are
 /// excluded. All WHO results are recomputed from same-basis values at export.
 class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
-  DriftClinicalCsvExportRepository(
-    this._database, {
-    WhoDataService? whoData,
-  }) : _who = whoData ?? WhoDataService();
+  DriftClinicalCsvExportRepository(this._database, {WhoDataService? whoData})
+    : _who = whoData ?? WhoDataService();
 
   final AppDatabase _database;
   final WhoDataService _who;
@@ -91,21 +89,21 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
     if (!_who.isLoaded) {
       await (_whoLoadFuture ??= _who.loadFromAssets());
     }
-    final query = _database.select(_database.visits).join([
-      innerJoin(
-        _database.children,
-        _database.children.id.equalsExp(_database.visits.childId),
-      ),
-      leftOuterJoin(
-        _database.measurements,
-        _database.measurements.visitId.equalsExp(_database.visits.id),
-      ),
-    ])
-      ..where(
-        _database.visits.ownerUserId.equals(ownerUserId) |
-            (_database.visits.ownerUserId.isNull() &
-                _database.children.ownerUserId.equals(ownerUserId)),
-      );
+    final query =
+        _database.select(_database.visits).join([
+          innerJoin(
+            _database.children,
+            _database.children.id.equalsExp(_database.visits.childId),
+          ),
+          leftOuterJoin(
+            _database.measurements,
+            _database.measurements.visitId.equalsExp(_database.visits.id),
+          ),
+        ])..where(
+          _database.visits.ownerUserId.equals(ownerUserId) |
+              (_database.visits.ownerUserId.isNull() &
+                  _database.children.ownerUserId.equals(ownerUserId)),
+        );
     final joinedRows = await query.get();
     final visitIds = joinedRows
         .map((row) => row.readTable(_database.visits).id)
@@ -114,26 +112,26 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
     final latestCameraResultByVisit = <int, CameraResult>{};
     final latestMeasuredRevisionByVisit = <int, MeasuredDetailRevision>{};
     if (visitIds.isNotEmpty) {
-      final cameraResults = await (_database.select(_database.cameraResults)
-            ..where((row) => row.visitId.isIn(visitIds))
-            ..orderBy([
-              (row) => OrderingTerm.desc(row.version),
-              (row) => OrderingTerm.desc(row.createdAt),
-            ]))
-          .get();
+      final cameraResults =
+          await (_database.select(_database.cameraResults)
+                ..where((row) => row.visitId.isIn(visitIds))
+                ..orderBy([
+                  (row) => OrderingTerm.desc(row.version),
+                  (row) => OrderingTerm.desc(row.createdAt),
+                ]))
+              .get();
       for (final result in cameraResults) {
         latestCameraResultByVisit.putIfAbsent(result.visitId, () => result);
       }
 
-      final revisions = await (_database.select(
-        _database.measuredDetailRevisions,
-      )
-            ..where((row) => row.visitId.isIn(visitIds))
-            ..orderBy([
-              (row) => OrderingTerm.desc(row.revisionNumber),
-              (row) => OrderingTerm.desc(row.createdAt),
-            ]))
-          .get();
+      final revisions =
+          await (_database.select(_database.measuredDetailRevisions)
+                ..where((row) => row.visitId.isIn(visitIds))
+                ..orderBy([
+                  (row) => OrderingTerm.desc(row.revisionNumber),
+                  (row) => OrderingTerm.desc(row.createdAt),
+                ]))
+              .get();
       for (final revision in revisions) {
         latestMeasuredRevisionByVisit.putIfAbsent(
           revision.visitId,
@@ -142,7 +140,8 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
       }
     }
 
-    final chronologicalRows = [...joinedRows]..sort((left, right) {
+    final chronologicalRows = [...joinedRows]
+      ..sort((left, right) {
         final leftVisit = left.readTable(_database.visits);
         final rightVisit = right.readTable(_database.visits);
         final childOrder = leftVisit.childId.compareTo(rightVisit.childId);
@@ -184,8 +183,8 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
 
     records.sort((left, right) {
       final nameOrder = left.record.childName.toLowerCase().compareTo(
-            right.record.childName.toLowerCase(),
-          );
+        right.record.childName.toLowerCase(),
+      );
       if (nameOrder != 0) return nameOrder;
       final childOrder = left.record.childId.compareTo(right.record.childId);
       if (childOrder != 0) return childOrder;
@@ -211,16 +210,17 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
         : visitDate.difference(_dateOnly(dateOfBirth)).inDays;
     final ageDays = rawAgeDays != null && rawAgeDays >= 0 ? rawAgeDays : null;
     final whoAgeMonths = ageDays == null ? null : ageDays / 30.4375;
-    final ageForWho =
-        whoAgeMonths != null && whoAgeMonths < 60 ? whoAgeMonths : null;
+    final ageForWho = whoAgeMonths != null && whoAgeMonths < 60
+        ? whoAgeMonths
+        : null;
     final measurementMode = _normaliseMeasurementMode(
       measurement?.measurementMode,
     );
     final expectedMeasurementMode = ageDays == null
         ? null
         : ageDays < 731
-            ? 'recumbent_length'
-            : 'standing_height';
+        ? 'recumbent_length'
+        : 'standing_height';
     final positionAdjustment = _positionAdjustment(
       ageDays: ageDays,
       measurementMode: measurementMode,
@@ -231,8 +231,9 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
     final hasDirectMuac = _hasDirectMuac(measurement);
     final actualHeightCm = _positiveFinite(measurement?.manualHeightCm);
     final actualWeightKg = _positiveFinite(measurement?.manualWeightKg);
-    final actualMuacCm =
-        hasDirectMuac ? _positiveFinite(measurement?.muacCm) : null;
+    final actualMuacCm = hasDirectMuac
+        ? _positiveFinite(measurement?.muacCm)
+        : null;
 
     final cameraUsesPopulationHeight =
         cameraResult?.heightSource == legacyWhoHeightSourceV1;
@@ -245,71 +246,124 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
         ? null
         : _positiveFinite(cameraResult?.estimatedWeightKg);
 
-    final storedPredictedHeightCm =
-        _positiveFinite(measurement?.predictedHeightCm);
-    final fallbackEstimatedHeightCm = _isManualMethod(measurement?.heightMethod)
+    final storedPredictedHeightCm = _positiveFinite(
+      measurement?.predictedHeightCm,
+    );
+    final storedHeightPredictionMethod = _storedHeightPredictionMethod(
+      measurement,
+    );
+    final storedHeightDuplicatesManual =
+        _isManualMethod(measurement?.heightMethod) &&
+        _sameMeasurement(storedPredictedHeightCm, actualHeightCm);
+    final storedHeightUsesPopulationReference = _isPopulationHeightMethod(
+      storedHeightPredictionMethod,
+    );
+    final eligibleStoredPredictedHeightCm =
+        storedHeightDuplicatesManual || storedHeightUsesPopulationReference
+        ? null
+        : storedPredictedHeightCm;
+    final fallbackHeightMethod =
+        _nonEmpty(measurement?.heightMethod) ??
+        _nonEmpty(measurement?.estimationMethod);
+    final fallbackHeightUsesPopulationReference = _isPopulationHeightMethod(
+      fallbackHeightMethod,
+    );
+    final fallbackEstimatedHeightCm =
+        _isManualMethod(measurement?.heightMethod) ||
+            fallbackHeightUsesPopulationReference
         ? null
         : _positiveFinite(measurement?.effectiveHeightCm);
     final calculatedHeightCm =
-        cameraHeightCm ?? storedPredictedHeightCm ?? fallbackEstimatedHeightCm;
+        cameraHeightCm ??
+        eligibleStoredPredictedHeightCm ??
+        fallbackEstimatedHeightCm;
     final calculatedHeightMethod = cameraHeightCm != null
         ? _nonEmpty(cameraResult?.heightSource) ??
-            _nonEmpty(cameraResult?.method)
-        : storedPredictedHeightCm != null
-            ? _storedHeightPredictionMethod(measurement)
-            : fallbackEstimatedHeightCm != null
-                ? _normaliseHeightEstimateMethod(
-                    _nonEmpty(measurement?.heightMethod) ??
-                        _nonEmpty(measurement?.estimationMethod),
-                  )
-                : null;
+              _nonEmpty(cameraResult?.method)
+        : eligibleStoredPredictedHeightCm != null
+        ? storedHeightPredictionMethod
+        : fallbackEstimatedHeightCm != null
+        ? _normaliseHeightEstimateMethod(
+            _nonEmpty(measurement?.heightMethod) ??
+                _nonEmpty(measurement?.estimationMethod),
+          )
+        : null;
+    final calculatedHeightAvailability = calculatedHeightCm != null
+        ? 'available'
+        : cameraUsesPopulationHeight ||
+              storedHeightUsesPopulationReference ||
+              fallbackHeightUsesPopulationReference
+        ? 'population_reference_suppressed'
+        : storedHeightDuplicatesManual || actualHeightCm != null
+        ? 'not_independently_recorded'
+        : 'unavailable';
 
-    // ML plausibility validation uses only calculated height, never measured
-    // height, so accepting a calculated weight cannot create a mixed record.
-    final whoMedianWeightKg = calculatedHeightCm == null || ageForWho == null
+    // A measured or population-reference height may be used only to validate
+    // the stored ML weight's broad safety bounds. It is never promoted into
+    // calculated-height evidence or used for calculated WHZ/BAZ.
+    final weightValidationHeightCm =
+        calculatedHeightCm ??
+        actualHeightCm ??
+        _positiveFinite(measurement?.effectiveHeightCm);
+    final whoMedianWeightKg =
+        weightValidationHeightCm == null || ageForWho == null
         ? null
         : _positiveFinite(
             _who.getMedianWeightForHeight(
               child.sex.toUpperCase(),
-              _adjustHeight(calculatedHeightCm, positionAdjustment),
+              _adjustHeight(weightValidationHeightCm, positionAdjustment),
               ageMonths: ageForWho,
             ),
           );
-    final rawStoredMlWeightKg =
-        _positiveFinite(measurement?.mlEstimatedWeightKg);
-    final storedMlWeightKg = _isPlausibleMlWeight(
-      rawStoredMlWeightKg,
-      whoMedianWeightKg,
-    )
+    final rawStoredMlWeightKg = _positiveFinite(
+      measurement?.mlEstimatedWeightKg,
+    );
+    final storedMlWeightKg =
+        _isPlausibleMlWeight(rawStoredMlWeightKg, whoMedianWeightKg)
         ? rawStoredMlWeightKg
         : null;
-    final storedPredictedWeightKg =
-        _positiveFinite(measurement?.predictedWeightKg);
-    final predictedDuplicatesActual =
-        _sameMeasurement(storedPredictedWeightKg, actualWeightKg);
+    final storedPredictedWeightKg = _positiveFinite(
+      measurement?.predictedWeightKg,
+    );
+    final predictedDuplicatesActual = _sameMeasurement(
+      storedPredictedWeightKg,
+      actualWeightKg,
+    );
     final fallbackEstimatedWeightKg = _isManualMethod(measurement?.weightMethod)
         ? null
         : _positiveFinite(measurement?.effectiveWeightKg);
-    final calculatedWeightCandidate = storedMlWeightKg ??
+    final calculatedWeightCandidate =
+        storedMlWeightKg ??
         (predictedDuplicatesActual ? null : storedPredictedWeightKg) ??
         fallbackEstimatedWeightKg;
     final calculatedWeightKg = cameraWeightKg ?? calculatedWeightCandidate;
     final calculatedWeightMethod = cameraWeightKg != null
         ? _nonEmpty(cameraResult?.weightSource) ??
-            _nonEmpty(cameraResult?.method)
+              _nonEmpty(cameraResult?.method)
         : storedMlWeightKg != null
-            ? experimentalMlWeightSourceV1
-            : calculatedWeightCandidate != null
-                ? _normaliseWeightEstimateMethod(
-                    _nonEmpty(measurement?.weightMethod) ??
-                        _nonEmpty(measurement?.estimationMethod),
-                  )
-                : null;
+        ? experimentalMlWeightSourceV1
+        : calculatedWeightCandidate != null
+        ? _normaliseWeightEstimateMethod(
+            _nonEmpty(measurement?.weightMethod) ??
+                _nonEmpty(measurement?.estimationMethod),
+          )
+        : null;
+    final calculatedWeightAvailability = calculatedWeightKg != null
+        ? 'available'
+        : rawStoredMlWeightKg != null
+        ? 'implausible_or_unverifiable_ml_weight_suppressed'
+        : actualWeightKg != null
+        ? 'not_independently_recorded'
+        : 'unavailable';
 
-    final actualAdjustedHeight =
-        _adjustNullableHeight(actualHeightCm, positionAdjustment);
-    final calculatedAdjustedHeight =
-        _adjustNullableHeight(calculatedHeightCm, positionAdjustment);
+    final actualAdjustedHeight = _adjustNullableHeight(
+      actualHeightCm,
+      positionAdjustment,
+    );
+    final calculatedAdjustedHeight = _adjustNullableHeight(
+      calculatedHeightCm,
+      positionAdjustment,
+    );
     final actualWho = _computeWhoScores(
       sex: child.sex,
       ageMonths: ageForWho,
@@ -330,15 +384,23 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
       hasDirectMuac: hasDirectMuac,
       ageMonths: ageForWho,
     );
-    final muacAgeInRange = ageForWho != null &&
+    final muacAgeInRange =
+        ageForWho != null &&
         ageForWho >= poshanMuacMinAgeMonths &&
         ageForWho < poshanMuacMaxAgeMonths;
-    final actualMuacStatus =
-        _classifyMuac(actualMuacCm, ageInRange: muacAgeInRange);
+    final actualMuacStatus = _classifyMuac(
+      actualMuacCm,
+      ageInRange: muacAgeInRange,
+    );
     final calculatedMuacStatus = _classifyMuac(
       _positiveFinite(calculatedMuac?.muacCm),
       ageInRange: muacAgeInRange,
     );
+    final calculatedMuacAvailability = calculatedMuac != null
+        ? 'available'
+        : hasDirectMuac
+        ? 'not_independently_recorded'
+        : 'unavailable';
     final actualAcute = _classifyActualAcute(
       ageMonths: ageForWho,
       whz: actualWho.whzQualityFlag == 'OK' ? actualWho.whz : null,
@@ -364,11 +426,11 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
     final overallRaw = measurement?.poshanComplete == true
         ? measurement?.poshanStatus
         : measurement?.whoAcuteStatus ??
-            measurement?.combinedStatus ??
-            cameraResult?.experimentalOverallCategory ??
-            measurement?.wastingStatus ??
-            measurement?.whzStatus ??
-            measurement?.poshanStatus;
+              measurement?.combinedStatus ??
+              cameraResult?.experimentalOverallCategory ??
+              measurement?.wastingStatus ??
+              measurement?.whzStatus ??
+              measurement?.poshanStatus;
     final previousMeasurement = previousActual?.measurement;
     final previousDate = previousActual?.date;
     final previousActualMuac = _hasDirectMuac(previousMeasurement)
@@ -412,8 +474,9 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
       calculatedHeightConfidence: calculatedHeightCm == null
           ? null
           : _finite(measurement?.heightConfidence) ??
-              _finite(measurement?.confidenceScore),
+                _finite(measurement?.confidenceScore),
       calculatedWhoAdjustedHeightCm: calculatedAdjustedHeight,
+      calculatedHeightAvailability: calculatedHeightAvailability,
       heightErrorCm: _difference(calculatedHeightCm, actualHeightCm),
       actualWeightKg: actualWeightKg,
       actualWeightMethod: actualWeightKg == null
@@ -423,8 +486,11 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
       calculatedWeightMethod: calculatedWeightMethod,
       calculatedWeightConfidence: calculatedWeightKg == null
           ? null
+          : calculatedWeightMethod == experimentalMlWeightSourceV1
+          ? null
           : _finite(measurement?.weightConfidence) ??
-              _finite(measurement?.confidenceScore),
+                _finite(measurement?.confidenceScore),
+      calculatedWeightAvailability: calculatedWeightAvailability,
       weightErrorKg: _difference(calculatedWeightKg, actualWeightKg),
       actualMuacCm: actualMuacCm,
       actualMuacStatus: actualMuacStatus,
@@ -437,18 +503,25 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
       calculatedMuacStatus: calculatedMuacStatus,
       calculatedMuacMethod: _nonEmpty(calculatedMuac?.muacMethod),
       calculatedMuacConfidence: _finite(calculatedMuac?.confidence),
-      calculatedMuacUncertaintyLowerCm:
-          _positiveFinite(calculatedMuac?.uncertaintyLowerCm),
-      calculatedMuacUncertaintyUpperCm:
-          _positiveFinite(calculatedMuac?.uncertaintyUpperCm),
+      calculatedMuacUncertaintyLowerCm: _positiveFinite(
+        calculatedMuac?.uncertaintyLowerCm,
+      ),
+      calculatedMuacUncertaintyUpperCm: _positiveFinite(
+        calculatedMuac?.uncertaintyUpperCm,
+      ),
       calculatedMuacModelVersion: _nonEmpty(calculatedMuac?.modelVersion),
-      calculatedMuacCalibrationVersion:
-          _nonEmpty(calculatedMuac?.calibrationVersion),
+      calculatedMuacCalibrationVersion: _nonEmpty(
+        calculatedMuac?.calibrationVersion,
+      ),
       calculatedMuacRequiresConfirmation: calculatedMuac?.requiresConfirmation,
-      calculatedMuacReferralGuidance:
-          _nonEmpty(calculatedMuac?.referralGuidance),
-      muacErrorCm:
-          _difference(_positiveFinite(calculatedMuac?.muacCm), actualMuacCm),
+      calculatedMuacReferralGuidance: _nonEmpty(
+        calculatedMuac?.referralGuidance,
+      ),
+      calculatedMuacAvailability: calculatedMuacAvailability,
+      muacErrorCm: _difference(
+        _positiveFinite(calculatedMuac?.muacCm),
+        actualMuacCm,
+      ),
       actualBmi: actualWho.bmi,
       actualHazZscore: actualWho.haz,
       actualStuntingClassification: actualWho.hazClassification,
@@ -526,11 +599,16 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
       bodyBuild: _nonEmpty(measurement?.bodyBuild),
       estimationMethod: _nonEmpty(measurement?.estimationMethod),
       sideViewUsed: measurement?.sideViewUsed,
+      mlEstimatedWeightKg: rawStoredMlWeightKg,
+      mlWeightAcceptedForCalculation: storedMlWeightKg != null,
+      mlWastingPrediction: _nonEmpty(measurement?.wastingStatus),
+      mlWastingMethod: _nonEmpty(measurement?.wastingMethod),
       samProbability: _finite(measurement?.samProbability),
       mamProbability: _finite(measurement?.mamProbability),
       normalProbability: _finite(measurement?.normalProbability),
-      riskOverweightProbability:
-          _finite(measurement?.riskOverweightProbability),
+      riskOverweightProbability: _finite(
+        measurement?.riskOverweightProbability,
+      ),
       overweightProbability: _finite(measurement?.overweightProbability),
       visitNotes: _nonEmpty(visit.notes),
       measurementNotes: _nonEmpty(measurement?.measuredNotes),
@@ -539,9 +617,25 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
         cameraResult: cameraResult,
         cameraUsesPopulationHeight: cameraUsesPopulationHeight,
         cameraUsesPopulationWeight: cameraUsesPopulationWeight,
+        storedPopulationHeightSuppressed:
+            storedHeightUsesPopulationReference ||
+            fallbackHeightUsesPopulationReference,
+        manualHeightDuplicateSuppressed: storedHeightDuplicatesManual,
         rejectedMlWeight:
             rawStoredMlWeightKg != null && storedMlWeightKg == null,
+        mlWeightValidatedWithMeasuredHeight:
+            rawStoredMlWeightKg != null &&
+            calculatedHeightCm == null &&
+            actualHeightCm != null,
+        mlWeightValidatedWithPopulationReference:
+            rawStoredMlWeightKg != null &&
+            calculatedHeightCm == null &&
+            actualHeightCm == null &&
+            weightValidationHeightCm != null,
+        mlWeightConfidenceUnavailable:
+            calculatedWeightMethod == experimentalMlWeightSourceV1,
         calculatedMuacMethod: calculatedMuac?.muacMethod,
+        directMuacHasNoStoredEstimate: hasDirectMuac && calculatedMuac == null,
         oedemaPresent: oedemaPresent,
         measurementModeMissing: measurementMode == null,
       ),
@@ -563,7 +657,8 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
     if (weightKg == null) notes.add('weight unavailable');
     if (suppressWeightScoresForOedema) {
       notes.add(
-          'weight-related scores not interpreted because oedema is present');
+        'weight-related scores not interpreted because oedema is present',
+      );
     }
     final bmi = heightCm == null || weightKg == null
         ? null
@@ -571,7 +666,8 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
     final haz = ageMonths == null || heightCm == null
         ? null
         : _finite(_nutrition.computeHazForAge(sex, ageMonths, heightCm));
-    final whz = suppressWeightScoresForOedema ||
+    final whz =
+        suppressWeightScoresForOedema ||
             ageMonths == null ||
             heightCm == null ||
             weightKg == null
@@ -579,12 +675,12 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
         : _finite(_nutrition.computeWhz(sex, ageMonths, heightCm, weightKg));
     final waz =
         suppressWeightScoresForOedema || ageMonths == null || weightKg == null
-            ? null
-            : _finite(_nutrition.computeWaz(sex, ageMonths, weightKg));
+        ? null
+        : _finite(_nutrition.computeWaz(sex, ageMonths, weightKg));
     final baz =
         suppressWeightScoresForOedema || ageMonths == null || bmi == null
-            ? null
-            : _finite(_nutrition.computeBaz(sex, ageMonths, bmi));
+        ? null
+        : _finite(_nutrition.computeBaz(sex, ageMonths, bmi));
 
     final hazFlag = _qualityFlag(
       zScore: haz,
@@ -672,11 +768,7 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
     if (whz != null && whz < -3) triggers.add('whz');
     if (muacCm != null && muacCm < 11.5) triggers.add('muac');
     if (triggers.isNotEmpty) {
-      return _AcuteResult(
-        status: 'SAM',
-        triggeredBy: triggers,
-        notes: null,
-      );
+      return _AcuteResult(status: 'SAM', triggeredBy: triggers, notes: null);
     }
     if (oedema != 'No') {
       return const _AcuteResult(
@@ -690,11 +782,7 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
       triggers.add('muac');
     }
     if (triggers.isNotEmpty) {
-      return _AcuteResult(
-        status: 'MAM',
-        triggeredBy: triggers,
-        notes: null,
-      );
+      return _AcuteResult(status: 'MAM', triggeredBy: triggers, notes: null);
     }
     if (whz != null && whz >= -2 && muacCm != null && muacCm >= 12.5) {
       return const _AcuteResult(
@@ -756,14 +844,16 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
     required bool hasDirectMuac,
     required double? ageMonths,
   }) {
-    final storedEstimate =
-        hasDirectMuac ? null : _positiveFinite(measurement?.muacCm);
+    final storedEstimate = hasDirectMuac
+        ? null
+        : _positiveFinite(measurement?.muacCm);
     if (storedEstimate != null) {
       return MuacResult(
         muacCm: storedEstimate,
         muacStatus: null,
         muacMethod: _nonEmpty(measurement?.muacMethod) ?? 'estimated',
-        ageInRange: measurement?.muacAgeInRange ??
+        ageInRange:
+            measurement?.muacAgeInRange ??
             (ageMonths != null && ageMonths >= 6 && ageMonths < 60),
         confidence: measurement?.muacConfidence,
         uncertaintyLowerCm: measurement?.muacUncertaintyLowerCm,
@@ -771,7 +861,8 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
         modelVersion: _nonEmpty(measurement?.muacModelVersion),
         calibrationVersion: _nonEmpty(measurement?.muacCalibrationVersion),
         requiresConfirmation: measurement?.muacRequiresConfirmation ?? true,
-        referralGuidance: _nonEmpty(measurement?.muacReferralGuidance) ??
+        referralGuidance:
+            _nonEmpty(measurement?.muacReferralGuidance) ??
             'Calculated MUAC requires confirmation with a tape.',
       );
     }
@@ -897,8 +988,14 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
     required CameraResult? cameraResult,
     required bool cameraUsesPopulationHeight,
     required bool cameraUsesPopulationWeight,
+    required bool storedPopulationHeightSuppressed,
+    required bool manualHeightDuplicateSuppressed,
     required bool rejectedMlWeight,
+    required bool mlWeightValidatedWithMeasuredHeight,
+    required bool mlWeightValidatedWithPopulationReference,
+    required bool mlWeightConfidenceUnavailable,
     required String? calculatedMuacMethod,
+    required bool directMuacHasNoStoredEstimate,
     required bool oedemaPresent,
     required bool measurementModeMissing,
   }) {
@@ -921,11 +1018,29 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
     if (cameraUsesPopulationWeight) {
       values.add('camera_population_weight_suppressed=true');
     }
+    if (storedPopulationHeightSuppressed) {
+      values.add('stored_population_height_suppressed=true');
+    }
+    if (manualHeightDuplicateSuppressed) {
+      values.add('manual_height_duplicate_suppressed=true');
+    }
     if (rejectedMlWeight) {
       values.add('implausible_ml_weight_suppressed=true');
     }
+    if (mlWeightValidatedWithMeasuredHeight) {
+      values.add('ml_weight_bounds_checked_with_measured_height=true');
+    }
+    if (mlWeightValidatedWithPopulationReference) {
+      values.add('ml_weight_bounds_checked_with_population_reference=true');
+    }
+    if (mlWeightConfidenceUnavailable) {
+      values.add('ml_weight_confidence_not_recorded=true');
+    }
     if (calculatedMuacMethod == 'estimated_from_whz') {
       values.add('calculated_muac_generated_from_calculated_whz=true');
+    }
+    if (directMuacHasNoStoredEstimate) {
+      values.add('calculated_muac_not_independently_recorded=true');
     }
     if (oedemaPresent) values.add('oedema_grade_not_collected=true');
     if (measurementModeMissing) {
@@ -973,6 +1088,13 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
         value == 'measured' ||
         value == 'tape' ||
         value == 'tape_measured';
+  }
+
+  bool _isPopulationHeightMethod(String? method) {
+    final value = method?.trim().toLowerCase();
+    return value == 'who_statistical' ||
+        value == 'who_median_estimated' ||
+        value == legacyWhoHeightSourceV1;
   }
 
   DateTime? _parseDate(String raw) => DateTime.tryParse(raw);

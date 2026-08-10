@@ -7,6 +7,7 @@ import 'package:child_growth_monitor_app/database/daos/sync_queue_dao.dart';
 import 'package:child_growth_monitor_app/database/daos/visit_dao.dart';
 import 'package:child_growth_monitor_app/models/body_measurements.dart';
 import 'package:child_growth_monitor_app/models/wasting_features.dart';
+import 'package:child_growth_monitor_app/features/reports/repositories/clinical_csv_export_repository.dart';
 import 'package:child_growth_monitor_app/services/assessment_service.dart';
 import 'package:child_growth_monitor_app/services/measurement_service.dart';
 import 'package:child_growth_monitor_app/services/pose_source.dart';
@@ -19,24 +20,24 @@ import '../fixtures/who_test_data.dart';
 class _StubPose implements PoseSource {
   @override
   Future<BodySegments> segmentsFor(String _) async => const BodySegments(
-        headHeightPx: 100,
-        torsoLengthPx: 240,
-        legLengthPx: 380,
-        shoulderWidthPx: 160,
-        hipWidthPx: 140,
-        upperArmLengthPx: 120,
-        totalHeightPx: 800,
-        headTopY: 0,
-        chinY: 100,
-        shoulderMidpointY: 200,
-        hipMidpointY: 440,
-        heelY: 800,
-        headConfidence: 1,
-        torsoConfidence: 1,
-        legConfidence: 1,
-        hipConfidence: 1,
-        armConfidence: 1,
-      );
+    headHeightPx: 100,
+    torsoLengthPx: 240,
+    legLengthPx: 380,
+    shoulderWidthPx: 160,
+    hipWidthPx: 140,
+    upperArmLengthPx: 120,
+    totalHeightPx: 800,
+    headTopY: 0,
+    chinY: 100,
+    shoulderMidpointY: 200,
+    hipMidpointY: 440,
+    heelY: 800,
+    headConfidence: 1,
+    torsoConfidence: 1,
+    legConfidence: 1,
+    hipConfidence: 1,
+    armConfidence: 1,
+  );
   @override
   Future<SideViewSegments?> sideSegmentsFor(String _) async => null;
   @override
@@ -46,24 +47,24 @@ class _StubPose implements PoseSource {
 class _DegradedPose implements PoseSource {
   @override
   Future<BodySegments> segmentsFor(String _) async => const BodySegments(
-        headHeightPx: null,
-        torsoLengthPx: null,
-        legLengthPx: null,
-        shoulderWidthPx: null,
-        hipWidthPx: null,
-        upperArmLengthPx: null,
-        totalHeightPx: null,
-        headTopY: null,
-        chinY: null,
-        shoulderMidpointY: null,
-        hipMidpointY: null,
-        heelY: null,
-        headConfidence: 0,
-        torsoConfidence: 0,
-        legConfidence: 0,
-        hipConfidence: 0,
-        armConfidence: 0,
-      );
+    headHeightPx: null,
+    torsoLengthPx: null,
+    legLengthPx: null,
+    shoulderWidthPx: null,
+    hipWidthPx: null,
+    upperArmLengthPx: null,
+    totalHeightPx: null,
+    headTopY: null,
+    chinY: null,
+    shoulderMidpointY: null,
+    hipMidpointY: null,
+    heelY: null,
+    headConfidence: 0,
+    torsoConfidence: 0,
+    legConfidence: 0,
+    hipConfidence: 0,
+    armConfidence: 0,
+  );
   @override
   Future<SideViewSegments?> sideSegmentsFor(String _) async => null;
   @override
@@ -96,8 +97,7 @@ class _StubMl extends MlInferenceService {
   bool weightWithinBounds({
     required double predictedKg,
     required double whoMedianKg,
-  }) =>
-      true;
+  }) => true;
 }
 
 void main() {
@@ -166,6 +166,51 @@ void main() {
     expect(stored.muacMethod, 'landmark_estimated');
     expect(stored.muacCalibrationVersion, 'unvalidated-paired-tape-v0');
   });
+
+  test(
+    'manual assessment re-exports stored ML evidence without false pairs',
+    () async {
+      await svc.runAssessment(
+        frontImagePath: '/tmp/front.jpg',
+        childName: 'Recovery Export Child',
+        dateOfBirth: '2024-01-01',
+        sex: 'F',
+        manualHeightCm: 85,
+        manualWeightKg: 9,
+        manualMuacCm: 13,
+        ownerUserId: 7,
+      );
+
+      final stored = await db.select(db.measurements).getSingle();
+      expect(stored.manualHeightCm, 85);
+      expect(stored.predictedHeightCm, isNull);
+      expect(stored.mlEstimatedWeightKg, 11);
+      expect(stored.mamProbability, 0.05);
+
+      final exportRepository = DriftClinicalCsvExportRepository(
+        db,
+        whoData: who,
+      );
+      final record = (await exportRepository.loadSavedRecords(
+        ownerUserId: 7,
+      )).single;
+
+      expect(record.actualHeightCm, 85);
+      expect(record.actualWeightKg, 9);
+      expect(record.actualMuacCm, 13);
+      expect(record.calculatedHeightCm, isNull);
+      expect(record.calculatedHeightAvailability, 'not_independently_recorded');
+      expect(record.calculatedWeightKg, 11);
+      expect(record.weightErrorKg, 2);
+      expect(record.calculatedWeightConfidence, isNull);
+      expect(record.calculatedMuacCm, isNull);
+      expect(record.calculatedMuacAvailability, 'not_independently_recorded');
+      expect(record.mlWastingPrediction, 'Normal');
+      expect(record.samProbability, 0.02);
+      expect(record.mamProbability, 0.05);
+      expect(record.normalProbability, 0.90);
+    },
+  );
 
   test('ML failure produces a result labelled who_fallback', () async {
     ml.throwOnPredict = StateError('boom');
