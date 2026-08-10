@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:child_growth_monitor_app/database/database.dart';
+import 'package:child_growth_monitor_app/features/ar_scan/domain/ar_scan_models.dart';
 import 'package:child_growth_monitor_app/features/guided_capture/domain/camera_screening_result.dart';
 import 'package:child_growth_monitor_app/features/reports/repositories/clinical_csv_export_repository.dart';
 import 'package:child_growth_monitor_app/services/who_data_service.dart';
@@ -44,9 +47,7 @@ void main() {
   test(
     'exports identifying inputs and actual/calculated values side by side',
     () async {
-      final childId = await database
-          .into(database.children)
-          .insert(
+      final childId = await database.into(database.children).insert(
             ChildrenCompanion.insert(
               name: 'Anaya Patil',
               dateOfBirth: '2022-01-28',
@@ -56,9 +57,7 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      final visitId = await database
-          .into(database.visits)
-          .insert(
+      final visitId = await database.into(database.visits).insert(
             VisitsCompanion.insert(
               childId: childId,
               localUuid: '10000000-0000-0000-0000-000000000001',
@@ -73,9 +72,7 @@ void main() {
               consentOperatorIdentifier: const Value('field.worker'),
             ),
           );
-      await database
-          .into(database.measuredDetailRevisions)
-          .insert(
+      await database.into(database.measuredDetailRevisions).insert(
             MeasuredDetailRevisionsCompanion.insert(
               revisionUuid: '70000000-0000-0000-0000-000000000001',
               visitId: visitId,
@@ -85,9 +82,7 @@ void main() {
               reason: const Value('Tape measurement added'),
             ),
           );
-      await database
-          .into(database.measurements)
-          .insert(
+      await database.into(database.measurements).insert(
             MeasurementsCompanion.insert(
               visitId: visitId,
               manualHeightCm: const Value(100),
@@ -134,9 +129,7 @@ void main() {
           );
 
       // Drafts and another owner's visits must not leak into this export.
-      await database
-          .into(database.visits)
-          .insert(
+      await database.into(database.visits).insert(
             VisitsCompanion.insert(
               childId: childId,
               localUuid: '10000000-0000-0000-0000-000000000002',
@@ -146,9 +139,7 @@ void main() {
               captureState: const Value('draft_capture'),
             ),
           );
-      final otherChildId = await database
-          .into(database.children)
-          .insert(
+      final otherChildId = await database.into(database.children).insert(
             ChildrenCompanion.insert(
               name: 'Other worker child',
               dateOfBirth: '2023-01-01',
@@ -156,9 +147,7 @@ void main() {
               ownerUserId: const Value(8),
             ),
           );
-      final otherVisitId = await database
-          .into(database.visits)
-          .insert(
+      final otherVisitId = await database.into(database.visits).insert(
             VisitsCompanion.insert(
               childId: otherChildId,
               localUuid: '10000000-0000-0000-0000-000000000003',
@@ -166,9 +155,7 @@ void main() {
               ownerUserId: const Value(8),
             ),
           );
-      await database
-          .into(database.measurements)
-          .insert(
+      await database.into(database.measurements).insert(
             MeasurementsCompanion.insert(
               visitId: otherVisitId,
               manualHeightCm: const Value(90),
@@ -237,9 +224,7 @@ void main() {
   test(
     'uses strict stunting and wasting vocabularies for camera predictions',
     () async {
-      final childId = await database
-          .into(database.children)
-          .insert(
+      final childId = await database.into(database.children).insert(
             ChildrenCompanion.insert(
               name: 'Camera Child',
               dateOfBirth: '2023-04-10',
@@ -247,9 +232,7 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      final visitId = await database
-          .into(database.visits)
-          .insert(
+      final visitId = await database.into(database.visits).insert(
             VisitsCompanion.insert(
               childId: childId,
               localUuid: '20000000-0000-0000-0000-000000000001',
@@ -260,9 +243,7 @@ void main() {
               captureState: const Value('estimated_report'),
             ),
           );
-      await database
-          .into(database.cameraResults)
-          .insert(
+      await database.into(database.cameraResults).insert(
             CameraResultsCompanion.insert(
               resultUuid: '30000000-0000-0000-0000-000000000001',
               visitId: visitId,
@@ -303,12 +284,110 @@ void main() {
     },
   );
 
+  test('exports ARCore height, geometry weight, MUAC, and quality evidence',
+      () async {
+    const scan = FullArScanResult(
+      estimatedHeightCm: 91.2,
+      uncertaintyCm: 0.6,
+      acceptedKeyframes: 20,
+      validDepthFraction: 0.58,
+      meanDepthConfidence: 0.84,
+      scanCoverageDegrees: 92,
+      cameraTravelMeters: 0.8,
+      floorStabilityCm: 1.1,
+      capturedBodyPoints: 6400,
+      durationMs: 15000,
+      qualityScore: 0.92,
+      depthMode: 'raw_depth_with_confidence',
+      shoulderWidthCm: 23,
+      hipWidthCm: 21,
+      torsoLengthCm: 30,
+      upperArmLengthCm: 16,
+      chestDepthCm: 13,
+      abdomenDepthCm: 12,
+      estimatedMuacCm: 13.1,
+      muacUncertaintyCm: 0.4,
+      poseQualityScore: 0.9,
+      geometryQualityScore: 0.88,
+    );
+    final childId = await database.into(database.children).insert(
+          ChildrenCompanion.insert(
+            name: 'ARCore Child',
+            dateOfBirth: '2023-10-10',
+            sex: 'M',
+            ownerUserId: const Value(7),
+          ),
+        );
+    final visitId = await database.into(database.visits).insert(
+          VisitsCompanion.insert(
+            childId: childId,
+            localUuid: '35000000-0000-0000-0000-000000000001',
+            visitDate: Value(DateTime(2026, 8, 5)),
+            ageMonths: 33.8,
+            ownerUserId: const Value(7),
+            entryMethod: const Value('assessment'),
+            deviceMetadataJson: Value(
+              jsonEncode({'arcore_depth_scan': scan.toJson()}),
+            ),
+          ),
+        );
+    await database.into(database.measurements).insert(
+          MeasurementsCompanion.insert(
+            visitId: visitId,
+            manualHeightCm: const Value(90),
+            manualWeightKg: const Value(10.5),
+            muacCm: const Value(12.8),
+            muacMethod: const Value('tape'),
+            muacIsDirectMeasurement: const Value(true),
+          ),
+        );
+    await database.into(database.cameraResults).insert(
+          CameraResultsCompanion.insert(
+            resultUuid: '36000000-0000-0000-0000-000000000001',
+            visitId: visitId,
+            version: 1,
+            estimatedHeightCm: const Value(91.2),
+            estimatedWeightKg: const Value(11.7),
+            estimatedMuacCm: const Value(13.1),
+            heightSource: const Value(arcoreDepthHeightSourceV3),
+            weightSource: const Value(arcoreGeometryWeightSourceV3),
+            muacSource: const Value(arcoreArmMuacSourceV3),
+            heightRangeLowerCm: const Value(90.6),
+            heightRangeUpperCm: const Value(91.8),
+            weightRangeLowerKg: const Value(11.1),
+            weightRangeUpperKg: const Value(12.3),
+            muacRangeLowerCm: const Value(12.7),
+            muacRangeUpperCm: const Value(13.5),
+            method: cameraScreeningContactlessMethodV2,
+            modelVersion: 'field-model-v1',
+            manifestChecksum:
+                'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+            trainingDataLabel: 'field-validation-pending',
+          ),
+        );
+
+    final record = (await repository.loadSavedRecords(ownerUserId: 7)).single;
+
+    expect(record.exportSchemaVersion, 'clinical_csv_v5_arcore_recovery');
+    expect(record.calculatedHeightCm, 91.2);
+    expect(record.calculatedHeightMethod, arcoreDepthHeightSourceV3);
+    expect(record.calculatedWeightKg, 11.7);
+    expect(record.calculatedWeightMethod, arcoreGeometryWeightSourceV3);
+    expect(record.calculatedMuacCm, 13.1);
+    expect(record.calculatedMuacMethod, arcoreArmMuacSourceV3);
+    expect(record.arcoreScanAvailable, isTrue);
+    expect(record.arcoreDepthHeightCm, 91.2);
+    expect(record.arcoreGeometryMlWeightKg, 11.7);
+    expect(record.arcoreArmMuacCm, 13.1);
+    expect(record.arcoreQualityScore, 0.92);
+    expect(record.arcoreShoulderWidthCm, 23);
+    expect(record.provenanceNotes, contains('arcore_non_clinical=true'));
+  });
+
   test(
     'leaves cross-domain labels blank when no z-score can correct them',
     () async {
-      final childId = await database
-          .into(database.children)
-          .insert(
+      final childId = await database.into(database.children).insert(
             ChildrenCompanion.insert(
               name: 'Mixed Label Child',
               dateOfBirth: '2023-01-01',
@@ -316,9 +395,7 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      final visitId = await database
-          .into(database.visits)
-          .insert(
+      final visitId = await database.into(database.visits).insert(
             VisitsCompanion.insert(
               childId: childId,
               localUuid: '40000000-0000-0000-0000-000000000001',
@@ -326,9 +403,7 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      await database
-          .into(database.measurements)
-          .insert(
+      await database.into(database.measurements).insert(
             MeasurementsCompanion.insert(
               visitId: visitId,
               hazStatus: const Value('SAM'),
@@ -350,9 +425,7 @@ void main() {
   test(
     'exports estimated MUAC evidence and suppresses implausible ML weight',
     () async {
-      final childId = await database
-          .into(database.children)
-          .insert(
+      final childId = await database.into(database.children).insert(
             ChildrenCompanion.insert(
               name: 'MUAC Estimate Child',
               dateOfBirth: '2024-01-12',
@@ -360,9 +433,7 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      final visitId = await database
-          .into(database.visits)
-          .insert(
+      final visitId = await database.into(database.visits).insert(
             VisitsCompanion.insert(
               childId: childId,
               localUuid: '50000000-0000-0000-0000-000000000001',
@@ -371,9 +442,7 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      await database
-          .into(database.measurements)
-          .insert(
+      await database.into(database.measurements).insert(
             MeasurementsCompanion.insert(
               visitId: visitId,
               predictedHeightCm: const Value(91.2),
@@ -433,9 +502,7 @@ void main() {
   test(
     'does not invent WHO median predictions for manual-only records',
     () async {
-      final childId = await database
-          .into(database.children)
-          .insert(
+      final childId = await database.into(database.children).insert(
             ChildrenCompanion.insert(
               name: 'Manual Only Child',
               dateOfBirth: '2023-01-01',
@@ -443,9 +510,7 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      final visitId = await database
-          .into(database.visits)
-          .insert(
+      final visitId = await database.into(database.visits).insert(
             VisitsCompanion.insert(
               childId: childId,
               localUuid: '60000000-0000-0000-0000-000000000001',
@@ -453,9 +518,7 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      await database
-          .into(database.measurements)
-          .insert(
+      await database.into(database.measurements).insert(
             MeasurementsCompanion.insert(
               visitId: visitId,
               manualHeightCm: const Value(90),
@@ -482,9 +545,7 @@ void main() {
   test(
     'recovers stored ML outputs without duplicating manual evidence',
     () async {
-      final childId = await database
-          .into(database.children)
-          .insert(
+      final childId = await database.into(database.children).insert(
             ChildrenCompanion.insert(
               name: 'Historical Assessment Child',
               dateOfBirth: '2023-01-01',
@@ -492,9 +553,7 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      final visitId = await database
-          .into(database.visits)
-          .insert(
+      final visitId = await database.into(database.visits).insert(
             VisitsCompanion.insert(
               childId: childId,
               localUuid: '61000000-0000-0000-0000-000000000001',
@@ -503,9 +562,7 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      await database
-          .into(database.measurements)
-          .insert(
+      await database.into(database.measurements).insert(
             MeasurementsCompanion.insert(
               visitId: visitId,
               manualHeightCm: const Value(90),
@@ -572,9 +629,7 @@ void main() {
   test(
     'suppresses stored WHO population height from child estimates',
     () async {
-      final childId = await database
-          .into(database.children)
-          .insert(
+      final childId = await database.into(database.children).insert(
             ChildrenCompanion.insert(
               name: 'Historical Reference Child',
               dateOfBirth: '2023-01-01',
@@ -582,9 +637,7 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      final visitId = await database
-          .into(database.visits)
-          .insert(
+      final visitId = await database.into(database.visits).insert(
             VisitsCompanion.insert(
               childId: childId,
               localUuid: '62000000-0000-0000-0000-000000000001',
@@ -593,9 +646,7 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      await database
-          .into(database.measurements)
-          .insert(
+      await database.into(database.measurements).insert(
             MeasurementsCompanion.insert(
               visitId: visitId,
               predictedHeightCm: const Value(95),
@@ -625,9 +676,7 @@ void main() {
   );
 
   test('never mixes measured height with calculated weight', () async {
-    final childId = await database
-        .into(database.children)
-        .insert(
+    final childId = await database.into(database.children).insert(
           ChildrenCompanion.insert(
             name: 'No Mixed Inputs Child',
             dateOfBirth: '2023-01-01',
@@ -635,9 +684,7 @@ void main() {
             ownerUserId: const Value(7),
           ),
         );
-    final visitId = await database
-        .into(database.visits)
-        .insert(
+    final visitId = await database.into(database.visits).insert(
           VisitsCompanion.insert(
             childId: childId,
             localUuid: '80000000-0000-0000-0000-000000000001',
@@ -646,9 +693,7 @@ void main() {
             ownerUserId: const Value(7),
           ),
         );
-    await database
-        .into(database.measurements)
-        .insert(
+    await database.into(database.measurements).insert(
           MeasurementsCompanion.insert(
             visitId: visitId,
             manualHeightCm: const Value(90),
@@ -674,9 +719,7 @@ void main() {
   });
 
   test('oedema triggers measured SAM and suppresses weight scores', () async {
-    final childId = await database
-        .into(database.children)
-        .insert(
+    final childId = await database.into(database.children).insert(
           ChildrenCompanion.insert(
             name: 'Oedema Child',
             dateOfBirth: '2023-01-01',
@@ -684,9 +727,7 @@ void main() {
             ownerUserId: const Value(7),
           ),
         );
-    final visitId = await database
-        .into(database.visits)
-        .insert(
+    final visitId = await database.into(database.visits).insert(
           VisitsCompanion.insert(
             childId: childId,
             localUuid: '81000000-0000-0000-0000-000000000001',
@@ -695,9 +736,7 @@ void main() {
             ownerUserId: const Value(7),
           ),
         );
-    await database
-        .into(database.measurements)
-        .insert(
+    await database.into(database.measurements).insert(
           MeasurementsCompanion.insert(
             visitId: visitId,
             manualHeightCm: const Value(95),
@@ -728,9 +767,7 @@ void main() {
   });
 
   test('exports measured change from the previous completed visit', () async {
-    final childId = await database
-        .into(database.children)
-        .insert(
+    final childId = await database.into(database.children).insert(
           ChildrenCompanion.insert(
             name: 'Longitudinal Child',
             dateOfBirth: '2023-01-01',
@@ -745,9 +782,7 @@ void main() {
       required double weight,
       required double muac,
     }) async {
-      final visitId = await database
-          .into(database.visits)
-          .insert(
+      final visitId = await database.into(database.visits).insert(
             VisitsCompanion.insert(
               childId: childId,
               localUuid: uuid,
@@ -756,9 +791,7 @@ void main() {
               ownerUserId: const Value(7),
             ),
           );
-      await database
-          .into(database.measurements)
-          .insert(
+      await database.into(database.measurements).insert(
             MeasurementsCompanion.insert(
               visitId: visitId,
               manualHeightCm: Value(height),

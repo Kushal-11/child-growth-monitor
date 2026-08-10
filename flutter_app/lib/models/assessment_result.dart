@@ -5,6 +5,8 @@ class AssessmentResult {
     required this.childName,
     required this.sex,
     required this.ageMonths,
+    this.visitUuid,
+    this.ownerUserId,
     required this.summary,
     required this.measurement,
     required this.nutrition,
@@ -18,6 +20,8 @@ class AssessmentResult {
   final String childName;
   final String sex;
   final double ageMonths;
+  final String? visitUuid;
+  final int? ownerUserId;
   final String summary;
   final Measurement measurement;
   final Nutrition nutrition;
@@ -32,6 +36,8 @@ class AssessmentResult {
       childName: json['child_name'] as String,
       sex: json['sex'] as String,
       ageMonths: (json['age_months'] as num).toDouble(),
+      visitUuid: json['visit_uuid'] as String?,
+      ownerUserId: (json['owner_user_id'] as num?)?.toInt(),
       summary: json['summary'] as String,
       measurement: Measurement.fromJson(
         json['measurement'] as Map<String, dynamic>? ?? {},
@@ -245,8 +251,8 @@ class MlPrediction {
       mamProbability: (json['mam_probability'] as num?)?.toDouble(),
       normalProbability: (json['normal_probability'] as num?)?.toDouble(),
       riskProbability: (json['risk_probability'] as num?)?.toDouble(),
-      overweightProbability:
-          (json['overweight_probability'] as num?)?.toDouble(),
+      overweightProbability: (json['overweight_probability'] as num?)
+          ?.toDouble(),
       wastingStatus: json['wasting_status'] as String?,
       wastingMethod: json['wasting_method'] as String?,
     );

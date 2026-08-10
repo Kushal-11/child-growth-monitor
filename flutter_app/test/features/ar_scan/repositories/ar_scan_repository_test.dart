@@ -61,6 +61,7 @@ void main() {
     );
     expect(context.ageMonths, 36);
     expect(context.sex, 'F');
+    expect(context.entryMethod, 'assessment');
 
     await repository.saveExperimentalResult(
       ownerUserId: ownerUserId,

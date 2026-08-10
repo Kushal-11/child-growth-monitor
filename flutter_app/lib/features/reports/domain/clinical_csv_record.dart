@@ -129,6 +129,32 @@ class ClinicalCsvRecord {
     required this.visitNotes,
     required this.measurementNotes,
     required this.provenanceNotes,
+    this.arcoreScanAvailable = false,
+    this.arcoreMethod,
+    this.arcoreDepthHeightCm,
+    this.arcoreHeightUncertaintyCm,
+    this.arcoreHeightRangeLowerCm,
+    this.arcoreHeightRangeUpperCm,
+    this.arcoreGeometryMlWeightKg,
+    this.arcoreWeightRangeLowerKg,
+    this.arcoreWeightRangeUpperKg,
+    this.arcoreArmMuacCm,
+    this.arcoreMuacUncertaintyCm,
+    this.arcoreMuacRangeLowerCm,
+    this.arcoreMuacRangeUpperCm,
+    this.arcoreQualityScore,
+    this.arcoreGeometryQualityScore,
+    this.arcorePoseQualityScore,
+    this.arcoreAcceptedKeyframes,
+    this.arcoreDepthConfidence,
+    this.arcoreCoverageDegrees,
+    this.arcoreFloorStabilityCm,
+    this.arcoreShoulderWidthCm,
+    this.arcoreHipWidthCm,
+    this.arcoreTorsoLengthCm,
+    this.arcoreUpperArmLengthCm,
+    this.arcoreChestDepthCm,
+    this.arcoreAbdomenDepthCm,
   });
 
   static const headers = <String>[
@@ -229,6 +255,34 @@ class ClinicalCsvRecord {
     'calculated_acute_triggered_by',
     'calculated_acute_method',
     'calculated_acute_screening_only',
+
+    // Raw-depth ARCore evidence and geometry retained as reduced values.
+    'arcore_scan_available',
+    'arcore_method',
+    'arcore_depth_height_cm',
+    'arcore_height_uncertainty_cm',
+    'arcore_height_range_lower_cm',
+    'arcore_height_range_upper_cm',
+    'arcore_geometry_ml_weight_kg',
+    'arcore_weight_range_lower_kg',
+    'arcore_weight_range_upper_kg',
+    'arcore_arm_muac_cm',
+    'arcore_muac_uncertainty_cm',
+    'arcore_muac_range_lower_cm',
+    'arcore_muac_range_upper_cm',
+    'arcore_quality_score',
+    'arcore_geometry_quality_score',
+    'arcore_pose_quality_score',
+    'arcore_accepted_keyframes',
+    'arcore_depth_confidence',
+    'arcore_coverage_degrees',
+    'arcore_floor_stability_cm',
+    'arcore_shoulder_width_cm',
+    'arcore_hip_width_cm',
+    'arcore_torso_length_cm',
+    'arcore_upper_arm_length_cm',
+    'arcore_chest_depth_cm',
+    'arcore_abdomen_depth_cm',
 
     // Stored model outputs shown by the assessment result screen.
     'ml_estimated_weight_kg',
@@ -393,6 +447,32 @@ class ClinicalCsvRecord {
   final String? visitNotes;
   final String? measurementNotes;
   final String? provenanceNotes;
+  final bool arcoreScanAvailable;
+  final String? arcoreMethod;
+  final double? arcoreDepthHeightCm;
+  final double? arcoreHeightUncertaintyCm;
+  final double? arcoreHeightRangeLowerCm;
+  final double? arcoreHeightRangeUpperCm;
+  final double? arcoreGeometryMlWeightKg;
+  final double? arcoreWeightRangeLowerKg;
+  final double? arcoreWeightRangeUpperKg;
+  final double? arcoreArmMuacCm;
+  final double? arcoreMuacUncertaintyCm;
+  final double? arcoreMuacRangeLowerCm;
+  final double? arcoreMuacRangeUpperCm;
+  final double? arcoreQualityScore;
+  final double? arcoreGeometryQualityScore;
+  final double? arcorePoseQualityScore;
+  final int? arcoreAcceptedKeyframes;
+  final double? arcoreDepthConfidence;
+  final double? arcoreCoverageDegrees;
+  final double? arcoreFloorStabilityCm;
+  final double? arcoreShoulderWidthCm;
+  final double? arcoreHipWidthCm;
+  final double? arcoreTorsoLengthCm;
+  final double? arcoreUpperArmLengthCm;
+  final double? arcoreChestDepthCm;
+  final double? arcoreAbdomenDepthCm;
 
   List<Object?> toCsvRow() => <Object?>[
     exportSchemaVersion,
@@ -488,6 +568,32 @@ class ClinicalCsvRecord {
     calculatedAcuteTriggeredBy,
     calculatedAcuteMethod,
     _formatBool(calculatedAcuteScreeningOnly),
+    _formatBool(arcoreScanAvailable),
+    arcoreMethod,
+    _formatNumber(arcoreDepthHeightCm),
+    _formatNumber(arcoreHeightUncertaintyCm),
+    _formatNumber(arcoreHeightRangeLowerCm),
+    _formatNumber(arcoreHeightRangeUpperCm),
+    _formatNumber(arcoreGeometryMlWeightKg),
+    _formatNumber(arcoreWeightRangeLowerKg),
+    _formatNumber(arcoreWeightRangeUpperKg),
+    _formatNumber(arcoreArmMuacCm),
+    _formatNumber(arcoreMuacUncertaintyCm),
+    _formatNumber(arcoreMuacRangeLowerCm),
+    _formatNumber(arcoreMuacRangeUpperCm),
+    _formatNumber(arcoreQualityScore),
+    _formatNumber(arcoreGeometryQualityScore),
+    _formatNumber(arcorePoseQualityScore),
+    arcoreAcceptedKeyframes,
+    _formatNumber(arcoreDepthConfidence),
+    _formatNumber(arcoreCoverageDegrees),
+    _formatNumber(arcoreFloorStabilityCm),
+    _formatNumber(arcoreShoulderWidthCm),
+    _formatNumber(arcoreHipWidthCm),
+    _formatNumber(arcoreTorsoLengthCm),
+    _formatNumber(arcoreUpperArmLengthCm),
+    _formatNumber(arcoreChestDepthCm),
+    _formatNumber(arcoreAbdomenDepthCm),
     _formatNumber(mlEstimatedWeightKg),
     _formatBool(mlWeightAcceptedForCalculation),
     mlWastingPrediction,

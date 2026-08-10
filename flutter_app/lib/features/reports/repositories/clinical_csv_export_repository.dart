@@ -9,10 +9,11 @@ import '../../../services/muac_service.dart';
 import '../../../services/nutrition_service.dart';
 import '../../../services/poshan_setu_service.dart';
 import '../../../services/who_data_service.dart';
+import '../../ar_scan/domain/ar_scan_models.dart';
 import '../../guided_capture/domain/camera_screening_result.dart';
 import '../domain/clinical_csv_record.dart';
 
-const _exportSchemaVersion = 'clinical_csv_v4_recovery';
+const _exportSchemaVersion = 'clinical_csv_v5_arcore_recovery';
 const _whoStandardVersion = 'who_child_growth_standards_2006_lms';
 const _whoActualAcuteMethod = 'who_imnci_measured_whz_muac_oedema_v1';
 const _whoCalculatedAcuteMethod =
@@ -227,6 +228,13 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
     );
     final oedema = _normaliseOedema(measurement?.oedema);
     final oedemaPresent = oedema == 'Yes';
+    final arScan = _arScanFromMetadata(visit.deviceMetadataJson);
+    final arHeightCm = _positiveFinite(arScan?.estimatedHeightCm);
+    final arCameraResult =
+        arScan != null &&
+            cameraResult?.method == cameraScreeningContactlessMethodV2
+        ? cameraResult
+        : null;
 
     final hasDirectMuac = _hasDirectMuac(measurement);
     final actualHeightCm = _positiveFinite(measurement?.manualHeightCm);
@@ -275,11 +283,14 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
         : _positiveFinite(measurement?.effectiveHeightCm);
     final calculatedHeightCm =
         cameraHeightCm ??
+        arHeightCm ??
         eligibleStoredPredictedHeightCm ??
         fallbackEstimatedHeightCm;
     final calculatedHeightMethod = cameraHeightCm != null
         ? _nonEmpty(cameraResult?.heightSource) ??
               _nonEmpty(cameraResult?.method)
+        : arHeightCm != null
+        ? arScan?.method
         : eligibleStoredPredictedHeightCm != null
         ? storedHeightPredictionMethod
         : fallbackEstimatedHeightCm != null
@@ -381,6 +392,8 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
 
     final calculatedMuac = _calculatedMuac(
       measurement: measurement,
+      cameraResult: cameraResult,
+      arScan: arScan,
       hasDirectMuac: hasDirectMuac,
       ageMonths: ageForWho,
     );
@@ -473,6 +486,8 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
       calculatedHeightMethod: calculatedHeightMethod,
       calculatedHeightConfidence: calculatedHeightCm == null
           ? null
+          : arHeightCm != null && calculatedHeightCm == arHeightCm
+          ? _finite(arScan?.qualityScore)
           : _finite(measurement?.heightConfidence) ??
                 _finite(measurement?.confidenceScore),
       calculatedWhoAdjustedHeightCm: calculatedAdjustedHeight,
@@ -559,6 +574,38 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
       calculatedAcuteTriggeredBy: _encodeTriggers(calculatedAcute.triggeredBy),
       calculatedAcuteMethod: _whoCalculatedAcuteMethod,
       calculatedAcuteScreeningOnly: true,
+      arcoreScanAvailable: arScan != null,
+      arcoreMethod: arScan?.method,
+      arcoreDepthHeightCm: arHeightCm,
+      arcoreHeightUncertaintyCm: _finite(arScan?.uncertaintyCm),
+      arcoreHeightRangeLowerCm: _positiveFinite(arScan?.heightRangeLowerCm),
+      arcoreHeightRangeUpperCm: _positiveFinite(arScan?.heightRangeUpperCm),
+      arcoreGeometryMlWeightKg: _positiveFinite(
+        arCameraResult?.estimatedWeightKg,
+      ),
+      arcoreWeightRangeLowerKg: _positiveFinite(
+        arCameraResult?.weightRangeLowerKg,
+      ),
+      arcoreWeightRangeUpperKg: _positiveFinite(
+        arCameraResult?.weightRangeUpperKg,
+      ),
+      arcoreArmMuacCm: _positiveFinite(arScan?.estimatedMuacCm),
+      arcoreMuacUncertaintyCm: _positiveFinite(arScan?.muacUncertaintyCm),
+      arcoreMuacRangeLowerCm: _positiveFinite(arScan?.muacRangeLowerCm),
+      arcoreMuacRangeUpperCm: _positiveFinite(arScan?.muacRangeUpperCm),
+      arcoreQualityScore: _finite(arScan?.qualityScore),
+      arcoreGeometryQualityScore: _finite(arScan?.geometryQualityScore),
+      arcorePoseQualityScore: _finite(arScan?.poseQualityScore),
+      arcoreAcceptedKeyframes: arScan?.acceptedKeyframes,
+      arcoreDepthConfidence: _finite(arScan?.meanDepthConfidence),
+      arcoreCoverageDegrees: _finite(arScan?.scanCoverageDegrees),
+      arcoreFloorStabilityCm: _finite(arScan?.floorStabilityCm),
+      arcoreShoulderWidthCm: _positiveFinite(arScan?.shoulderWidthCm),
+      arcoreHipWidthCm: _positiveFinite(arScan?.hipWidthCm),
+      arcoreTorsoLengthCm: _positiveFinite(arScan?.torsoLengthCm),
+      arcoreUpperArmLengthCm: _positiveFinite(arScan?.upperArmLengthCm),
+      arcoreChestDepthCm: _positiveFinite(arScan?.chestDepthCm),
+      arcoreAbdomenDepthCm: _positiveFinite(arScan?.abdomenDepthCm),
       poshanSetuBmiStatus: poshan.bmiStatus,
       poshanSetuMuacStatus: poshan.muacStatus,
       poshanSetuFinalStatus: poshan.finalStatus,
@@ -615,6 +662,7 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
       provenanceNotes: _buildProvenanceNotes(
         measurement: measurement,
         cameraResult: cameraResult,
+        arScan: arScan,
         cameraUsesPopulationHeight: cameraUsesPopulationHeight,
         cameraUsesPopulationWeight: cameraUsesPopulationWeight,
         storedPopulationHeightSuppressed:
@@ -841,9 +889,46 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
 
   MuacResult? _calculatedMuac({
     required Measurement? measurement,
+    required CameraResult? cameraResult,
+    required FullArScanResult? arScan,
     required bool hasDirectMuac,
     required double? ageMonths,
   }) {
+    final cameraEstimate = _positiveFinite(cameraResult?.estimatedMuacCm);
+    if (cameraEstimate != null) {
+      return MuacResult(
+        muacCm: cameraEstimate,
+        muacStatus: null,
+        muacMethod:
+            _nonEmpty(cameraResult?.muacSource) ??
+            _nonEmpty(cameraResult?.method) ??
+            'camera_estimated',
+        ageInRange: ageMonths != null && ageMonths >= 6 && ageMonths < 60,
+        confidence: _finite(arScan?.geometryQualityScore),
+        uncertaintyLowerCm: _positiveFinite(cameraResult?.muacRangeLowerCm),
+        uncertaintyUpperCm: _positiveFinite(cameraResult?.muacRangeUpperCm),
+        modelVersion: _nonEmpty(cameraResult?.modelVersion),
+        calibrationVersion: _nonEmpty(cameraResult?.method),
+        requiresConfirmation: true,
+        referralGuidance: 'Calculated camera MUAC requires tape confirmation.',
+      );
+    }
+    final arEstimate = _positiveFinite(arScan?.estimatedMuacCm);
+    if (arEstimate != null) {
+      return MuacResult(
+        muacCm: arEstimate,
+        muacStatus: null,
+        muacMethod: arcoreArmMuacSourceV3,
+        ageInRange: ageMonths != null && ageMonths >= 6 && ageMonths < 60,
+        confidence: _finite(arScan?.geometryQualityScore),
+        uncertaintyLowerCm: _positiveFinite(arScan?.muacRangeLowerCm),
+        uncertaintyUpperCm: _positiveFinite(arScan?.muacRangeUpperCm),
+        modelVersion: arScan?.method,
+        calibrationVersion: arScan?.method,
+        requiresConfirmation: true,
+        referralGuidance: 'ARCore MUAC estimate requires tape confirmation.',
+      );
+    }
     final storedEstimate = hasDirectMuac
         ? null
         : _positiveFinite(measurement?.muacCm);
@@ -965,6 +1050,19 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
     };
   }
 
+  FullArScanResult? _arScanFromMetadata(String? encoded) {
+    if (encoded == null || encoded.isEmpty) return null;
+    try {
+      final metadata = jsonDecode(encoded);
+      if (metadata is! Map<String, dynamic>) return null;
+      final raw = metadata['arcore_depth_scan'];
+      if (raw is! Map) return null;
+      return FullArScanResult.fromJson(Map<String, dynamic>.from(raw));
+    } on Object {
+      return null;
+    }
+  }
+
   double? _positionAdjustment({
     required int? ageDays,
     required String? measurementMode,
@@ -986,6 +1084,7 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
   String? _buildProvenanceNotes({
     required Measurement? measurement,
     required CameraResult? cameraResult,
+    required FullArScanResult? arScan,
     required bool cameraUsesPopulationHeight,
     required bool cameraUsesPopulationWeight,
     required bool storedPopulationHeightSuppressed,
@@ -1011,6 +1110,12 @@ class DriftClinicalCsvExportRepository implements ClinicalCsvExportRepository {
           cameraResult.estimatedWhz != null) {
         values.add('camera_zscores_recomputed_from_same_basis_values=true');
       }
+    }
+    if (arScan != null) {
+      values.add('arcore_depth_scan_available=true');
+      values.add('arcore_method=${arScan.method}');
+      values.add('arcore_non_clinical=true');
+      values.add('arcore_raw_depth_not_retained=true');
     }
     if (cameraUsesPopulationHeight) {
       values.add('camera_population_height_suppressed=true');

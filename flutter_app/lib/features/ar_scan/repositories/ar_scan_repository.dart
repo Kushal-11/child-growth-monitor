@@ -23,10 +23,12 @@ class ArScanVisitContext {
   const ArScanVisitContext({
     required this.ageMonths,
     required this.sex,
+    required this.entryMethod,
   });
 
   final double ageMonths;
   final String sex;
+  final String entryMethod;
 }
 
 class DriftArScanRepository implements ArScanRepository {
@@ -38,23 +40,27 @@ class DriftArScanRepository implements ArScanRepository {
     required int ownerUserId,
     required String visitUuid,
   }) async {
-    final visit = await (_database.select(_database.visits)
-          ..where(
-            (row) =>
-                row.localUuid.equals(visitUuid) &
-                row.ownerUserId.equals(ownerUserId),
-          ))
-        .getSingleOrNull();
+    final visit =
+        await (_database.select(_database.visits)..where(
+              (row) =>
+                  row.localUuid.equals(visitUuid) &
+                  row.ownerUserId.equals(ownerUserId),
+            ))
+            .getSingleOrNull();
     if (visit == null) throw StateError('Owner-scoped visit was not found');
-    final child = await (_database.select(_database.children)
-          ..where(
-            (row) =>
-                row.id.equals(visit.childId) &
-                row.ownerUserId.equals(ownerUserId),
-          ))
-        .getSingleOrNull();
+    final child =
+        await (_database.select(_database.children)..where(
+              (row) =>
+                  row.id.equals(visit.childId) &
+                  row.ownerUserId.equals(ownerUserId),
+            ))
+            .getSingleOrNull();
     if (child == null) throw StateError('Owner-scoped child was not found');
-    return ArScanVisitContext(ageMonths: visit.ageMonths, sex: child.sex);
+    return ArScanVisitContext(
+      ageMonths: visit.ageMonths,
+      sex: child.sex,
+      entryMethod: visit.entryMethod,
+    );
   }
 
   @override
@@ -62,39 +68,45 @@ class DriftArScanRepository implements ArScanRepository {
     required int ownerUserId,
     required String visitUuid,
     required FullArScanResult result,
-  }) =>
-      _database.transaction(() async {
-        final visit = await (_database.select(_database.visits)
-              ..where((row) =>
+  }) => _database.transaction(() async {
+    final visit =
+        await (_database.select(_database.visits)..where(
+              (row) =>
                   row.localUuid.equals(visitUuid) &
-                  row.ownerUserId.equals(ownerUserId)))
+                  row.ownerUserId.equals(ownerUserId),
+            ))
             .getSingleOrNull();
-        if (visit == null) throw StateError('Owner-scoped visit was not found');
-        final metadata = _decodeObject(visit.deviceMetadataJson);
-        metadata['arcore_depth_scan'] = result.toJson();
-        final encoded = jsonEncode(metadata);
-        await (_database.update(_database.visits)
-              ..where((row) => row.id.equals(visit.id)))
-            .write(VisitsCompanion(deviceMetadataJson: Value(encoded)));
+    if (visit == null) throw StateError('Owner-scoped visit was not found');
+    final metadata = _decodeObject(visit.deviceMetadataJson);
+    metadata['arcore_depth_scan'] = result.toJson();
+    final encoded = jsonEncode(metadata);
+    await (_database.update(_database.visits)
+          ..where((row) => row.id.equals(visit.id)))
+        .write(VisitsCompanion(deviceMetadataJson: Value(encoded)));
 
-        final outbox = await (_database.select(_database.syncOutbox)
-              ..where((row) =>
+    final outbox =
+        await (_database.select(_database.syncOutbox)..where(
+              (row) =>
                   row.ownerUserId.equals(ownerUserId) &
                   row.entityType.equals(SyncOutboxEntityType.visit) &
-                  row.entityUuid.equals(visitUuid)))
+                  row.entityUuid.equals(visitUuid),
+            ))
             .getSingleOrNull();
-        if (outbox == null) {
-          throw StateError('Visit outbox record was not found');
-        }
-        final payload = _decodeObject(outbox.payloadJson);
-        payload['device_metadata'] = metadata;
-        await SyncOutboxDao(_database).refreshPayload(
-          ownerUserId: ownerUserId,
-          entityType: SyncOutboxEntityType.visit,
-          entityUuid: visitUuid,
-          payloadJson: jsonEncode(payload),
-        );
-      });
+    // Guided-capture visits have a typed outbox entry. Standard assessment
+    // visits use the legacy sync queue, which reads the visit row later.
+    // Persist the depth result in both paths and refresh an outbox payload
+    // only when that payload exists.
+    if (outbox != null) {
+      final payload = _decodeObject(outbox.payloadJson);
+      payload['device_metadata'] = metadata;
+      await SyncOutboxDao(_database).refreshPayload(
+        ownerUserId: ownerUserId,
+        entityType: SyncOutboxEntityType.visit,
+        entityUuid: visitUuid,
+        payloadJson: jsonEncode(payload),
+      );
+    }
+  });
 
   Map<String, dynamic> _decodeObject(String? value) {
     if (value == null || value.isEmpty) return <String, dynamic>{};

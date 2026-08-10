@@ -89,11 +89,18 @@ class ArScanCard extends ConsumerWidget {
                   '${result.estimatedMuacCm!.toStringAsFixed(1)} ± '
                   '${result.muacUncertaintyCm!.toStringAsFixed(1)} cm',
                 ),
-              Text(
-                result.hasWeightGeometry
-                    ? 'Body geometry captured for the contactless weight estimate.'
-                    : 'Height saved. Weight/MUAC will use the best available guided-camera fallback.',
-              ),
+              if (state.processedResult?.estimatedWeightKg != null)
+                Text(
+                  'Estimated weight '
+                  '${state.processedResult!.estimatedWeightKg!.toStringAsFixed(1)} kg'
+                  '${state.processedResult!.weightRangeLowerKg != null && state.processedResult!.weightRangeUpperKg != null ? ' (${state.processedResult!.weightRangeLowerKg!.toStringAsFixed(1)}–${state.processedResult!.weightRangeUpperKg!.toStringAsFixed(1)} kg range)' : ''}',
+                )
+              else
+                Text(
+                  result.hasWeightGeometry
+                      ? 'Body geometry saved for the contactless weight estimate.'
+                      : 'Height saved. Weight/MUAC will use the best available guided-camera fallback.',
+                ),
               const Text(
                 'These values are estimates. Full height, weight, and MUAC '
                 'results appear in the estimated report.',
@@ -110,10 +117,12 @@ class ArScanCard extends ConsumerWidget {
             FilledButton.icon(
               onPressed: state.scanning || result != null
                   ? null
-                  : () => ref.read(arScanProvider.notifier).scanAndSave(
-                        ownerUserId: ownerUserId,
-                        visitUuid: visitUuid,
-                      ),
+                  : () => ref
+                        .read(arScanProvider.notifier)
+                        .scanAndSave(
+                          ownerUserId: ownerUserId,
+                          visitUuid: visitUuid,
+                        ),
               icon: const Icon(Icons.view_in_ar),
               label: Text(
                 state.scanning ? 'Scanning…' : 'Start guided depth scan',

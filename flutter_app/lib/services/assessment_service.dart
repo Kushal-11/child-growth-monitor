@@ -301,11 +301,17 @@ class AssessmentService {
       ),
     );
     await _syncQueueDao.enqueue(visitId);
+    final savedVisit = await _visitDao.getById(visitId);
+    if (savedVisit == null) {
+      throw StateError('Saved assessment visit could not be reloaded');
+    }
 
     return ar.AssessmentResult(
       childName: childName,
       sex: sex,
       ageMonths: ageMonths,
+      visitUuid: savedVisit.visit.localUuid,
+      ownerUserId: child.ownerUserId,
       summary: poshan.finalStatus,
       combinedNutrition: ar.CombinedNutritionDetail(
         status: summaryStatus,

@@ -54,6 +54,9 @@ class FakeArPlatform implements ArScanPlatform {
 }
 
 class RecordingArRepository implements ArScanRepository {
+  RecordingArRepository({this.entryMethod = 'guided_capture'});
+
+  final String entryMethod;
   FullArScanResult? savedResult;
 
   @override
@@ -61,7 +64,7 @@ class RecordingArRepository implements ArScanRepository {
     required int ownerUserId,
     required String visitUuid,
   }) async =>
-      const ArScanVisitContext(ageMonths: 30, sex: 'F');
+      ArScanVisitContext(ageMonths: 30, sex: 'F', entryMethod: entryMethod);
 
   @override
   Future<void> saveExperimentalResult({
@@ -73,11 +76,20 @@ class RecordingArRepository implements ArScanRepository {
   }
 }
 
-Widget testApp(FakeArPlatform platform, RecordingArRepository repository) =>
+Widget testApp(
+  FakeArPlatform platform,
+  RecordingArRepository repository, {
+  ArScanPostProcessor? postProcessor,
+}) =>
     ProviderScope(
       overrides: [
         arScanPlatformProvider.overrideWithValue(platform),
         arScanRepositoryProvider.overrideWithValue(repository),
+        arScanPostProcessorProvider.overrideWithValue(
+          postProcessor ??
+              ({required int ownerUserId, required String visitUuid}) async =>
+                  null,
+        ),
       ],
       child: const MaterialApp(
         home: Scaffold(
@@ -113,5 +125,33 @@ void main() {
     expect(repository.savedResult, same(_result));
     expect(find.textContaining('Estimated height 88.1'), findsOneWidget);
     expect(find.textContaining('These values are estimates'), findsOneWidget);
+  });
+
+  testWidgets('assessment scan displays the processed AR geometry weight',
+      (tester) async {
+    final platform = FakeArPlatform(supported: true, result: _result);
+    final repository = RecordingArRepository(entryMethod: 'assessment');
+    await tester.pumpWidget(
+      testApp(
+        platform,
+        repository,
+        postProcessor: ({
+          required int ownerUserId,
+          required String visitUuid,
+        }) async =>
+            const ArScanProcessedResult(
+          estimatedWeightKg: 12.4,
+          weightRangeLowerKg: 11.8,
+          weightRangeUpperKg: 13,
+          weightSource: 'arcore_geometry_ml_weight_v3',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start guided depth scan'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Estimated weight 12.4 kg'), findsOneWidget);
+    expect(find.textContaining('11.8–13.0 kg range'), findsOneWidget);
   });
 }

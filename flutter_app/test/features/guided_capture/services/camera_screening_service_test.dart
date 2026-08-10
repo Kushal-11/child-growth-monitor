@@ -303,6 +303,20 @@ void main() {
       expect(result.captureQualitySummary['ar_coverage_degrees'], 92);
     });
 
+    test('full AR geometry permits a retained front photo without side photo',
+        () async {
+      final result = await service().run(
+        visit: screeningVisit(arScan: contactlessArResult),
+        acceptedAssets: [acceptedAssets().first],
+        version: 1,
+      );
+
+      expect(result.estimatedHeightCm, 91);
+      expect(result.estimatedWeightKg, 11);
+      expect(result.estimatedMuacCm, 12.4);
+      expect(result.captureQualitySummary['used_views'], ['front']);
+    });
+
     test(
         'AR height rescales guided-photo geometry when depth geometry is partial',
         () async {
@@ -518,6 +532,52 @@ void main() {
       expect(stored.muacSource, arcoreArmMuacSourceV3);
     });
 
+    test('reprocesses a standard assessment after AR scan without an outbox',
+        () async {
+      const assessmentUuid = '15000000-0000-0000-0000-000000000001';
+      await db.into(db.visits).insert(
+            VisitsCompanion.insert(
+              childId: childId,
+              localUuid: assessmentUuid,
+              ageMonths: 30,
+              ownerUserId: const Value(7),
+              entryMethod: const Value('assessment'),
+              imagePath: const Value('/visit/assessment-front.jpg'),
+              deviceMetadataJson: Value(
+                jsonEncode({'arcore_depth_scan': contactlessArResult.toJson()}),
+              ),
+            ),
+          );
+      final runner = _CapturingRunner();
+      final workflow = CameraScreeningWorkflow(
+        database: db,
+        visitDao: visitDao,
+        cameraResultDao: resultDao,
+        runner: runner,
+      );
+
+      final result = await workflow.processAssessment(
+        ownerUserId: 7,
+        visitUuid: assessmentUuid,
+      );
+
+      expect(result.estimatedWeightKg, 11);
+      expect(runner.receivedVisit?.arScan?.estimatedHeightCm, 91);
+      expect(runner.receivedAssets, hasLength(1));
+      expect(runner.receivedAssets.single.role, CaptureAssetRole.front);
+      expect(
+        await resultDao.getVersions(
+          ownerUserId: 7,
+          visitUuid: assessmentUuid,
+        ),
+        hasLength(1),
+      );
+      final cameraOutbox = await (db.select(db.syncOutbox)
+            ..where((row) => row.entityType.equals('camera_result')))
+          .get();
+      expect(cameraOutbox, isEmpty);
+    });
+
     test('failed reprocessing preserves the last estimated report', () async {
       final initialWorkflow = CameraScreeningWorkflow(
         database: db,
@@ -625,6 +685,7 @@ class _FailingRunner implements CameraScreeningRunner {
 
 class _CapturingRunner implements CameraScreeningRunner {
   CameraScreeningVisit? receivedVisit;
+  List<CameraScreeningAsset> receivedAssets = const [];
 
   @override
   Future<CameraScreeningResult> run({
@@ -634,6 +695,7 @@ class _CapturingRunner implements CameraScreeningRunner {
     String? supersedesResultUuid,
   }) async {
     receivedVisit = visit;
+    receivedAssets = acceptedAssets;
     return CameraScreeningResult(
       resultUuid: '30000000-0000-0000-0000-000000000099',
       version: version,

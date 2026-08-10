@@ -115,6 +115,32 @@ const _expectedClinicalHeaders = <String>[
   'calculated_acute_triggered_by',
   'calculated_acute_method',
   'calculated_acute_screening_only',
+  'arcore_scan_available',
+  'arcore_method',
+  'arcore_depth_height_cm',
+  'arcore_height_uncertainty_cm',
+  'arcore_height_range_lower_cm',
+  'arcore_height_range_upper_cm',
+  'arcore_geometry_ml_weight_kg',
+  'arcore_weight_range_lower_kg',
+  'arcore_weight_range_upper_kg',
+  'arcore_arm_muac_cm',
+  'arcore_muac_uncertainty_cm',
+  'arcore_muac_range_lower_cm',
+  'arcore_muac_range_upper_cm',
+  'arcore_quality_score',
+  'arcore_geometry_quality_score',
+  'arcore_pose_quality_score',
+  'arcore_accepted_keyframes',
+  'arcore_depth_confidence',
+  'arcore_coverage_degrees',
+  'arcore_floor_stability_cm',
+  'arcore_shoulder_width_cm',
+  'arcore_hip_width_cm',
+  'arcore_torso_length_cm',
+  'arcore_upper_arm_length_cm',
+  'arcore_chest_depth_cm',
+  'arcore_abdomen_depth_cm',
   'ml_estimated_weight_kg',
   'ml_weight_accepted_for_calculation',
   'ml_wasting_prediction',
@@ -152,7 +178,7 @@ void main() {
   test('writes the complete typed header and RFC-safe rows', () async {
     final repository = _FakeRepository([
       const ClinicalCsvRecord(
-        exportSchemaVersion: 'clinical_csv_v4_recovery',
+        exportSchemaVersion: 'clinical_csv_v5_arcore_recovery',
         childName: 'Child "A", One',
         childId: 1,
         guardianName: 'Guardian One',
@@ -247,6 +273,32 @@ void main() {
         calculatedAcuteTriggeredBy: null,
         calculatedAcuteMethod: 'who_calculated_whz_muac_screening_v1',
         calculatedAcuteScreeningOnly: true,
+        arcoreScanAvailable: true,
+        arcoreMethod: 'arcore_contactless_anthropometry_v3',
+        arcoreDepthHeightCm: 100.9,
+        arcoreHeightUncertaintyCm: 0.7,
+        arcoreHeightRangeLowerCm: 100.2,
+        arcoreHeightRangeUpperCm: 101.6,
+        arcoreGeometryMlWeightKg: 16.16,
+        arcoreWeightRangeLowerKg: 15.5,
+        arcoreWeightRangeUpperKg: 16.8,
+        arcoreArmMuacCm: 16,
+        arcoreMuacUncertaintyCm: 0.4,
+        arcoreMuacRangeLowerCm: 15.6,
+        arcoreMuacRangeUpperCm: 16.4,
+        arcoreQualityScore: 0.91,
+        arcoreGeometryQualityScore: 0.88,
+        arcorePoseQualityScore: 0.9,
+        arcoreAcceptedKeyframes: 20,
+        arcoreDepthConfidence: 0.82,
+        arcoreCoverageDegrees: 91,
+        arcoreFloorStabilityCm: 1.2,
+        arcoreShoulderWidthCm: 24,
+        arcoreHipWidthCm: 22,
+        arcoreTorsoLengthCm: 31,
+        arcoreUpperArmLengthCm: 17,
+        arcoreChestDepthCm: 14,
+        arcoreAbdomenDepthCm: 13,
         poshanSetuBmiStatus: 'MAM',
         poshanSetuMuacStatus: 'Normal',
         poshanSetuFinalStatus: 'MAM',
@@ -302,7 +354,7 @@ void main() {
     expect(rows, hasLength(2));
     expect(rows.first, ClinicalCsvRecord.headers);
     expect(ClinicalCsvRecord.headers, _expectedClinicalHeaders);
-    expect(ClinicalCsvRecord.headers, hasLength(124));
+    expect(ClinicalCsvRecord.headers, hasLength(150));
     expect(ClinicalCsvRecord.headers.last, 'visit_uuid');
     expect(ClinicalCsvRecord.headers, isNot(contains('field_category')));
     expect(ClinicalCsvRecord.headers, isNot(contains('haz_zscore')));
@@ -324,6 +376,10 @@ void main() {
     expect(value('height_error_cm'), '9.9');
     expect(value('weight_error_kg'), '5.46');
     expect(value('muac_error_cm'), '2.5');
+    expect(value('arcore_scan_available'), 'true');
+    expect(value('arcore_depth_height_cm'), '100.9');
+    expect(value('arcore_geometry_ml_weight_kg'), '16.16');
+    expect(value('arcore_arm_muac_cm'), '16');
     expect(value('ml_estimated_weight_kg'), '16.16');
     expect(value('ml_wasting_prediction'), 'MAM');
     expect(value('sam_probability'), '0.1');

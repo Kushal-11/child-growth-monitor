@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../constants/config.dart' show wastingStatusLabel;
+import '../../features/ar_scan/widgets/ar_scan_card.dart';
 import '../../l10n/l10n_provider.dart';
 import '../../models/assessment_result.dart';
 import '../../models/who_reference_targets.dart';
@@ -47,6 +48,13 @@ class ResultScreen extends ConsumerWidget {
             if (_usesEstimatedEvidence(result)) ...[
               const SizedBox(height: 12),
               _estimateDisclosure(context, ref),
+            ],
+            if (result.visitUuid != null && result.ownerUserId != null) ...[
+              const SizedBox(height: 12),
+              ArScanCard(
+                ownerUserId: result.ownerUserId!,
+                visitUuid: result.visitUuid!,
+              ),
             ],
             const SizedBox(height: 16),
             _photoSection(context, ref, result),
@@ -140,9 +148,9 @@ class ResultScreen extends ConsumerWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                ),
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 4),
           Text(message),
@@ -188,9 +196,7 @@ class ResultScreen extends ConsumerWidget {
             if (confidence != null) ...[
               Row(
                 children: [
-                  Expanded(
-                    child: Text('${t('pose_confidence', ref)}:'),
-                  ),
+                  Expanded(child: Text('${t('pose_confidence', ref)}:')),
                   const SizedBox(width: 8),
                   Text('${(confidence * 100).toStringAsFixed(0)}%'),
                 ],
@@ -307,12 +313,11 @@ class ResultScreen extends ConsumerWidget {
 
   bool _hasPhotoEstimates(AssessmentResult result) {
     final measurement = result.measurement;
-    final hasHeight = !{
-          'manual',
-          'reference_object',
-        }.contains(measurement.heightMethod) &&
+    final hasHeight =
+        !{'manual', 'reference_object'}.contains(measurement.heightMethod) &&
         measurement.effectiveHeightCm != null;
-    final hasWeight = measurement.weightMethod != 'manual' &&
+    final hasWeight =
+        measurement.weightMethod != 'manual' &&
         (measurement.effectiveWeightKg ?? measurement.predictedWeightKg) !=
             null;
     final hasMuac =
@@ -326,10 +331,8 @@ class ResultScreen extends ConsumerWidget {
     AssessmentResult result,
   ) {
     final measurement = result.measurement;
-    final heightIsEstimated = !{
-          'manual',
-          'reference_object',
-        }.contains(measurement.heightMethod) &&
+    final heightIsEstimated =
+        !{'manual', 'reference_object'}.contains(measurement.heightMethod) &&
         measurement.effectiveHeightCm != null;
     final estimatedWeight =
         measurement.effectiveWeightKg ?? measurement.predictedWeightKg;
@@ -383,11 +386,7 @@ class ResultScreen extends ConsumerWidget {
             extras: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (_confidenceText(
-                  context,
-                  ref,
-                  measurement.weightConfidence,
-                )
+                if (_confidenceText(context, ref, measurement.weightConfidence)
                     case final confidence?)
                   confidence,
                 if (_weightExtras(context, ref, measurement)
@@ -429,9 +428,9 @@ class ResultScreen extends ConsumerWidget {
           Text(
             t('screening_estimates_title', ref),
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Colors.amber.shade900,
-                  fontWeight: FontWeight.bold,
-                ),
+              color: Colors.amber.shade900,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 4),
           Text(t('screening_estimates_body', ref)),
@@ -465,9 +464,9 @@ class ResultScreen extends ConsumerWidget {
         children: [
           Text(
             t('screening_classifications_title', ref),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 2),
           Text(
@@ -486,30 +485,22 @@ class ResultScreen extends ConsumerWidget {
             context,
             label: t('who_wasting_label', ref),
             status: whzStatus,
-            evidence: _zScoreEvidence(
-              ref,
-              result.nutrition.whzZscore,
-              'WHZ',
-            ),
+            evidence: _zScoreEvidence(ref, result.nutrition.whzZscore, 'WHZ'),
           ),
           const Divider(height: 20),
           _classificationRow(
             context,
             label: t('who_stunting_label', ref),
             status: hazStatus,
-            evidence: _zScoreEvidence(
-              ref,
-              result.nutrition.hazZscore,
-              'HAZ',
-            ),
+            evidence: _zScoreEvidence(ref, result.nutrition.hazZscore, 'HAZ'),
           ),
           const SizedBox(height: 12),
           Text(
             t('screening_classifications_disclaimer', ref),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.teal.shade900,
-                  fontWeight: FontWeight.w500,
-                ),
+              color: Colors.teal.shade900,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -527,15 +518,9 @@ class ResultScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
+          Text(label, style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 2),
-          Text(
-            evidence,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+          Text(evidence, style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 6),
           StatusBadge(status: status),
         ],
@@ -819,13 +804,14 @@ class ResultScreen extends ConsumerWidget {
     AssessmentResult result,
   ) {
     final targets = result.whoReferenceTargets;
-    final sexLabel =
-        result.sex.toUpperCase() == 'M' ? t('boy', ref) : t('girl', ref);
+    final sexLabel = result.sex.toUpperCase() == 'M'
+        ? t('boy', ref)
+        : t('girl', ref);
 
     return Card(
-      color: Theme.of(context).colorScheme.primaryContainer.withValues(
-            alpha: 0.35,
-          ),
+      color: Theme.of(
+        context,
+      ).colorScheme.primaryContainer.withValues(alpha: 0.35),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -833,9 +819,9 @@ class ResultScreen extends ConsumerWidget {
           children: [
             Text(
               t('who_reference_title', ref),
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 2),
             Text(
@@ -893,16 +879,13 @@ class ResultScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
+          Text(label, style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 2),
           Text(
             '${value.target.toStringAsFixed(1)} $unit',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           Text(
             '${t('who_reference_range', ref)} '
@@ -939,11 +922,7 @@ class ResultScreen extends ConsumerWidget {
     );
   }
 
-  Widget _muacNote(
-    BuildContext context,
-    WidgetRef ref,
-    MuacDetail muac,
-  ) {
+  Widget _muacNote(BuildContext context, WidgetRef ref, MuacDetail muac) {
     final noteKey = muac.muacMethod == 'landmark_estimated'
         ? 'muac_note_landmark_text'
         : 'muac_note_text';

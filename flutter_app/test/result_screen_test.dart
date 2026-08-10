@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 
 import 'package:child_growth_monitor_app/database/database.dart'
     show AppDatabase;
+import 'package:child_growth_monitor_app/features/ar_scan/widgets/ar_scan_card.dart';
 import 'package:child_growth_monitor_app/providers/database_provider.dart';
 import 'package:child_growth_monitor_app/providers/assessment_provider.dart';
 import 'package:child_growth_monitor_app/models/assessment_result.dart';
@@ -74,6 +75,8 @@ AssessmentResult _estimatedOnly() => AssessmentResult(
       childName: 'Asha',
       sex: 'F',
       ageMonths: 46.8,
+      visitUuid: '10000000-0000-0000-0000-000000000001',
+      ownerUserId: 7,
       summary: 'Indeterminate',
       combinedNutrition: const CombinedNutritionDetail(
         status: 'NORMAL',
@@ -230,6 +233,7 @@ void main() {
     expect(find.text('Pose + age/sex'), findsOneWidget);
     expect(find.text('ML estimate'), findsOneWidget);
     expect(find.text('WHZ estimate'), findsOneWidget);
+    expect(find.byType(ArScanCard), findsOneWidget);
     expect(find.text('Image'), findsNothing);
   });
 }

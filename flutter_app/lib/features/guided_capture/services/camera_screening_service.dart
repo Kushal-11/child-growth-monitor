@@ -36,10 +36,10 @@ class MlCameraInferenceAdapter implements CameraMlInference {
 
   @override
   CameraModelMetadata get metadata => CameraModelMetadata(
-        modelVersion: _service.modelVersion,
-        manifestChecksum: _service.manifestChecksum,
-        trainingDataLabel: _service.trainingDataLabel,
-      );
+    modelVersion: _service.modelVersion,
+    manifestChecksum: _service.manifestChecksum,
+    trainingDataLabel: _service.trainingDataLabel,
+  );
 
   @override
   WastingPrediction predict(WastingFeatures features) =>
@@ -49,11 +49,10 @@ class MlCameraInferenceAdapter implements CameraMlInference {
   bool weightWithinBounds({
     required double predictedKg,
     required double whoMedianKg,
-  }) =>
-      _service.weightWithinBounds(
-        predictedKg: predictedKg,
-        whoMedianKg: whoMedianKg,
-      );
+  }) => _service.weightWithinBounds(
+    predictedKg: predictedKg,
+    whoMedianKg: whoMedianKg,
+  );
 }
 
 abstract interface class CameraScreeningRunner {
@@ -73,12 +72,12 @@ class CameraScreeningService implements CameraScreeningRunner {
     required CameraMlInference ml,
     String Function()? newUuid,
     DateTime Function()? now,
-  })  : _pose = pose,
-        _measurement = measurement,
-        _who = who,
-        _ml = ml,
-        _newUuid = newUuid ?? const Uuid().v4,
-        _now = now ?? DateTime.now;
+  }) : _pose = pose,
+       _measurement = measurement,
+       _who = who,
+       _ml = ml,
+       _newUuid = newUuid ?? const Uuid().v4,
+       _now = now ?? DateTime.now;
 
   final PoseSource _pose;
   final MeasurementService _measurement;
@@ -95,14 +94,22 @@ class CameraScreeningService implements CameraScreeningRunner {
     String? supersedesResultUuid,
   }) async {
     final front = _requiredAsset(acceptedAssets, CaptureAssetRole.front);
-    final side = _requiredAsset(acceptedAssets, CaptureAssetRole.side);
+    final arScan = visit.arScan;
+    final side = _optionalAsset(acceptedAssets, CaptureAssetRole.side);
+    if (side == null && arScan?.hasWeightGeometry != true) {
+      throw StateError(
+        'Accepted side asset is required when AR body geometry is unavailable',
+      );
+    }
     final frontSegments = await _pose.segmentsFor(front.localPath);
     if (frontSegments.totalHeightPx == null ||
         !frontSegments.totalHeightPx!.isFinite ||
         frontSegments.totalHeightPx! <= 0) {
       throw StateError('Accepted front asset has no usable full-body pose');
     }
-    final sideSegments = await _pose.sideSegmentsFor(side.localPath);
+    final sideSegments = side == null
+        ? null
+        : await _pose.sideSegmentsFor(side.localPath);
     final poseConfidence = await _pose.confidenceFor(front.localPath);
     final measurements = _measurement.computeCameraEstimate(
       segments: frontSegments,
@@ -112,11 +119,11 @@ class CameraScreeningService implements CameraScreeningRunner {
       poseConfidence: poseConfidence.isFinite ? poseConfidence : 0,
     );
 
-    final arScan = visit.arScan;
     final usesArGeometry = arScan?.hasWeightGeometry == true;
     final heightCm =
         arScan?.estimatedHeightCm ?? measurements.effectiveHeightCm;
-    final photoGeometryScale = arScan != null &&
+    final photoGeometryScale =
+        arScan != null &&
             measurements.effectiveHeightCm.isFinite &&
             measurements.effectiveHeightCm > 0
         ? heightCm / measurements.effectiveHeightCm
@@ -136,13 +143,13 @@ class CameraScreeningService implements CameraScreeningRunner {
     final chestDepthCm = usesArGeometry
         ? arScan!.chestDepthCm
         : measurements.chestDepthCm == null
-            ? null
-            : measurements.chestDepthCm! * photoGeometryScale;
+        ? null
+        : measurements.chestDepthCm! * photoGeometryScale;
     final abdomenDepthCm = usesArGeometry
         ? arScan!.abdomenDepthCm
         : measurements.abdDepthCm == null
-            ? null
-            : measurements.abdDepthCm! * photoGeometryScale;
+        ? null
+        : measurements.abdDepthCm! * photoGeometryScale;
     final features = WastingFeatures(
       ageMonths: visit.ageMonths,
       sexBinary: visit.sex.toUpperCase() == 'M' ? 1 : 0,
@@ -180,8 +187,8 @@ class CameraScreeningService implements CameraScreeningRunner {
       source: usesArGeometry
           ? arcoreGeometryWeightSourceV3
           : arScan != null
-              ? arcoreHeightPhotoGeometryWeightSourceV3
-              : experimentalMlWeightSourceV1,
+          ? arcoreHeightPhotoGeometryWeightSourceV3
+          : experimentalMlWeightSourceV1,
     );
     final weightRange = estimatedWeightKg != null
         ? _weightRange(
@@ -244,8 +251,8 @@ class CameraScreeningService implements CameraScreeningRunner {
       heightSource: arScan == null
           ? legacyWhoHeightSourceV1
           : arScan.method == contactlessArMethodV3
-              ? arcoreDepthHeightSourceV3
-              : arcoreDepthHeightSourceV2,
+          ? arcoreDepthHeightSourceV3
+          : arcoreDepthHeightSourceV2,
       weightSource: weightSource,
       muacSource: muac.muacMethod,
       heightRangeLowerCm: arScan?.heightRangeLowerCm,
@@ -256,10 +263,12 @@ class CameraScreeningService implements CameraScreeningRunner {
       muacRangeUpperCm: muac.uncertaintyUpperCm,
       estimatedHaz: estimatedHaz,
       estimatedWhz: estimatedWhz,
-      estimatedStuntingStatus:
-          estimatedHaz == null ? null : classifyHaz(estimatedHaz),
-      estimatedWastingStatus:
-          estimatedWhz == null ? null : classifyWhz(estimatedWhz),
+      estimatedStuntingStatus: estimatedHaz == null
+          ? null
+          : classifyHaz(estimatedHaz),
+      estimatedWastingStatus: estimatedWhz == null
+          ? null
+          : classifyWhz(estimatedWhz),
       experimentalOverallCategory: classifier?.category,
       componentProbabilities: classifier?.probabilities ?? const {},
       bodyProportionFeatures: {
@@ -278,8 +287,8 @@ class CameraScreeningService implements CameraScreeningRunner {
         'geometry_source': usesArGeometry
             ? contactlessArMethodV3
             : arScan != null
-                ? arcoreHeightPhotoGeometryWeightSourceV3
-                : cameraScreeningMethodV1,
+            ? arcoreHeightPhotoGeometryWeightSourceV3
+            : cameraScreeningMethodV1,
         'clinical_measurement_eligible': false,
         if (chestDepthCm != null) 'chest_depth_cm': chestDepthCm,
         if (abdomenDepthCm != null) 'abd_depth_cm': abdomenDepthCm,
@@ -308,13 +317,24 @@ class CameraScreeningService implements CameraScreeningRunner {
     return candidates.first;
   }
 
+  CameraScreeningAsset? _optionalAsset(
+    List<CameraScreeningAsset> assets,
+    CaptureAssetRole role,
+  ) {
+    final candidates = assets.where(
+      (asset) => asset.role == role && asset.localPath.isNotEmpty,
+    );
+    return candidates.firstOrNull;
+  }
+
   (double?, String?) _resolveEstimatedWeight({
     required WastingPrediction? prediction,
     required double? whoMedianWeight,
     required String source,
   }) {
     final predicted = prediction?.estimatedWeightKg;
-    final medianIsValid = whoMedianWeight != null &&
+    final medianIsValid =
+        whoMedianWeight != null &&
         whoMedianWeight.isFinite &&
         whoMedianWeight > 0;
     if (predicted != null &&
@@ -339,7 +359,8 @@ class CameraScreeningService implements CameraScreeningRunner {
     required double? geometryQuality,
   }) {
     final quality = (geometryQuality ?? 0).clamp(0.0, 1.0);
-    final fraction = contactlessGeometryPerturbationBase +
+    final fraction =
+        contactlessGeometryPerturbationBase +
         contactlessGeometryPerturbationQualityPenalty * (1.0 - quality);
     final predictions = <double>[estimateKg];
     for (final factor in [1.0 - fraction, 1.0 + fraction]) {
@@ -360,8 +381,9 @@ class CameraScreeningService implements CameraScreeningRunner {
                 chestDepthCm: base.chestDepthCm == null
                     ? null
                     : base.chestDepthCm! * factor,
-                abdDepthCm:
-                    base.abdDepthCm == null ? null : base.abdDepthCm! * factor,
+                abdDepthCm: base.abdDepthCm == null
+                    ? null
+                    : base.abdDepthCm! * factor,
               ),
             )
             .estimatedWeightKg;
@@ -384,8 +406,8 @@ class CameraScreeningService implements CameraScreeningRunner {
         .fold<double>(0, (largest, value) => value > largest ? value : largest);
     final halfWidth =
         observedHalfWidth > contactlessWeightRangeMinimumHalfWidthKg
-            ? observedHalfWidth
-            : contactlessWeightRangeMinimumHalfWidthKg;
+        ? observedHalfWidth
+        : contactlessWeightRangeMinimumHalfWidthKg;
     return (
       (estimateKg - halfWidth).clamp(0.1, double.infinity),
       estimateKg + halfWidth,
@@ -421,8 +443,10 @@ class CameraScreeningService implements CameraScreeningRunner {
     )) {
       return null;
     }
-    final sum =
-        probabilities.values.fold<double>(0, (total, value) => total + value);
+    final sum = probabilities.values.fold<double>(
+      0,
+      (total, value) => total + value,
+    );
     if ((sum - 1).abs() > 0.02) return null;
     final highest = probabilities.entries.reduce(
       (left, right) => left.value >= right.value ? left : right,
@@ -438,17 +462,20 @@ class CameraScreeningService implements CameraScreeningRunner {
     List<CameraScreeningAsset> assets, {
     FullArScanResult? arScan,
   }) {
-    final used = assets
-        .where(
-          (asset) =>
-              asset.role == CaptureAssetRole.front ||
-              asset.role == CaptureAssetRole.side,
-        )
-        .toList()
-      ..sort((left, right) => left.role.index.compareTo(right.role.index));
+    final used =
+        assets
+            .where(
+              (asset) =>
+                  asset.role == CaptureAssetRole.front ||
+                  asset.role == CaptureAssetRole.side,
+            )
+            .toList()
+          ..sort((left, right) => left.role.index.compareTo(right.role.index));
     double? average(Iterable<double?> scores) {
-      final finite =
-          scores.whereType<double>().where((score) => score.isFinite).toList();
+      final finite = scores
+          .whereType<double>()
+          .where((score) => score.isFinite)
+          .toList();
       if (finite.isEmpty) return null;
       return finite.reduce((left, right) => left + right) / finite.length;
     }
@@ -460,8 +487,9 @@ class CameraScreeningService implements CameraScreeningRunner {
       'orientation': average(used.map((asset) => asset.orientationScore)),
       'sharpness': average(used.map((asset) => asset.sharpnessScore)),
       'lighting': average(used.map((asset) => asset.lightingScore)),
-      'used_views':
-          used.map((asset) => asset.role.wireValue).toList(growable: false),
+      'used_views': used
+          .map((asset) => asset.role.wireValue)
+          .toList(growable: false),
       if (arScan != null) ...{
         'ar_method': arScan.method,
         'ar_overall': arScan.qualityScore,
@@ -482,10 +510,10 @@ class CameraScreeningWorkflow {
     required GuidedVisitDao visitDao,
     required CameraResultDao cameraResultDao,
     required CameraScreeningRunner runner,
-  })  : _database = database,
-        _visitDao = visitDao,
-        _cameraResultDao = cameraResultDao,
-        _runner = runner;
+  }) : _database = database,
+       _visitDao = visitDao,
+       _cameraResultDao = cameraResultDao,
+       _runner = runner;
 
   final AppDatabase _database;
   final GuidedVisitDao _visitDao;
@@ -503,27 +531,28 @@ class CameraScreeningWorkflow {
         visitUuid: visitUuid,
       );
       processingStarted = visit.captureState == 'processing';
-      final child = await (_database.select(_database.children)
-            ..where(
-              (row) =>
-                  row.id.equals(visit.childId) &
-                  row.ownerUserId.equals(ownerUserId),
-            ))
-          .getSingleOrNull();
+      final child =
+          await (_database.select(_database.children)..where(
+                (row) =>
+                    row.id.equals(visit.childId) &
+                    row.ownerUserId.equals(ownerUserId),
+              ))
+              .getSingleOrNull();
       if (child == null) {
         throw StateError('Owner-scoped child was not found');
       }
-      final storedAssets = await (_database.select(_database.captureAssets)
-            ..where(
-              (row) =>
-                  row.visitId.equals(visit.id) &
-                  row.qualityVerdict.equals('accepted'),
-            )
-            ..orderBy([
-              (row) => OrderingTerm.asc(row.selectedRank),
-              (row) => OrderingTerm.asc(row.capturedAt),
-            ]))
-          .get();
+      final storedAssets =
+          await (_database.select(_database.captureAssets)
+                ..where(
+                  (row) =>
+                      row.visitId.equals(visit.id) &
+                      row.qualityVerdict.equals('accepted'),
+                )
+                ..orderBy([
+                  (row) => OrderingTerm.asc(row.selectedRank),
+                  (row) => OrderingTerm.asc(row.capturedAt),
+                ]))
+              .get();
       final assets = storedAssets
           .where(
             (asset) => asset.localPath != null && asset.localPath!.isNotEmpty,
@@ -555,8 +584,9 @@ class CameraScreeningWorkflow {
         ),
         acceptedAssets: assets,
         version: previous.length + 1,
-        supersedesResultUuid:
-            previous.isEmpty ? null : previous.last.resultUuid,
+        supersedesResultUuid: previous.isEmpty
+            ? null
+            : previous.last.resultUuid,
       );
       await _cameraResultDao.appendCameraResult(
         ownerUserId: ownerUserId,
@@ -574,6 +604,72 @@ class CameraScreeningWorkflow {
       }
       rethrow;
     }
+  }
+
+  /// Reprocesses an already-saved standard assessment after an ARCore scan.
+  /// The standard assessment's persisted front photo supplies pose evidence;
+  /// contactless AR geometry replaces the otherwise-required side photo.
+  Future<CameraScreeningResult> processAssessment({
+    required int ownerUserId,
+    required String visitUuid,
+  }) async {
+    final visit =
+        await (_database.select(_database.visits)..where(
+              (row) =>
+                  row.localUuid.equals(visitUuid) &
+                  row.ownerUserId.equals(ownerUserId),
+            ))
+            .getSingleOrNull();
+    if (visit == null || visit.entryMethod != 'assessment') {
+      throw StateError('Owner-scoped assessment visit was not found');
+    }
+    final frontPath = visit.imagePath;
+    if (frontPath == null || frontPath.isEmpty) {
+      throw StateError('Assessment front photo was not retained');
+    }
+    final child =
+        await (_database.select(_database.children)..where(
+              (row) =>
+                  row.id.equals(visit.childId) &
+                  row.ownerUserId.equals(ownerUserId),
+            ))
+            .getSingleOrNull();
+    if (child == null) {
+      throw StateError('Owner-scoped child was not found');
+    }
+    final arScan = _arScanFromMetadata(visit.deviceMetadataJson);
+    if (arScan == null) {
+      throw StateError('Saved ARCore depth result was not found');
+    }
+    final assets = <CameraScreeningAsset>[
+      CameraScreeningAsset(role: CaptureAssetRole.front, localPath: frontPath),
+      if (visit.sideImagePath case final sidePath? when sidePath.isNotEmpty)
+        CameraScreeningAsset(role: CaptureAssetRole.side, localPath: sidePath),
+    ];
+    final previous = await _cameraResultDao.getVersions(
+      ownerUserId: ownerUserId,
+      visitUuid: visitUuid,
+    );
+    final result = await _runner.run(
+      visit: CameraScreeningVisit(
+        visitUuid: visitUuid,
+        ownerUserId: ownerUserId,
+        ageMonths: visit.ageMonths,
+        sex: child.sex,
+        arScan: arScan,
+      ),
+      acceptedAssets: assets,
+      version: previous.length + 1,
+      supersedesResultUuid: previous.isEmpty ? null : previous.last.resultUuid,
+    );
+    await _cameraResultDao.appendCameraResult(
+      ownerUserId: ownerUserId,
+      visitUuid: visitUuid,
+      result: _companionFor(visit.id, result),
+      payloadJson: jsonEncode(result.toJson()),
+      enqueueOutbox: false,
+    );
+    return result;
   }
 
   FullArScanResult? _arScanFromMetadata(String? encoded) {
@@ -614,12 +710,15 @@ class CameraScreeningWorkflow {
       estimatedStuntingStatus: Value(result.estimatedStuntingStatus),
       estimatedWastingStatus: Value(result.estimatedWastingStatus),
       experimentalOverallCategory: Value(result.experimentalOverallCategory),
-      componentProbabilitiesJson:
-          Value(jsonEncode(result.componentProbabilities)),
-      bodyProportionFeaturesJson:
-          Value(jsonEncode(result.bodyProportionFeatures)),
-      captureQualitySummaryJson:
-          Value(jsonEncode(result.captureQualitySummary)),
+      componentProbabilitiesJson: Value(
+        jsonEncode(result.componentProbabilities),
+      ),
+      bodyProportionFeaturesJson: Value(
+        jsonEncode(result.bodyProportionFeatures),
+      ),
+      captureQualitySummaryJson: Value(
+        jsonEncode(result.captureQualitySummary),
+      ),
       method: result.method,
       modelVersion: result.modelVersion,
       manifestChecksum: result.manifestChecksum,
