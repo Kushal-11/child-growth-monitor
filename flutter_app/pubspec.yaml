@@ -1,7 +1,7 @@
 name: child_growth_monitor_app
 description: Flutter client for child growth monitor FastAPI backend.
 publish_to: 'none'
-version: 0.2.1+3
+version: 0.2.2+4
 
 environment:
   sdk: '>=3.3.0 <4.0.0'

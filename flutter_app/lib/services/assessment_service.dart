@@ -43,15 +43,15 @@ class AssessmentService {
     required WhoDataService who,
     required MlInferenceService ml,
     required ImagePersister persistImage,
-  })  : _childDao = childDao,
-        _visitDao = visitDao,
-        _syncQueueDao = syncQueueDao,
-        _pose = pose,
-        _measurement = measurement,
-        _nutrition = nutrition,
-        _who = who,
-        _ml = ml,
-        _persistImage = persistImage;
+  }) : _childDao = childDao,
+       _visitDao = visitDao,
+       _syncQueueDao = syncQueueDao,
+       _pose = pose,
+       _measurement = measurement,
+       _nutrition = nutrition,
+       _who = who,
+       _ml = ml,
+       _persistImage = persistImage;
 
   final ChildDao _childDao;
   final VisitDao _visitDao;
@@ -81,10 +81,12 @@ class AssessmentService {
     final ageMonths = DateTime.now().difference(dob).inDays / daysPerMonth;
 
     final frontPath = await _persistImage(frontImagePath);
-    final sidePath =
-        sideImagePath != null ? await _persistImage(sideImagePath) : null;
-    final backPath =
-        backImagePath != null ? await _persistImage(backImagePath) : null;
+    final sidePath = sideImagePath != null
+        ? await _persistImage(sideImagePath)
+        : null;
+    final backPath = backImagePath != null
+        ? await _persistImage(backImagePath)
+        : null;
 
     final segments = await _detectFront(frontPath);
     if (segments.totalHeightPx == null || segments.totalHeightPx! <= 0) {
@@ -105,6 +107,13 @@ class AssessmentService {
       poseConfidence: poseConfidence,
     );
     final heightMethod = manualHeightCm != null ? 'manual' : m.estimationMethod;
+    final independentlyEstimatedHeightCm =
+        manualHeightCm == null &&
+            m.estimationMethod != 'who_statistical' &&
+            m.estimationMethod != 'who_median_estimated' &&
+            m.estimationMethod != 'who_height_for_age_median_v1'
+        ? m.effectiveHeightCm
+        : null;
 
     WastingPrediction? prediction;
     try {
@@ -178,10 +187,10 @@ class AssessmentService {
     final weightMethod = manualWeightKg != null
         ? 'manual'
         : prediction?.estimatedWeightKg == effectiveWeight
-            ? 'ml_estimated'
-            : effectiveWeight != null
-                ? 'who_statistical'
-                : 'unavailable';
+        ? 'ml_estimated'
+        : effectiveWeight != null
+        ? 'who_statistical'
+        : 'unavailable';
     final poshan = const PoshanSetuService().classify(
       sex: sex,
       ageMonths: ageMonths,
@@ -229,7 +238,7 @@ class AssessmentService {
       sideImagePath: sidePath,
       backImagePath: backPath,
       measurement: MeasurementsCompanion(
-        predictedHeightCm: Value(m.effectiveHeightCm),
+        predictedHeightCm: Value(independentlyEstimatedHeightCm),
         predictedWeightKg: Value(effectiveWeight),
         manualHeightCm: Value(manualHeightCm),
         manualWeightKg: Value(manualWeightKg),
@@ -261,8 +270,9 @@ class AssessmentService {
         riskOverweightProbability: Value(prediction?.riskProbability),
         overweightProbability: Value(prediction?.overweightProbability),
         wastingStatus: Value(prediction?.wastingStatus ?? 'who_fallback'),
-        wastingMethod:
-            Value(prediction == null ? 'unavailable' : 'ml_classifier'),
+        wastingMethod: Value(
+          prediction == null ? 'unavailable' : 'ml_classifier',
+        ),
         muacCm: Value(muacResult.muacCm),
         muacStatus: Value(muacResult.muacStatus),
         muacMethod: Value(muacResult.muacMethod),
@@ -320,7 +330,7 @@ class AssessmentService {
       measurement: ar.Measurement(
         effectiveHeightCm: m.effectiveHeightCm,
         heightMethod: heightMethod,
-        predictedHeightCm: m.effectiveHeightCm,
+        predictedHeightCm: independentlyEstimatedHeightCm,
         predictedWeightKg: effectiveWeight,
         manualHeightCm: manualHeightCm,
         manualWeightKg: manualWeightKg,
